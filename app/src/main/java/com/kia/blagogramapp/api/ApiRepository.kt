@@ -4,6 +4,7 @@ import android.util.Log
 import com.kia.blagogramapp.BlagoApi
 import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.model.Message
+import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.models.SearchUserItem
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -64,6 +65,14 @@ class ApiRepository(private val api: BlagoApi) {
         val list = body["result"] as List<Map<String, Any>>
 
         return list.map {
+            // Safe parsing for user_id which might be absent or string
+            val rawUserId = it["user_id"]
+            val userId = when (rawUserId) {
+                is Number -> rawUserId.toInt()
+                is String -> rawUserId.toIntOrNull()
+                else -> null
+            }
+
             Chat(
                 id = (it["chat_id"] as Number).toInt(),
                 name = it["name"]?.toString(),
@@ -71,7 +80,8 @@ class ApiRepository(private val api: BlagoApi) {
                 last_msg = it["last_message"]?.toString(),
                 last_time = it["last_time"]?.toString(),
                 unread = (it["unread"] as Number).toInt(),
-                last_sender_id = (it["last_sender_id"] as Number?)?.toInt()
+                last_sender_id = (it["last_sender_id"] as Number?)?.toInt(),
+                user_id = userId
             )
         }
     }
@@ -272,5 +282,33 @@ class ApiRepository(private val api: BlagoApi) {
         if (body["ok"] != true) throw Exception(body["error"].toString())
 
         return body
+    }
+
+    // -------------------------------------------------
+    // GET USER PROFILE
+    // -------------------------------------------------
+    suspend fun getUserProfile(token: String, userId: Int): UserProfile {
+        val resp = api.call(
+            ApiRequest(
+                action = "get.profile",
+                token = token,
+                user_id = userId
+            )
+        )
+
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"].toString())
+
+        val r = body["result"] as Map<String, Any>
+        return UserProfile(
+            id = (r["id"] as Number).toInt(),
+            username = r["username"]?.toString() ?: r["login"]?.toString() ?: "",
+            display_name = r["display_name"]?.toString(),
+            avatar = r["avatar"]?.toString(),
+            status = r["status"]?.toString(),
+            friends_count = (r["friends_count"] as? Number)?.toInt() ?: 0,
+            followers_count = (r["followers_count"] as? Number)?.toInt() ?: 0
+        )
     }
 }

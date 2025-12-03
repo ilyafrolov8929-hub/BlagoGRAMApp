@@ -1,5 +1,6 @@
 package com.kia.blagogramapp.adapters
 
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,6 +8,9 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.imageview.ShapeableImageView
+import coil.load
+import com.kia.blagogramapp.ProfileActivity
 import com.kia.blagogramapp.R
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.models.ChatListItem

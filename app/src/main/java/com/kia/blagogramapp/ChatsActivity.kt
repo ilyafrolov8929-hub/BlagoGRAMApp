@@ -211,7 +211,7 @@ class ChatsActivity : AppCompatActivity() {
                     val prefix = if (c.last_sender_id == myId) "Вы: " else ""
                     ChatItem(
                         chat_id = c.id,
-                        user_id = 0,
+                        user_id = c.user_id ?: 0,
                         name = (c.name ?: "").ifBlank { "Неизвестно" },
                         avatar = c.avatar,
                         last_message = prefix + (c.last_msg ?: ""),
@@ -227,6 +227,7 @@ class ChatsActivity : AppCompatActivity() {
                         i.putExtra("chat_id", chat.chat_id)
                         i.putExtra("chat_name", chat.name)
                         i.putExtra("chat_avatar", chat.avatar)
+                        i.putExtra("target_user_id", chat.user_id) // Передаем ID собеседника
                         startActivity(i)
                     }
                 }

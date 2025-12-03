@@ -7,6 +7,7 @@ data class Chat(
     val last_msg: String?,
     val last_time: String?,
     val unread: Int,
-    val last_sender_id: Int?
+    val last_sender_id: Int?,
+    val user_id: Int? // ID собеседника для личных чатов
 )
 

@@ -10,15 +10,22 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import coil.load
 import androidx.core.graphics.drawable.toBitmap
+import com.kia.blagogramapp.api.ApiClient
+import com.kia.blagogramapp.api.ApiRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var profileUsername: TextView
     private lateinit var userID: TextView
     private lateinit var status: TextView
-
+    private lateinit var friendsCount: TextView
+    private lateinit var subsCount: TextView
     private lateinit var avatarView: ImageView
     private lateinit var profileCover: ImageView
+    private lateinit var repo: ApiRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -34,27 +41,96 @@ class ProfileActivity : AppCompatActivity() {
         profileUsername = findViewById(R.id.profileUsername)
         userID = findViewById(R.id.userID)
         status = findViewById(R.id.status)
+        friendsCount = findViewById(R.id.friendsCount)
+        subsCount = findViewById(R.id.subsCount)
 
         avatarView = findViewById(R.id.profileAvatar)
         profileCover = findViewById(R.id.profileCover)
 
+        repo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
+
+        val targetUserId = intent.getIntExtra("user_id", 0)
+        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        val isMyProfile = (targetUserId == 0 || targetUserId == myId)
+
+        // кнопка настройки (⚙️)
+        val settingsBtn = findViewById<ImageView>(R.id.btnSettings)
+        settingsBtn.setOnClickListener {
+            startActivity(Intent(this, ProfileEditActivity::class.java))
+        }
+
+        if (isMyProfile) {
+            settingsBtn.visibility = View.VISIBLE
+            loadMyProfile()
+        } else {
+            settingsBtn.visibility = View.GONE
+            loadUserProfile(targetUserId)
+        }
+
+        // кнопка назад
+        findViewById<ImageView>(R.id.exit_profile).setOnClickListener {
+            finish()
+        }
+    }
+
+    private fun loadMyProfile() {
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
-
-        // подставляем текст
-        userID.text = "@" + prefs.getString("login", "")
-        profileUsername.text = prefs.getString("display_name", "")
-        status.text = prefs.getString("status", "")
-
-        // грузим аватар
+        val login = prefs.getString("login", "")
+        val displayName = prefs.getString("display_name", "")
+        val statusText = prefs.getString("status", "")
         val avatar = prefs.getString("avatar", "")
-        avatarView.load("https://blagogram.ru/avatars/$avatar") {
+        
+        // TODO: Сохранять эти данные тоже локально, пока по нулям
+        val friends = 0
+        val followers = 0
+
+        updateUI(login, displayName, statusText, avatar, friends, followers)
+        
+        // Можно обновить данные с сервера для своего профиля тоже
+        val myId = prefs.getInt("user_id", 0)
+        if (myId != 0) {
+            loadUserProfile(myId)
+        }
+    }
+
+    private fun loadUserProfile(userId: Int) {
+        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val profile = repo.getUserProfile(token, userId)
+                runOnUiThread {
+                    updateUI(
+                        profile.username, 
+                        profile.display_name, 
+                        profile.status, 
+                        profile.avatar,
+                        profile.friends_count,
+                        profile.followers_count
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int) {
+        userID.text = "@$login"
+        profileUsername.text = displayName
+        status.text = statusText
+        
+        friendsCount.text = friends.toString()
+        subsCount.text = followers.toString()
+
+        val avatarUrl = "https://blagogram.ru/avatars/$avatar"
+        
+        avatarView.load(avatarUrl) {
             crossfade(true)
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
         }
 
-        // грузим обложку и анализируем яркость
-        profileCover.load("https://blagogram.ru/avatars/$avatar") {
+        profileCover.load(avatarUrl) {
             crossfade(true)
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
@@ -63,8 +139,6 @@ class ProfileActivity : AppCompatActivity() {
                 onSuccess = { _, result ->
                     try {
                         val bmp: Bitmap = result.drawable.toBitmap()
-
-                        // берём верхнюю полоску (под статусбар)
                         val height = bmp.height.coerceAtMost(70)
                         if (height < 10) return@listener
 
@@ -81,24 +155,12 @@ class ProfileActivity : AppCompatActivity() {
                                         Color.blue(color) * 0.114).toInt()
                             }
                         }
-
                         brightness /= total
-
                         applyTopBarStyle(brightness > 140)
 
                     } catch (_: Exception) { }
                 }
             )
-        }
-
-        // кнопка назад
-        findViewById<ImageView>(R.id.exit_profile).setOnClickListener {
-            finish()
-        }
-
-        // кнопка настройки (⚙️)
-        findViewById<ImageView>(R.id.btnSettings).setOnClickListener {
-            startActivity(Intent(this, ProfileEditActivity::class.java))
         }
     }
 

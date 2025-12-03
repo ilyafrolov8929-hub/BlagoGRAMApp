@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsetsController
@@ -31,6 +32,7 @@ import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -40,6 +42,7 @@ class ChatActivity : AppCompatActivity() {
 
     private lateinit var repo: ApiRepository
     private var chatId: Int = 0
+    private var targetUserId: Int = 0 // ID собеседника (если известно)
     private lateinit var recycler: RecyclerView
     private lateinit var adapter: MessagesAdapter
 
@@ -98,6 +101,12 @@ class ChatActivity : AppCompatActivity() {
 
         val avatar = intent.getStringExtra("chat_avatar")
         val avatarView = findViewById<ShapeableImageView>(R.id.chatAvatar)
+        
+        // Попытаемся найти ID собеседника, если он не передан напрямую
+        // К сожалению, в ChatActivity передается только chatId, имя и аватар.
+        // Пока что мы будем искать собеседника по первому входящему сообщению (костыль, но рабочий для ЛС)
+        // Либо если мы пришли из поиска, где ID известен, надо было бы его передать. 
+        // Добавим логику: попытаемся найти sender_id из сообщений.
 
         sendBtn = findViewById(R.id.sendBtn)
         attachBtn = findViewById(R.id.attachBtn)
@@ -115,7 +124,24 @@ class ChatActivity : AppCompatActivity() {
 
         chatId = intent.getIntExtra("chat_id", 0)
         val chatName = intent.getStringExtra("chat_name") ?: "Чат"
-        findViewById<TextView>(R.id.chatName).text = chatName
+        
+        val nameView = findViewById<TextView>(R.id.chatName)
+        nameView.text = chatName
+
+        // ОБРАБОТЧИК КЛИКА НА ХЕДЕР (Аватар + Имя)
+        val headerClickListener = View.OnClickListener {
+             if (targetUserId != 0) {
+                 val i = Intent(this, ProfileActivity::class.java)
+                 i.putExtra("user_id", targetUserId)
+                 startActivity(i)
+             } else {
+                 // Если ID еще не определен
+                 Toast.makeText(this, "Вы еще не беседовали с этим пользователем!", Toast.LENGTH_SHORT).show()
+             }
+        }
+        
+        avatarView.setOnClickListener(headerClickListener)
+        nameView.setOnClickListener(headerClickListener)
 
         if (chatId == 0) {
             finish()
@@ -129,14 +155,12 @@ class ChatActivity : AppCompatActivity() {
 
         val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
-        // В методе onCreate:
         adapter = MessagesAdapter(emptyList(), myId) { url, message ->
-            // Предполагаем, что ваш адаптер теперь возвращает не только url, но и объект message
             openViewer(
                 url = url,
-                senderName = message.display_name ?: "Неизвестный", // Или имя из message
-                sentTime = message.sent_at, // Время отправки
-                caption = message.content   // Текст сообщения под фото
+                senderName = message.display_name ?: "Неизвестный",
+                sentTime = message.sent_at,
+                caption = message.content
             )
         }
 
@@ -165,7 +189,7 @@ class ChatActivity : AppCompatActivity() {
             pickImagesLauncher.launch("image/*")
         }
 
-        loadMessages()
+        loadMessages(myId)
 
         sendBtn.setOnClickListener {
             val text = messageInput.text.toString().trim()
@@ -275,12 +299,21 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadMessages() {
+    private fun loadMessages(myId: Int) {
         val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         CoroutineScope(Dispatchers.IO).launch {
 
             try {
                 val messages: List<Message> = repo.getMessages(token, chatId)
+
+                // Пытаемся найти собеседника (первое сообщение НЕ от меня)
+                // Это не идеальный способ, но работает для личных чатов, где есть история
+                if (targetUserId == 0) {
+                    val otherMsg = messages.find { it.sender_id != myId }
+                    if (otherMsg != null) {
+                        targetUserId = otherMsg.sender_id
+                    }
+                }
 
                 runOnUiThread {
                     val emptyText = findViewById<TextView>(R.id.emptyMessagesText)
@@ -341,7 +374,7 @@ class ChatActivity : AppCompatActivity() {
                 repo.sendMessage(token, chatId, text, filesToUpload)
                 // Optional: reload messages from server to get real IDs, or update local message with server response
                 // For now, we will just reload all
-                loadMessages()
+                loadMessages(myId)
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
