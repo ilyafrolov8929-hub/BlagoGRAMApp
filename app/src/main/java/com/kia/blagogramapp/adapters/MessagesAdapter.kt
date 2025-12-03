@@ -15,7 +15,8 @@ import com.kia.blagogramapp.utils.TimeUtils
 class MessagesAdapter(
     itemsInput: List<ChatListItem>,
     private val myId: Int,
-    private val onImageClick: (String) -> Unit
+    // ИЗМЕНЕНИЕ 1: Теперь колбэк принимает URL и само сообщение
+    private val onImageClick: (String, Message) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var items: MutableList<ChatListItem> = itemsInput.toMutableList()
@@ -35,19 +36,16 @@ class MessagesAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
 
         return when (viewType) {
-
             typeHeader -> {
                 val v = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_day_header, parent, false)
                 HeaderHolder(v)
             }
-
             typeRight -> {
                 val v = LayoutInflater.from(parent.context)
                     .inflate(R.layout.message_right, parent, false)
                 MsgHolder(v)
             }
-
             else -> {
                 val v = LayoutInflater.from(parent.context)
                     .inflate(R.layout.message_left, parent, false)
@@ -78,16 +76,24 @@ class MessagesAdapter(
 
                 if (msg.images.isNotEmpty()) {
                     h.imagesRecycler.visibility = View.VISIBLE
-                    h.imagesRecycler.layoutManager = LinearLayoutManager(h.itemView.context)
-                    
-                    val urls = msg.images.map { 
+                    h.imagesRecycler.layoutManager =
+                        LinearLayoutManager(h.itemView.context)
+
+                    val urls = msg.images.map {
                         if (it.startsWith("content:") || it.startsWith("file:")) {
-                            it 
+                            it
                         } else {
-                            "https://blagogram.ru/uploads/${msg.sender_id}/$it" 
+                            "https://blagogram.ru/uploads/${msg.sender_id}/$it"
                         }
                     }
-                    h.imagesRecycler.adapter = MessageImagesAdapter(urls, onImageClick)
+
+                    // ИЗМЕНЕНИЕ 2: Оборачиваем вызов, чтобы добавить объект msg
+                    // MessageImagesAdapter остается старым (принимает (String)->Unit),
+                    // но мы внутри лямбды вызываем наш обновленный onImageClick
+                    h.imagesRecycler.adapter = MessageImagesAdapter(urls) { clickedUrl ->
+                        onImageClick(clickedUrl, msg)
+                    }
+
                 } else {
                     h.imagesRecycler.visibility = View.GONE
                 }
@@ -99,20 +105,20 @@ class MessagesAdapter(
 
     fun update(messages: List<Message>) {
         val newItems = buildList(messages)
-        
+
         val diffCallback = MessagesDiffCallback(items, newItems)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
 
         items.clear()
         items.addAll(newItems)
-        
+
         diffResult.dispatchUpdatesTo(this)
     }
 
     fun addMessage(message: Message) {
         val header = TimeUtils.headerFor(message.sent_at)
         val lastItem = items.lastOrNull()
-        
+
         var needsHeader = true
         if (lastItem is ChatListItem.Msg) {
             val lastHeader = TimeUtils.headerFor(lastItem.message.sent_at)
@@ -120,9 +126,9 @@ class MessagesAdapter(
                 needsHeader = false
             }
         } else if (lastItem is ChatListItem.Header) {
-             if (lastItem.title == header) {
-                 needsHeader = false
-             }
+            if (lastItem.title == header) {
+                needsHeader = false
+            }
         } else if (items.isEmpty()) {
             needsHeader = true
         }
@@ -138,7 +144,6 @@ class MessagesAdapter(
 
     private fun buildList(messages: List<Message>): List<ChatListItem> {
         val list = mutableListOf<ChatListItem>()
-
         var lastHeader = ""
 
         for (m in messages) {
@@ -148,10 +153,8 @@ class MessagesAdapter(
                 list.add(ChatListItem.Header(header))
                 lastHeader = header
             }
-
             list.add(ChatListItem.Msg(m))
         }
-
         return list
     }
 
@@ -184,13 +187,9 @@ class MessagesAdapter(
             if (oldItem is ChatListItem.Msg && newItem is ChatListItem.Msg) {
                 val oldMsg = oldItem.message
                 val newMsg = newItem.message
-
-                // Если ID совпадают (серверные сообщения)
                 if (oldMsg.id != 0 && oldMsg.id == newMsg.id) return true
-
-                // Хак для плавности: если это "то же самое" сообщение (мой ID=0 и контент совпадает)
                 if (oldMsg.id == 0 && newMsg.sender_id == oldMsg.sender_id && newMsg.content == oldMsg.content) {
-                     return true
+                    return true
                 }
                 return false
             }

@@ -129,9 +129,17 @@ class ChatActivity : AppCompatActivity() {
 
         val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
-        adapter = MessagesAdapter(emptyList(), myId) { url ->
-            openViewer(url)
+        // В методе onCreate:
+        adapter = MessagesAdapter(emptyList(), myId) { url, message ->
+            // Предполагаем, что ваш адаптер теперь возвращает не только url, но и объект message
+            openViewer(
+                url = url,
+                senderName = message.display_name ?: "Неизвестный", // Или имя из message
+                sentTime = message.sent_at, // Время отправки
+                caption = message.content   // Текст сообщения под фото
+            )
         }
+
         recycler.adapter = adapter
 
         findViewById<ImageView>(R.id.backBtn).setOnClickListener {
@@ -197,11 +205,15 @@ class ChatActivity : AppCompatActivity() {
         cropLauncher.launch(uCrop.getIntent(this))
     }
 
-    private fun openViewer(url: String) {
+    private fun openViewer(url: String, senderName: String, sentTime: String, caption: String?) {
         val intent = Intent(this, PhotoViewerActivity::class.java)
         intent.putExtra("image_url", url)
+        intent.putExtra("sender_name", senderName)
+        intent.putExtra("sent_time", sentTime)
+        intent.putExtra("caption", caption) // Передаем текст сообщения
         startActivity(intent)
     }
+
 
     private fun updateAttachmentsPreview() {
         attachmentsAdapter.notifyDataSetChanged()
