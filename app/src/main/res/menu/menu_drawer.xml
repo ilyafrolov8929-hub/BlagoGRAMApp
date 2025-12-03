@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/item_chats"
+            android:title="Чаты"
+            android:icon="@drawable/ic_chat" />
+
+        <item
+            android:id="@+id/item_new_chat"
+            android:title="Новый чат +"
+            android:icon="@drawable/ic_add" />
+
+        <item
+            android:id="@+id/item_profile"
+            android:title="Профиль"
+            android:icon="@drawable/ic_user" />
+
+        <item
+            android:id="@+id/item_settings"
+            android:title="Настройки"
+            android:icon="@drawable/ic_settings" />
+    </group>
+
+    <item
+        android:id="@+id/item_logoutheader"
+        />
+
+    <item
+        android:id="@+id/item_logout"
+        android:title="Выйти"
+        android:icon="@drawable/ic_logout" />
+
+</menu>

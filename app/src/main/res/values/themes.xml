@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BlagoGRAMApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.App.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- без ActionBar -->
+    </style>
+</resources>
