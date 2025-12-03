@@ -15,6 +15,8 @@ import com.kia.blagogramapp.api.ApiRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.google.gson.Gson
+import com.kia.blagogramapp.model.UserProfile
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -64,6 +66,9 @@ class ProfileActivity : AppCompatActivity() {
             loadMyProfile()
         } else {
             settingsBtn.visibility = View.GONE
+            // Попытаемся загрузить кэш для чужого профиля, если есть
+            loadUserProfileFromCache(targetUserId)
+            // И грузим с сети
             loadUserProfile(targetUserId)
         }
 
@@ -80,16 +85,40 @@ class ProfileActivity : AppCompatActivity() {
         val statusText = prefs.getString("status", "")
         val avatar = prefs.getString("avatar", "")
         
-        // TODO: Сохранять эти данные тоже локально, пока по нулям
-        val friends = 0
-        val followers = 0
-
-        updateUI(login, displayName, statusText, avatar, friends, followers)
-        
-        // Можно обновить данные с сервера для своего профиля тоже
+        // Сохранять эти данные тоже локально, пока по нулям, если не обновляли
+        // Но мы можем попробовать достать из кэша профиля
         val myId = prefs.getInt("user_id", 0)
+        
+        loadUserProfileFromCache(myId) // Это может перезаписать данные из prefs если кэш свежее
+
+        // Если кэша не было, покажем что есть в prefs
+        if (userID.text.isNullOrEmpty()) {
+             updateUI(login, displayName, statusText, avatar, 0, 0)
+        }
+        
+        // Обновить данные с сервера
         if (myId != 0) {
             loadUserProfile(myId)
+        }
+    }
+
+    private fun loadUserProfileFromCache(userId: Int) {
+        val prefs = getSharedPreferences("app_cache", MODE_PRIVATE)
+        val json = prefs.getString("profile_$userId", null)
+        if (!json.isNullOrEmpty()) {
+            try {
+                val profile = Gson().fromJson(json, UserProfile::class.java)
+                updateUI(
+                    profile.username, 
+                    profile.display_name, 
+                    profile.status, 
+                    profile.avatar,
+                    profile.friends_count,
+                    profile.followers_count
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -98,6 +127,14 @@ class ProfileActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val profile = repo.getUserProfile(token, userId)
+                
+                // Кэшируем профиль
+                val json = Gson().toJson(profile)
+                getSharedPreferences("app_cache", MODE_PRIVATE)
+                    .edit()
+                    .putString("profile_$userId", json)
+                    .apply()
+
                 runOnUiThread {
                     updateUI(
                         profile.username, 
@@ -107,6 +144,16 @@ class ProfileActivity : AppCompatActivity() {
                         profile.friends_count,
                         profile.followers_count
                     )
+                    
+                    // Если это наш профиль, обновим и основные настройки
+                    val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+                    if (userId == myId) {
+                        getSharedPreferences("app", MODE_PRIVATE).edit()
+                            .putString("display_name", profile.display_name)
+                            .putString("status", profile.status)
+                            .putString("avatar", profile.avatar)
+                            .apply()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -386,41 +386,71 @@ class ChatActivity : AppCompatActivity() {
 
     private fun uriToCompressedFile(uri: Uri): File? {
         return try {
-            val contentResolver = contentResolver
-            val mimeType = contentResolver.getType(uri)
-            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
+            val cr = contentResolver
+            val mimeType = cr.getType(uri)
+            val extension = MimeTypeMap.getSingleton()
+                .getExtensionFromMimeType(mimeType) ?: "jpg"
 
-            val inputStream = contentResolver.openInputStream(uri)
-            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream?.close()
-
-            var width = options.outWidth
-            var height = options.outHeight
-            var inSampleSize = 1
-            val reqWidth = 1280
-            val reqHeight = 1280
-
-            if (height > reqHeight || width > reqWidth) {
-                val halfHeight: Int = height / 2
-                val halfWidth: Int = width / 2
-                while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
-                    inSampleSize *= 2
+            // ---- 1. Получаем временный файл из URI ----
+            val originalFile = File(cacheDir, "original_${System.currentTimeMillis()}.$extension")
+            cr.openInputStream(uri)?.use { input ->
+                FileOutputStream(originalFile).use { output ->
+                    input.copyTo(output)
                 }
             }
 
-            val finalOptions = BitmapFactory.Options().apply { this.inSampleSize = inSampleSize }
-            val finalInputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(finalInputStream, null, finalOptions)
-            finalInputStream?.close()
+            // ---- 2. Читаем EXIF ориентацию ----
+            val exif = androidx.exifinterface.media.ExifInterface(originalFile.absolutePath)
+            val orientation = exif.getAttributeInt(
+                androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
+            )
 
-            val file = File(cacheDir, "img_${System.currentTimeMillis()}.$extension")
-            val outputStream = FileOutputStream(file)
-            bitmap?.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-            outputStream.close()
-            bitmap?.recycle()
+            // ---- 3. Декодируем bitmap ----
+            val bitmap = BitmapFactory.decodeFile(originalFile.absolutePath)
 
-            file
+            // ---- 4. Поворачиваем если нужно ----
+            val matrix = android.graphics.Matrix()
+            when (orientation) {
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            }
+
+            val rotated = Bitmap.createBitmap(
+                bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+            )
+
+            // ---- 5. Сжимаем размер (до 1280px max) ----
+            val maxSize = 1280
+            val ratio = rotated.width.toFloat() / rotated.height.toFloat()
+
+            val newWidth: Int
+            val newHeight: Int
+
+            if (ratio > 1) {
+                newWidth = maxSize
+                newHeight = (maxSize / ratio).toInt()
+            } else {
+                newHeight = maxSize
+                newWidth = (maxSize * ratio).toInt()
+            }
+
+            val resized = Bitmap.createScaledBitmap(rotated, newWidth, newHeight, true)
+
+            // ---- 6. Создаём итоговый файл ----
+            val finalFile = File(cacheDir, "img_${System.currentTimeMillis()}.$extension")
+            FileOutputStream(finalFile).use { out ->
+                resized.compress(Bitmap.CompressFormat.JPEG, 80, out)
+            }
+
+            // очищаем память
+            bitmap.recycle()
+            rotated.recycle()
+            resized.recycle()
+
+            finalFile
+
         } catch (e: Exception) {
             e.printStackTrace()
             null

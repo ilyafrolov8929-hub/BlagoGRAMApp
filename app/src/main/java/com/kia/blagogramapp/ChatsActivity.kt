@@ -27,6 +27,8 @@ import com.kia.blagogramapp.network.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class VerticalSpaceDecoration(private val space: Int) : RecyclerView.ItemDecoration() {
     override fun getItemOffsets(
@@ -112,6 +114,10 @@ class ChatsActivity : AppCompatActivity() {
         }
 
         updateHeader()
+        
+        // Сначала пытаемся загрузить из кэша
+        loadChatsFromCache()
+        // Потом грузим с сервера
         loadChats()
     }
 
@@ -199,6 +205,48 @@ class ChatsActivity : AppCompatActivity() {
         Log.d("HEADER", "updated avatar=$avatar name=$name login=$login")
     }
 
+    private fun loadChatsFromCache() {
+        val prefs = getSharedPreferences("app_cache", MODE_PRIVATE)
+        val json = prefs.getString("chats_list", null)
+        if (!json.isNullOrEmpty()) {
+            try {
+                val type = object : TypeToken<List<Chat>>() {}.type
+                val chats: List<Chat> = Gson().fromJson(json, type)
+                if (chats.isNotEmpty()) {
+                    updateAdapter(chats)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun updateAdapter(chats: List<Chat>) {
+        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        
+        val items = chats.map { c ->
+            val prefix = if (c.last_sender_id == myId) "Вы: " else ""
+            ChatItem(
+                chat_id = c.id,
+                user_id = c.user_id ?: 0,
+                name = (c.name ?: "").ifBlank { "Неизвестно" },
+                avatar = c.avatar,
+                last_message = prefix + (c.last_msg ?: ""),
+                last_time = c.last_time,
+                unread = c.unread
+            )
+        }
+
+        recycler.adapter = ChatsAdapter(items) { chat ->
+            val i = Intent(this@ChatsActivity, ChatActivity::class.java)
+            i.putExtra("chat_id", chat.chat_id)
+            i.putExtra("chat_name", chat.name)
+            i.putExtra("chat_avatar", chat.avatar)
+            i.putExtra("target_user_id", chat.user_id) // Передаем ID собеседника
+            startActivity(i)
+        }
+    }
+
     private fun loadChats() {
         val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         val swipe = findViewById<SwipeRefreshLayout>(R.id.swipeChats)
@@ -207,35 +255,23 @@ class ChatsActivity : AppCompatActivity() {
             try {
                 val chats: List<Chat> = repo.getChats(token)
 
-                val items = chats.map { c ->
-                    val prefix = if (c.last_sender_id == myId) "Вы: " else ""
-                    ChatItem(
-                        chat_id = c.id,
-                        user_id = c.user_id ?: 0,
-                        name = (c.name ?: "").ifBlank { "Неизвестно" },
-                        avatar = c.avatar,
-                        last_message = prefix + (c.last_msg ?: ""),
-                        last_time = c.last_time,
-                        unread = c.unread
-                    )
-                }
+                // Сохраняем в кэш JSON
+                val json = Gson().toJson(chats)
+                getSharedPreferences("app_cache", MODE_PRIVATE)
+                    .edit()
+                    .putString("chats_list", json)
+                    .apply()
 
                 runOnUiThread {
                     swipe.isRefreshing = false  // ⬅ ОСТАНАВЛИВАЕМ
-                    recycler.adapter = ChatsAdapter(items) { chat ->
-                        val i = Intent(this@ChatsActivity, ChatActivity::class.java)
-                        i.putExtra("chat_id", chat.chat_id)
-                        i.putExtra("chat_name", chat.name)
-                        i.putExtra("chat_avatar", chat.avatar)
-                        i.putExtra("target_user_id", chat.user_id) // Передаем ID собеседника
-                        startActivity(i)
-                    }
+                    updateAdapter(chats)
                 }
 
             } catch (e: Exception) {
                 runOnUiThread {
                     swipe.isRefreshing = false  // ⬅ ОСТАНАВЛИВАЕМ
-                    e.printStackTrace() }
+                    e.printStackTrace() 
+                }
             }
         }
     }
