@@ -2,6 +2,8 @@ package com.kia.blagogramapp
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -60,6 +62,57 @@ class ProfileEditActivity : AppCompatActivity() {
             finish()
         }
     }
+
+    private fun compressImage(originalFile: File): File {
+        // читаем EXIF
+        val exif = androidx.exifinterface.media.ExifInterface(originalFile.absolutePath)
+        val orientation = exif.getAttributeInt(
+            androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+            androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
+        )
+
+        // загружаем bitmap
+        var bmp = BitmapFactory.decodeFile(originalFile.absolutePath)
+
+        // поворот если нужно
+        val matrix = android.graphics.Matrix()
+
+        when (orientation) {
+            androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        }
+
+        bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
+
+        // уменьшаем разрешение
+        val maxSize = 800
+        val ratio = bmp.width.toFloat() / bmp.height.toFloat()
+
+        val newWidth: Int
+        val newHeight: Int
+
+        if (ratio > 1) {
+            newWidth = maxSize
+            newHeight = (maxSize / ratio).toInt()
+        } else {
+            newHeight = maxSize
+            newWidth = (maxSize * ratio).toInt()
+        }
+
+        val resized = Bitmap.createScaledBitmap(bmp, newWidth, newHeight, true)
+
+        // создаём сжатый файл
+        val compressedFile = File(originalFile.parent, "compressed_${originalFile.name}")
+        val out = FileOutputStream(compressedFile)
+        resized.compress(Bitmap.CompressFormat.JPEG, 70, out)
+        out.flush()
+        out.close()
+
+        return compressedFile
+    }
+
+
 
     // ---- Сохранение профиля ----
     private fun saveProfile() {
@@ -130,12 +183,21 @@ class ProfileEditActivity : AppCompatActivity() {
             val userId = prefs.getInt("user_id", 0)
 
             val fileName = "${userId}_${System.currentTimeMillis()}.jpg"
-            val file = File(filesDir, fileName)
+            val tmpFile = File(filesDir, fileName)
 
-            contentResolver.openInputStream(uri)?.copyTo(FileOutputStream(file))
+            // оригинал копируем
+            contentResolver.openInputStream(uri)?.copyTo(FileOutputStream(tmpFile))
 
-            avatarFile = file
-            avatarFileName = fileName
+            // делаем сжатую копию
+            val compressed = compressImage(tmpFile)
+
+            // используем только сжатую версию
+            avatarFile = compressed
+            avatarFileName = compressed.name
+
+            // чтобы оригинал не занимал место
+            tmpFile.delete()
         }
     }
+
 }
