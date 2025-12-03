@@ -10,13 +10,17 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.App.NoActionBar">
+
         <activity android:name=".ChatsActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ProfileEditActivity" />
         <activity android:name=".SearchUserActivity" />
+        <activity android:name=".PhotoViewerActivity" />
+
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.App.NoActionBar" />
+
         <activity android:name=".StartActivity"
             android:exported="true">
             <intent-filter>
@@ -28,12 +32,10 @@
         <activity
             android:name=".LoginActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data android:scheme="blagogram" />
             </intent-filter>
         </activity>
@@ -42,5 +44,12 @@
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
 
+        <!-- ВОТ ЭТО ДОБАВЬ -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.App.NoActionBar" />
+
     </application>
+
 </manifest>

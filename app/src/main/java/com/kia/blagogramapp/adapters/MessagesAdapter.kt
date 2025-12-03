@@ -14,7 +14,8 @@ import com.kia.blagogramapp.utils.TimeUtils
 
 class MessagesAdapter(
     itemsInput: List<ChatListItem>,
-    private val myId: Int
+    private val myId: Int,
+    private val onImageClick: (String) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var items: MutableList<ChatListItem> = itemsInput.toMutableList()
@@ -86,7 +87,7 @@ class MessagesAdapter(
                             "https://blagogram.ru/uploads/${msg.sender_id}/$it" 
                         }
                     }
-                    h.imagesRecycler.adapter = MessageImagesAdapter(urls)
+                    h.imagesRecycler.adapter = MessageImagesAdapter(urls, onImageClick)
                 } else {
                     h.imagesRecycler.visibility = View.GONE
                 }
@@ -188,9 +189,7 @@ class MessagesAdapter(
                 if (oldMsg.id != 0 && oldMsg.id == newMsg.id) return true
 
                 // Хак для плавности: если это "то же самое" сообщение (мой ID=0 и контент совпадает)
-                // Это позволяет DiffUtil понять, что временное сообщение (id=0) превратилось в серверное
                 if (oldMsg.id == 0 && newMsg.sender_id == oldMsg.sender_id && newMsg.content == oldMsg.content) {
-                     // Можно добавить проверку по images, если критично
                      return true
                 }
                 return false

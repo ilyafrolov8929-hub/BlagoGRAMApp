@@ -11,7 +11,8 @@ import com.kia.blagogramapp.R
 
 class AttachmentsAdapter(
     private var items: MutableList<Uri>,
-    private val onRemove: (Int) -> Unit
+    private val onRemove: (Int) -> Unit,
+    private val onClick: (Int) -> Unit
 ) : RecyclerView.Adapter<AttachmentsAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -34,6 +35,10 @@ class AttachmentsAdapter(
 
         holder.remove.setOnClickListener {
             onRemove(position)
+        }
+        
+        holder.image.setOnClickListener {
+            onClick(position)
         }
     }
 

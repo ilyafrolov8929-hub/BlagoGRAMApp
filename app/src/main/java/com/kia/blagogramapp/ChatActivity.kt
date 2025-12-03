@@ -1,5 +1,6 @@
 package com.kia.blagogramapp
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -26,6 +27,7 @@ import com.kia.blagogramapp.adapters.MessagesAdapter
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.model.Message
+import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +50,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var attachmentsAdapter: AttachmentsAdapter
     private val selectedImages = mutableListOf<Uri>()
     private var isFirstLoad = true
+    private var editingPosition = -1
 
     private val headerContent by lazy { findViewById<View>(R.id.headerContent) }
 
@@ -55,6 +58,18 @@ class ChatActivity : AppCompatActivity() {
         if (uris.isNotEmpty()) {
             selectedImages.addAll(uris)
             updateAttachmentsPreview()
+        }
+    }
+
+    private val cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val resultUri = UCrop.getOutput(result.data!!)
+            resultUri?.let { uri ->
+                if (editingPosition >= 0 && editingPosition < selectedImages.size) {
+                    selectedImages[editingPosition] = uri
+                    updateAttachmentsPreview()
+                }
+            }
         }
     }
 
@@ -114,7 +129,9 @@ class ChatActivity : AppCompatActivity() {
 
         val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
-        adapter = MessagesAdapter(emptyList(), myId)
+        adapter = MessagesAdapter(emptyList(), myId) { url ->
+            openViewer(url)
+        }
         recycler.adapter = adapter
 
         findViewById<ImageView>(R.id.backBtn).setOnClickListener {
@@ -123,10 +140,17 @@ class ChatActivity : AppCompatActivity() {
 
         // Attachments setup
         attachmentsRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        attachmentsAdapter = AttachmentsAdapter(selectedImages) { position ->
-            selectedImages.removeAt(position)
-            updateAttachmentsPreview()
-        }
+        attachmentsAdapter = AttachmentsAdapter(
+            items = selectedImages,
+            onRemove = { position ->
+                selectedImages.removeAt(position)
+                updateAttachmentsPreview()
+            },
+            onClick = { position ->
+                editingPosition = position
+                startCrop(selectedImages[position])
+            }
+        )
         attachmentsRecycler.adapter = attachmentsAdapter
 
         attachBtn.setOnClickListener {
@@ -160,6 +184,23 @@ class ChatActivity : AppCompatActivity() {
             }
             return@setOnTouchListener false
         }
+    }
+
+    private fun startCrop(uri: Uri) {
+        val destinationFileName = "cropped_${System.currentTimeMillis()}.jpg"
+        val destinationUri = Uri.fromFile(File(cacheDir, destinationFileName))
+
+        val uCrop = UCrop.of(uri, destinationUri)
+            .withAspectRatio(1f, 1f) 
+            .withMaxResultSize(1080, 1080)
+            
+        cropLauncher.launch(uCrop.getIntent(this))
+    }
+
+    private fun openViewer(url: String) {
+        val intent = Intent(this, PhotoViewerActivity::class.java)
+        intent.putExtra("image_url", url)
+        startActivity(intent)
     }
 
     private fun updateAttachmentsPreview() {

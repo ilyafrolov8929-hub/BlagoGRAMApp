@@ -9,7 +9,8 @@ import coil.load
 import com.kia.blagogramapp.R
 
 class MessageImagesAdapter(
-    private val imageUrls: List<String>
+    private val imageUrls: List<String>,
+    private val onImageClick: (String) -> Unit
 ) : RecyclerView.Adapter<MessageImagesAdapter.Holder>() {
 
     class Holder(v: View) : RecyclerView.ViewHolder(v) {
@@ -26,6 +27,10 @@ class MessageImagesAdapter(
         holder.img.load(url) {
             crossfade(true)
             placeholder(R.drawable.ic_photo)
+        }
+        
+        holder.img.setOnClickListener {
+            onImageClick(url)
         }
     }
 
