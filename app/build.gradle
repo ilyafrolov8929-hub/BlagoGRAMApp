@@ -39,10 +39,11 @@ dependencies {
     implementation "com.squareup.okhttp3:logging-interceptor:4.10.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
     implementation "io.coil-kt:coil:2.2.2"
-// Для зума картинок при просмотре
+    // Для зума картинок при просмотре
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
 
     // Для редактирования (кроп, поворот)
     implementation 'com.github.yalantis:ucrop:2.2.8'
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation libs.androidx.cardview
 }

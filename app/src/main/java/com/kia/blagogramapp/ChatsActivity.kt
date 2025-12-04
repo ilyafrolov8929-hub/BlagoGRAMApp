@@ -6,20 +6,15 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.View
 import android.view.WindowInsetsController
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import coil.load
-import com.google.android.material.navigation.NavigationView
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.kia.blagogramapp.adapters.ChatsAdapter
-import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.models.ChatItem
@@ -44,12 +39,9 @@ class VerticalSpaceDecoration(private val space: Int) : RecyclerView.ItemDecorat
 
 class ChatsActivity : AppCompatActivity() {
 
-    private lateinit var menuBtn: ImageView
     private lateinit var logo: TextView
-
-    private lateinit var drawer: DrawerLayout
-    private lateinit var navigationView: NavigationView
     private lateinit var recycler: RecyclerView
+    private lateinit var bottomNav: BottomNavigationView
     private var repo = ApiRepository(RetrofitClient.api)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,8 +52,6 @@ class ChatsActivity : AppCompatActivity() {
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         window.statusBarColor = Color.TRANSPARENT
         setContentView(R.layout.activity_chats)
-        drawer = findViewById(R.id.drawerLayout)
-        navigationView = findViewById(R.id.navigationView)
 
         val swipe = findViewById<SwipeRefreshLayout>(R.id.swipeChats)
 
@@ -69,8 +59,8 @@ class ChatsActivity : AppCompatActivity() {
             loadChats()
         }
 
-        menuBtn = findViewById(R.id.menuBtn)
         logo = findViewById(R.id.logo)
+        bottomNav = findViewById(R.id.bottomNav)
 
         applyThemeAuto()
 
@@ -80,40 +70,27 @@ class ChatsActivity : AppCompatActivity() {
         // ОТСТУП МЕЖДУ ЭЛЕМЕНТАМИ (важно!)
         recycler.addItemDecoration(VerticalSpaceDecoration(18))
 
+        logo.text = "Чаты"
 
-        findViewById<ImageView>(R.id.menuBtn).setOnClickListener {
-            drawer.openDrawer(Gravity.LEFT)
-        }
-
-        logo.text = "Привет, ${getSharedPreferences("app", MODE_PRIVATE).getString("display_name", "Имя") ?: "Имя"}!"
-
-        navigationView.setNavigationItemSelectedListener { item ->
+        bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.item_logout -> {
-                    getSharedPreferences("app", MODE_PRIVATE).edit().clear().apply()
-                    finish()
+                R.id.nav_chats -> {
+                    true
                 }
-
-                R.id.item_profile -> {
-                    startActivity(Intent(this, ProfileActivity::class.java))
-                    drawer.closeDrawers()
-                }
-
-                R.id.item_settings -> {
-                    startActivity(Intent(this, ProfileEditActivity::class.java))
-                    drawer.closeDrawers()
-                }
-
-                R.id.item_new_chat -> {
+                R.id.nav_search -> {
                     startActivity(Intent(this, SearchUserActivity::class.java))
-                    drawer.closeDrawers()
+                    false
                 }
-
+                R.id.nav_profile -> {
+                    val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+                    val intent = Intent(this, ProfileActivity::class.java)
+                    intent.putExtra("user_id", myId)
+                    startActivity(intent)
+                    false
+                }
+                else -> false
             }
-            true
         }
-
-        updateHeader()
         
         // Сначала пытаемся загрузить из кэша
         loadChatsFromCache()
@@ -154,7 +131,7 @@ class ChatsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateHeader()
+        bottomNav.selectedItemId = R.id.nav_chats
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -168,41 +145,14 @@ class ChatsActivity : AppCompatActivity() {
 
         if (isDark) {
             // ТЁМНАЯ ТЕМА → светлые элементы
-            menuBtn.setColorFilter(Color.WHITE)
             logo.setTextColor(Color.WHITE)
             setStatusBarIconsDark(false)  // ← ИКОНКИ СТАТУСБАРА СВЕТЛЫЕ
 
         } else {
             // СВЕТЛАЯ ТЕМА → тёмные элементы
-            menuBtn.setColorFilter(Color.BLACK)
             logo.setTextColor(Color.BLACK)
             setStatusBarIconsDark(true)  // ← ИКОНКИ СТАТУСБАРА СВЕТЛЫЕ
         }
-    }
-
-    private fun updateHeader() {
-        val prefs = getSharedPreferences("app", MODE_PRIVATE)
-
-        val avatar = prefs.getString("avatar", "")
-        val name = prefs.getString("display_name", "Имя")
-        val login = prefs.getString("login", "")
-
-        val header = navigationView.getHeaderView(0)
-
-        val headerAvatar = header.findViewById<ImageView>(R.id.navAvatar)
-        val headerName = header.findViewById<TextView>(R.id.navName)         // display_name
-        val headerUsername = header.findViewById<TextView>(R.id.navUsername) // @login
-
-        headerName.text = name
-        headerUsername.text = "@$login"
-
-        headerAvatar.load("https://blagogram.ru/avatars/${avatar}?v=${System.currentTimeMillis()}") {
-            crossfade(true)
-            placeholder(R.drawable.ic_user_placeholder)
-            error(R.drawable.ic_user_placeholder)
-        }
-
-        Log.d("HEADER", "updated avatar=$avatar name=$name login=$login")
     }
 
     private fun loadChatsFromCache() {
@@ -250,7 +200,6 @@ class ChatsActivity : AppCompatActivity() {
     private fun loadChats() {
         val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         val swipe = findViewById<SwipeRefreshLayout>(R.id.swipeChats)
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val chats: List<Chat> = repo.getChats(token)

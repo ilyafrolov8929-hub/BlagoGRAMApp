@@ -18,7 +18,10 @@
         android:layout_height="wrap_content"
         android:background="@drawable/chat_input_bg"
         android:hint="Поиск..."
+        android:textColor="#FFFFFF"
+        android:textColorHint="#80FFFFFF"
         android:padding="12dp" />
+
 
     <ProgressBar
         android:id="@+id/searchProgress"

@@ -61,6 +61,19 @@ class ProfileEditActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.btnBackProfileEdit).setOnClickListener {
             finish()
         }
+
+        findViewById<TextView>(R.id.btnLogout).setOnClickListener {
+            val p = getSharedPreferences("app", MODE_PRIVATE)
+            p.edit().clear().apply()
+            
+            // Также очистим кэш
+            getSharedPreferences("app_cache", MODE_PRIVATE).edit().clear().apply()
+
+            val intent = Intent(this, StartActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
     }
 
     private fun compressImage(originalFile: File): File {

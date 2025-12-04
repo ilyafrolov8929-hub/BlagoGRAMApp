@@ -56,7 +56,7 @@ class ProfileActivity : AppCompatActivity() {
         val isMyProfile = (targetUserId == 0 || targetUserId == myId)
 
         // кнопка настройки (⚙️)
-        val settingsBtn = findViewById<ImageView>(R.id.btnSettings)
+        val settingsBtn = findViewById<View>(R.id.btnSettings)
         settingsBtn.setOnClickListener {
             startActivity(Intent(this, ProfileEditActivity::class.java))
         }
@@ -73,7 +73,7 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         // кнопка назад
-        findViewById<ImageView>(R.id.exit_profile).setOnClickListener {
+        findViewById<View>(R.id.exit_profile).setOnClickListener {
             finish()
         }
     }
@@ -85,18 +85,14 @@ class ProfileActivity : AppCompatActivity() {
         val statusText = prefs.getString("status", "")
         val avatar = prefs.getString("avatar", "")
         
-        // Сохранять эти данные тоже локально, пока по нулям, если не обновляли
-        // Но мы можем попробовать достать из кэша профиля
         val myId = prefs.getInt("user_id", 0)
         
-        loadUserProfileFromCache(myId) // Это может перезаписать данные из prefs если кэш свежее
+        loadUserProfileFromCache(myId)
 
-        // Если кэша не было, покажем что есть в prefs
-        if (userID.text.isNullOrEmpty()) {
+        if (userID.text.isNullOrEmpty() || userID.text == "@") {
              updateUI(login, displayName, statusText, avatar, 0, 0)
         }
         
-        // Обновить данные с сервера
         if (myId != 0) {
             loadUserProfile(myId)
         }
@@ -128,7 +124,6 @@ class ProfileActivity : AppCompatActivity() {
             try {
                 val profile = repo.getUserProfile(token, userId)
                 
-                // Кэшируем профиль
                 val json = Gson().toJson(profile)
                 getSharedPreferences("app_cache", MODE_PRIVATE)
                     .edit()
@@ -145,7 +140,6 @@ class ProfileActivity : AppCompatActivity() {
                         profile.followers_count
                     )
                     
-                    // Если это наш профиль, обновим и основные настройки
                     val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
                     if (userId == myId) {
                         getSharedPreferences("app", MODE_PRIVATE).edit()
@@ -212,18 +206,14 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun applyTopBarStyle(isLight: Boolean) {
-        val exit = findViewById<ImageView>(R.id.exit_profile)
-        val settings = findViewById<ImageView>(R.id.btnSettings)
         val user = findViewById<TextView>(R.id.userID)
-
+        
         if (isLight) {
-            exit.setColorFilter(Color.BLACK)
-            settings.setColorFilter(Color.BLACK)
             user.setTextColor(Color.BLACK)
+            user.setShadowLayer(0f, 0f, 0f, 0)
         } else {
-            exit.setColorFilter(Color.WHITE)
-            settings.setColorFilter(Color.WHITE)
             user.setTextColor(Color.WHITE)
+            user.setShadowLayer(2f, 1f, 1f, Color.BLACK)
         }
     }
 }

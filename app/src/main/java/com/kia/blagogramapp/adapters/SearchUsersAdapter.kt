@@ -36,7 +36,7 @@ class SearchUsersAdapter(
     override fun onBindViewHolder(h: Holder, pos: Int) {
         val u = items[pos]
 
-        h.name.text = u.display_name
+        h.name.text = if (u.display_name.isNullOrEmpty()) "Неизвестно" else u.display_name
         h.username.text = "@${u.username}"
 
         h.avatar.load("https://blagogram.ru/avatars/${u.avatar}") {

@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="#000A0A1F"
     android:fitsSystemWindows="true"
+    android:animateLayoutChanges="true"
     android:orientation="vertical">
 
     <RelativeLayout
@@ -19,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
-            android:background="#858585"
+            android:background="#454545"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="17dp">
@@ -29,7 +30,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_back"
-                android:tint="#FFFFFF" />
+                app:tint="#FFFFFF" />
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/chatAvatar"
@@ -138,7 +139,7 @@
             android:layout_marginStart="10dp"
             android:padding="10dp"
             android:src="@drawable/ic_sendfile"
-            android:tint="#A9A8A8" />
+            app:tint="#A9A8A8" />
 
         <ImageView
             android:id="@+id/sendBtn"
@@ -147,7 +148,7 @@
             android:layout_marginStart="10dp"
             android:padding="10dp"
             android:src="@drawable/ic_send"
-            android:tint="#A9A8A8" />
+            app:tint="#A9A8A8" />
 
     </LinearLayout>
 
