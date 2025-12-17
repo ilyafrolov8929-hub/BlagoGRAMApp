@@ -16,15 +16,22 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.WindowCompat
 
 class StartActivity : AppCompatActivity() {
+    private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // 1. Инициализация тем
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        DesignEngine.Theme.apply(isDarkTheme)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
+
+        isCurrentThemeDark = isDarkTheme
+        isCurrentUseMonet = useMonet
+
+        DesignEngine.Theme.apply(isDarkTheme, useMonet)
         
         // 2. Настройка окна
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -134,5 +141,19 @@ class StartActivity : AppCompatActivity() {
         rootLayout.addView(copyrightView, copyrightParams)
         
         setContentView(rootLayout)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Проверяем смену темы
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
+        val isNowMonet = themePrefs.getBoolean("use_monet", false)
+
+        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
+            recreate()
+            return
+        }
     }
 }

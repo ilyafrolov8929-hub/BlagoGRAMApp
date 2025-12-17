@@ -38,6 +38,7 @@ class ChatsActivity : AppCompatActivity() {
     private var repo = ApiRepository(RetrofitClient.api)
 
     private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
 
     // Элементы бокового меню
     private lateinit var drawerOverlay: FrameLayout
@@ -51,9 +52,12 @@ class ChatsActivity : AppCompatActivity() {
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
+        
         isCurrentThemeDark = isDarkTheme
+        isCurrentUseMonet = useMonet
 
-        DesignEngine.Theme.apply(isDarkTheme)
+        DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
         // 2. Настройка окна
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -379,7 +383,9 @@ class ChatsActivity : AppCompatActivity() {
         // Проверяем смену темы
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
-        if (isNowDark != isCurrentThemeDark) {
+        val isNowMonet = themePrefs.getBoolean("use_monet", false)
+        
+        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
             recreate()
             return
         }

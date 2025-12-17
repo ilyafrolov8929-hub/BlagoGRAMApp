@@ -6,6 +6,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
@@ -14,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import coil.load
 import com.google.android.material.imageview.ShapeableImageView
 
@@ -55,12 +57,14 @@ object LayoutHelper {
  */
 object DesignEngine {
     var density: Float = 1f
+    var context: Context? = null
 
-    fun init(context: Context) {
-        density = context.resources.displayMetrics.density
+    fun init(ctx: Context) {
+        density = ctx.resources.displayMetrics.density
+        context = ctx.applicationContext
     }
 
-    // Совместимость со старым кодом: эти константы теперь перенаправляют на текущую тему
+    // Геттеры для цветов (ссылаются на текущие значения в Theme)
     val COLOR_BACKGROUND get() = Theme.colorBackground
     val COLOR_SHEET_BACKGROUND get() = Theme.colorSheetBackground
     val COLOR_CARD_BACKGROUND get() = Theme.colorCardBackground
@@ -73,15 +77,13 @@ object DesignEngine {
     val COLOR_CHEVRON get() = Theme.colorChevron
     val COLOR_DIVIDER get() = Theme.colorDivider
     val COLOR_LOGOUT get() = Theme.colorLogout
-    
-    // Новая константа для акцентного цвета
     val COLOR_BLUE get() = Theme.colorBlue
 
     /**
-     * Движок тем. Хранит текущие цвета и умеет их переключать.
+     * Движок тем.
      */
     object Theme {
-        // Значения по умолчанию (Светлая тема)
+        // Значения по умолчанию
         var colorBackground: Int = 0xFFf7f7f7.toInt()
         var colorSheetBackground: Int = 0xFFE6E6E6.toInt()
         var colorCardBackground: Int = 0xFFFFFFFF.toInt()
@@ -94,16 +96,51 @@ object DesignEngine {
         var colorChevron: Int = 0xFFB0B0B0.toInt()
         var colorDivider: Int = 0xFFF0F0F0.toInt()
         var colorLogout: Int = 0xFFF44336.toInt()
-        var colorBlue: Int = 0xFF007AFF.toInt() // Стандартный синий iOS/Telegram
+        var colorBlue: Int = 0xFF007AFF.toInt()
 
-        fun apply(isDark: Boolean) {
-            if (isDark) {
-                // --- Цвета темной темы ---
+        fun apply(isDark: Boolean, isMonet: Boolean = false) {
+            val ctx = DesignEngine.context
+            
+            // Проверка на Monet (Android 12+)
+            if (isMonet && ctx != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (isDark) {
+                    // --- MONET DARK ---
+                    colorBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_900)
+                    colorSheetBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_900)
+                    colorCardBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_800)
+                    colorProfileName = ContextCompat.getColor(ctx, android.R.color.system_accent1_100)
+                    colorProfileStatus = ContextCompat.getColor(ctx, android.R.color.system_accent2_200)
+                    colorHeader = ContextCompat.getColor(ctx, android.R.color.system_accent2_300)
+                    colorTextPrimary = ContextCompat.getColor(ctx, android.R.color.system_accent1_50)
+                    colorTextSecondary = ContextCompat.getColor(ctx, android.R.color.system_neutral2_300)
+                    colorIconPrimary = ContextCompat.getColor(ctx, android.R.color.system_accent1_100)
+                    colorChevron = ContextCompat.getColor(ctx, android.R.color.system_neutral2_500)
+                    colorDivider = ContextCompat.getColor(ctx, android.R.color.system_neutral1_700)
+                    colorLogout = 0xFFFF453A.toInt() 
+                    colorBlue = ContextCompat.getColor(ctx, android.R.color.system_accent1_300) // Яркий акцент
+                } else {
+                    // --- MONET LIGHT ---
+                    colorBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_50)
+                    colorSheetBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_100)
+                    colorCardBackground = ContextCompat.getColor(ctx, android.R.color.system_accent1_10) // Чуть-чуть оттенок
+                    colorProfileName = 0xFF000000.toInt()
+                    colorProfileStatus = ContextCompat.getColor(ctx, android.R.color.system_neutral2_600)
+                    colorHeader = ContextCompat.getColor(ctx, android.R.color.system_neutral2_700)
+                    colorTextPrimary = ContextCompat.getColor(ctx, android.R.color.system_accent1_900)
+                    colorTextSecondary = ContextCompat.getColor(ctx, android.R.color.system_neutral2_600)
+                    colorIconPrimary = ContextCompat.getColor(ctx, android.R.color.system_accent1_800)
+                    colorChevron = ContextCompat.getColor(ctx, android.R.color.system_neutral2_300)
+                    colorDivider = ContextCompat.getColor(ctx, android.R.color.system_neutral1_200)
+                    colorLogout = 0xFFF44336.toInt()
+                    colorBlue = ContextCompat.getColor(ctx, android.R.color.system_accent1_600) // Насыщенный акцент
+                }
+            } else if (isDark) {
+                // --- STANDART DARK ---
                 colorBackground = 0xFF1A1A1A.toInt()
                 colorSheetBackground = 0xFF000000.toInt()
-                colorCardBackground = 0xFF1C1C1E.toInt()
+                colorCardBackground = 0xFF2C2C2E.toInt()
                 colorProfileName = 0xFFFFFFFF.toInt()
-                colorProfileStatus = 0xFFEBEBF5.toInt() // Можно добавить альфу
+                colorProfileStatus = 0xFFEBEBF5.toInt()
                 colorHeader = 0xFF8E8E93.toInt()
                 colorTextPrimary = 0xFFFFFFFF.toInt()
                 colorTextSecondary = 0xFF8E8E93.toInt()
@@ -111,20 +148,20 @@ object DesignEngine {
                 colorChevron = 0xFF8E8E93.toInt()
                 colorDivider = 0xFF38383A.toInt()
                 colorLogout = 0xFFFF453A.toInt()
-                colorBlue = 0xFF0A84FF.toInt() // Синий для темной темы (чуть ярче)
+                colorBlue = 0xFF0A84FF.toInt()
             } else {
-                // --- Цвета светлой темы ---
-                colorBackground = 0xFFf7f7f7.toInt()
-                colorSheetBackground = 0xFFE6E6E6.toInt()
+                // --- STANDART LIGHT ---
+                colorBackground = 0xFFF2F2F7.toInt()
+                colorSheetBackground = 0xFFFFFFFF.toInt()
                 colorCardBackground = 0xFFFFFFFF.toInt()
                 colorProfileName = 0xFFFFFFFF.toInt()
                 colorProfileStatus = 0xFFB0B0B0.toInt()
-                colorHeader = 0xFF707070.toInt()
+                colorHeader = 0xFF8E8E93.toInt()
                 colorTextPrimary = 0xFF000000.toInt()
                 colorTextSecondary = 0xFF8E8E93.toInt()
                 colorIconPrimary = 0xFF333333.toInt()
-                colorChevron = 0xFFB0B0B0.toInt()
-                colorDivider = 0xFFF0F0F0.toInt()
+                colorChevron = 0xFFC7C7CC.toInt()
+                colorDivider = 0xFFC6C6C8.toInt()
                 colorLogout = 0xFFF44336.toInt()
                 colorBlue = 0xFF007AFF.toInt()
             }
@@ -194,7 +231,7 @@ class HeaderCell(context: Context) : TextView(context) {
         isAllCaps = true
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(DesignEngine.COLOR_HEADER)
-        layoutParams = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 8, 0, 8, 8)
+        layoutParams = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 16, 8)
     }
 }
 
@@ -203,7 +240,7 @@ class ContainerCell(context: Context) : LinearLayout(context) {
         orientation = VERTICAL
         background = GradientDrawable().apply {
             setColor(DesignEngine.COLOR_CARD_BACKGROUND)
-            cornerRadius = LayoutHelper.dp(16).toFloat()
+            cornerRadius = LayoutHelper.dp(12).toFloat()
         }
     }
 
@@ -258,7 +295,7 @@ class TextCell(context: Context) : FrameLayout(context) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(LayoutHelper.dp(54), MeasureSpec.EXACTLY))
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(LayoutHelper.dp(50), MeasureSpec.EXACTLY))
     }
 }
 
@@ -269,7 +306,7 @@ class SpacerCell(context: Context, height: Int) : View(context) {
 }
 
 /**
- * Ячейка чата в списке чатов (аналог item_chat.xml).
+ * Ячейка чата
  */
 class ChatCell(context: Context) : FrameLayout(context) {
     val avatarView: ShapeableImageView
@@ -284,31 +321,26 @@ class ChatCell(context: Context) : FrameLayout(context) {
         foreground = context.getDrawable(outValue.resourceId)
         isClickable = true
         
-        // Фон самой ячейки (можно сделать прозрачным, так как список имеет фон, но для надежности можно задать)
-        // setBackgroundColor(DesignEngine.COLOR_CARD_BACKGROUND) // По желанию
-
-        // Паддинги самой ячейки
-        setPadding(LayoutHelper.dp(20), LayoutHelper.dp(10), LayoutHelper.dp(20), LayoutHelper.dp(10))
+        setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
 
         // 1. Аватар
         avatarView = ShapeableImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             setBackgroundColor(Color.LTGRAY)
-            // Круглая форма
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setAllCornerSizes(LayoutHelper.dp(25).toFloat()) // 50dp / 2
+                .setAllCornerSizes(LayoutHelper.dp(25).toFloat())
                 .build()
         }
         addView(avatarView, LayoutHelper.createFrame(50, 50, Gravity.CENTER_VERTICAL or Gravity.START))
 
-        // 2. Контейнер текстов (Имя + Сообщение)
+        // 2. Имя и сообщение
         val textContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
         }
         
         nameView = TextView(context).apply {
-            textSize = 18f
+            textSize = 17f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(DesignEngine.COLOR_TEXT_PRIMARY)
             maxLines = 1
@@ -316,7 +348,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
         }
         
         messageView = TextView(context).apply {
-            textSize = 14f
+            textSize = 15f
             setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
@@ -325,28 +357,28 @@ class ChatCell(context: Context) : FrameLayout(context) {
         textContainer.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
         textContainer.addView(messageView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 2, 0, 0))
         
-        // Добавляем контейнер с отступом слева (50 + 16 = 66)
         addView(textContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START, 66, 0, 60, 0))
 
-        // 3. Контейнер Мета (Время + Badge)
+        // 3. Мета
         val metaContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
         }
         
         timeView = TextView(context).apply {
-            textSize = 12f
+            textSize = 13f
             setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
         }
         
         unreadBadge = TextView(context).apply {
-            textSize = 12f
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             setPadding(LayoutHelper.dp(6), LayoutHelper.dp(2), LayoutHelper.dp(6), LayoutHelper.dp(2))
             background = GradientDrawable().apply {
                 setColor(DesignEngine.COLOR_BLUE)
-                cornerRadius = LayoutHelper.dp(12).toFloat()
+                cornerRadius = LayoutHelper.dp(14).toFloat()
             }
             visibility = View.GONE
         }
@@ -365,7 +397,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
         if (unread > 0) {
             unreadBadge.text = unread.toString()
             unreadBadge.visibility = View.VISIBLE
-            timeView.setTextColor(DesignEngine.COLOR_BLUE) // Время синим, если есть непрочитанные
+            timeView.setTextColor(DesignEngine.COLOR_BLUE)
         } else {
             unreadBadge.visibility = View.GONE
             timeView.setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)

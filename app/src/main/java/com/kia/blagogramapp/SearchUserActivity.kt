@@ -36,6 +36,8 @@ class SearchUserActivity : AppCompatActivity() {
     private lateinit var progress: ProgressBar
     private lateinit var backBtn: View
     private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,9 +46,12 @@ class SearchUserActivity : AppCompatActivity() {
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        isCurrentThemeDark = isDarkTheme
+        val useMonet = themePrefs.getBoolean("use_monet", false)
 
-        DesignEngine.Theme.apply(isDarkTheme)
+        isCurrentThemeDark = isDarkTheme
+        isCurrentUseMonet = useMonet
+
+        DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
         // Enable Edge-to-Edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -223,7 +228,9 @@ class SearchUserActivity : AppCompatActivity() {
         // Проверяем смену темы
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
-        if (isNowDark != isCurrentThemeDark) {
+        val isNowMonet = themePrefs.getBoolean("use_monet", false)
+
+        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
             recreate()
             return
         }

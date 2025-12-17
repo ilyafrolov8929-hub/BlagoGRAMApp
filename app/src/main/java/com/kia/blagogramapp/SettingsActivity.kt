@@ -20,17 +20,22 @@ import androidx.appcompat.app.AppCompatActivity
  * Воссоздаем дизайн из activity_settings.xml с помощью кода.
  */
 class SettingsActivity : AppCompatActivity() {
+    private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- 1. Темы ---
+        // 1. Инициализация тем
         DesignEngine.init(this)
-
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
 
-        DesignEngine.Theme.apply(isDarkTheme)
+        isCurrentThemeDark = isDarkTheme
+        isCurrentUseMonet = useMonet
+
+        DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
         // --- 2. Настройка окна ---
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -112,7 +117,7 @@ class SettingsActivity : AppCompatActivity() {
             setData("Уведомления и звуки", R.drawable.ic_music)
         })
         settingsCard.addCell(TextCell(this).apply {
-            setData("Темы и кастомизация", R.drawable.ic_music)
+            setData("Темы и кастомизация", R.drawable.ic_brush)
             setOnClickListener { startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java)) }
         }, isLast = true)
 
@@ -257,5 +262,19 @@ class SettingsActivity : AppCompatActivity() {
             result = resources.getDimensionPixelSize(resourceId)
         }
         return result
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Проверяем смену темы
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
+        val isNowMonet = themePrefs.getBoolean("use_monet", false)
+
+        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
+            recreate()
+            return
+        }
     }
 }
