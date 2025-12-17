@@ -2,11 +2,17 @@ package com.kia.blagogramapp
 
 import android.app.Activity
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.os.Bundle
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import coil.load
 import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.api.ApiClient
@@ -33,7 +39,47 @@ class ProfileEditActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // 1. Enable Edge-to-Edge
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         setContentView(R.layout.activity_profile_edit)
+
+        // 2. Handle Insets
+        val rootLayout = findViewById<View>(R.id.rootLayout)
+        val headerContent = findViewById<View>(R.id.headerContent)
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = view.resources.displayMetrics.density
+            val topPaddingExtra = (15 * density).toInt() // 15dp extra padding
+
+            // Padding for header (status bar height + extra space)
+            headerContent.setPadding(
+                headerContent.paddingLeft,
+                insets.top + topPaddingExtra,
+                headerContent.paddingRight,
+                headerContent.paddingBottom
+            )
+            
+            // Padding for bottom (navigation bar)
+            view.setPadding(
+                view.paddingLeft,
+                view.paddingTop,
+                view.paddingRight,
+                insets.bottom
+            )
+            
+            WindowInsetsCompat.CONSUMED
+        }
+
+        // 3. Fix Status Bar Color logic
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val window = window
+        window.statusBarColor = Color.TRANSPARENT // Make sure it's transparent so header color shows through
+        
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.isAppearanceLightStatusBars = !isDark // Dark icons for Light theme, Light icons for Dark theme
 
         repo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
 
@@ -48,30 +94,19 @@ class ProfileEditActivity : AppCompatActivity() {
 
         avatarView.load("https://blagogram.ru/avatars/${prefs.getString("avatar", "")}")
 
-        findViewById<ImageView>(R.id.editAvatarBtn).setOnClickListener {
+        findViewById<View>(R.id.editAvatarBtn).setOnClickListener {
             val pick = Intent(Intent.ACTION_PICK)
             pick.type = "image/*"
             startActivityForResult(pick, PICK_AVATAR)
         }
 
-        findViewById<Button>(R.id.btnSave).setOnClickListener {
+        // Fixed ClassCastException: Use View or ImageView instead of Button
+        findViewById<View>(R.id.btnSave).setOnClickListener {
             saveProfile()
         }
 
-        findViewById<ImageView>(R.id.btnBackProfileEdit).setOnClickListener {
-            finish()
-        }
-
-        findViewById<TextView>(R.id.btnLogout).setOnClickListener {
-            val p = getSharedPreferences("app", MODE_PRIVATE)
-            p.edit().clear().apply()
-            
-            // Также очистим кэш
-            getSharedPreferences("app_cache", MODE_PRIVATE).edit().clear().apply()
-
-            val intent = Intent(this, StartActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
+        // Fixed ClassCastException: Use View or LinearLayout instead of ImageView
+        findViewById<View>(R.id.btnBackProfileEdit).setOnClickListener {
             finish()
         }
     }

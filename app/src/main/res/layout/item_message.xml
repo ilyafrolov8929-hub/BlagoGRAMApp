@@ -8,11 +8,11 @@
     <!-- Left (incoming) -->
     <LinearLayout
         android:id="@+id/leftBubble"
-        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="start"
         android:orientation="horizontal"
-        android:layout_gravity="start">
+        android:visibility="gone">
 
         <ImageView
             android:id="@+id/msgAvatarLeft"
@@ -22,11 +22,11 @@
             android:src="@mipmap/ic_launcher" />
 
         <LinearLayout
-            android:background="@drawable/bg_bubble_incoming"
-            android:padding="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:background="@drawable/bg_bubble_incoming"
+            android:orientation="vertical"
+            android:padding="10dp">
 
             <TextView
                 android:id="@+id/msgTextLeft"
@@ -37,27 +37,27 @@
                 android:id="@+id/msgTimeLeft"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="11sp"
+                android:layout_marginTop="4dp"
                 android:textColor="#888"
-                android:layout_marginTop="4dp" />
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
 
     <!-- Right (outgoing) -->
     <LinearLayout
         android:id="@+id/rightBubble"
-        android:visibility="gone"
-        android:layout_gravity="end"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_gravity="end"
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <LinearLayout
-            android:background="@drawable/bg_bubble_outgoing"
-            android:padding="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:background="@drawable/bg_bubble_outgoing"
+            android:orientation="vertical"
+            android:padding="10dp">
 
             <TextView
                 android:id="@+id/msgTextRight"
@@ -68,9 +68,9 @@
                 android:id="@+id/msgTimeRight"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="11sp"
+                android:layout_marginTop="4dp"
                 android:textColor="#666"
-                android:layout_marginTop="4dp" />
+                android:textSize="11sp" />
         </LinearLayout>
 
         <ImageView

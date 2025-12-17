@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.vanniktech.emoji.EmojiTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/emojiText"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:padding="4dp"
+    android:includeFontPadding="false"
+    android:textColor="#000000"
+    android:textSize="28sp"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:clickable="true"
+    android:focusable="true"/>

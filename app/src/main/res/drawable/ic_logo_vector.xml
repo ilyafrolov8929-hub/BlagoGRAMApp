@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Background (Optional, remove if you want transparent) -->
+    <!--
+    <path
+        android:pathData="M0,0h100v100h-100z"
+        android:fillColor="#1a1a2e"/>
+    -->
+
+    <!-- The Stylized B -->
+    <path
+        android:strokeWidth="3"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M30,15 L60,15 C75,15 85,25 85,35 C85,45 75,52 65,52 C78,52 85,62 85,72 C85,85 75,90 60,90 L30,90 L30,65 L30,15 Z M45,28 L45,42 L58,42 C65,42 68,38 68,35 C68,32 65,28 58,28 L45,28 Z M45,62 L45,78 L58,78 C68,78 70,75 70,70 C70,65 68,62 58,62 L45,62 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startY="10"
+                android:startX="30"
+                android:endY="90"
+                android:endX="80"
+                android:type="linear">
+                <item android:offset="0" android:color="#00FFFF"/>
+                <item android:offset="1" android:color="#AA00FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

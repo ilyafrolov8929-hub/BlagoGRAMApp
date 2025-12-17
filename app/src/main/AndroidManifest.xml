@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <application
+        android:name=".App"
         android:label="@string/app_name"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -14,8 +15,12 @@
         <activity android:name=".ChatsActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ProfileEditActivity" />
+        <activity android:name=".SettingsActivity" />
         <activity android:name=".SearchUserActivity" />
         <activity android:name=".PhotoViewerActivity" />
+        <activity android:name=".AboutActivity" />
+        <activity android:name=".DesignEngineActivity" />
+        <activity android:name=".ThemeSelectionActivity" />
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustResize"
@@ -44,7 +49,6 @@
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
 
-        <!-- ВОТ ЭТО ДОБАВЬ -->
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"

@@ -2,21 +2,20 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingVertical="8dp">
 
-    <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    <TextView
         android:id="@+id/dayTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginVertical="12dp"
-        android:background="@drawable/avatar_edit_bg"
+        android:background="@drawable/day_header_background"
         android:gravity="center"
-        android:padding="4dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
         android:text="Сегодня"
         android:textColor="#FFFFFF"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
 
 </FrameLayout>

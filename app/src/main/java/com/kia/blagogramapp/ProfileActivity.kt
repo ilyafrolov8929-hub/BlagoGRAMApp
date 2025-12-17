@@ -58,7 +58,7 @@ class ProfileActivity : AppCompatActivity() {
         // кнопка настройки (⚙️)
         val settingsBtn = findViewById<View>(R.id.btnSettings)
         settingsBtn.setOnClickListener {
-            startActivity(Intent(this, ProfileEditActivity::class.java))
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
 
         if (isMyProfile) {

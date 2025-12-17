@@ -1,38 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#00000000"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="#F5F5F5"
+    android:orientation="vertical">
 
-    <ImageView
-        android:id="@+id/backBtn"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:padding="4dp"
-        android:src="@drawable/ic_back" />
-
-    <EditText
-        android:id="@+id/searchInput"
+    <!-- Header -->
+    <LinearLayout
+        android:id="@+id/headerContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/chat_input_bg"
-        android:hint="Поиск..."
-        android:textColor="#FFFFFF"
-        android:textColorHint="#80FFFFFF"
-        android:padding="12dp" />
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="10dp">
 
+        <LinearLayout
+            android:id="@+id/backBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_stat_pill"
+            android:backgroundTint="#E0E0E0"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_back"
+                app:tint="#000000" />
+
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/searchInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:background="@drawable/bg_chat_input_rounded"
+            android:backgroundTint="#F0F0F0"
+            android:drawableStart="?android:attr/actionModeWebSearchDrawable"
+            android:drawablePadding="12dp"
+            android:drawableTint="#808080"
+            android:hint="Поиск пользователей..."
+            android:maxLines="1"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#808080"
+            android:textSize="16sp" />
+
+    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/searchProgress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="20dp"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerSearch"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingTop="10dp" />
+        android:clipToPadding="false"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp" />
+
 </LinearLayout>

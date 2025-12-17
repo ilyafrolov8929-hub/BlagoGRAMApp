@@ -1,0 +1,63 @@
+[
+  {
+    "type": "SPACE",
+    "height": 50
+  },
+  {
+    "type": "TEXT",
+    "text": "Design Engine JSON",
+    "textSize": 24,
+    "isBold": true,
+    "gravity": "center",
+    "textColor": "#000000"
+  },
+  {
+    "type": "SPACE",
+    "height": 20
+  },
+  {
+    "type": "CARD",
+    "backgroundColor": "#FFFFFF",
+    "cornerRadius": 16,
+    "elevation": 4,
+    "margin": 16,
+    "padding": 16,
+    "items": [
+      {
+        "type": "TEXT",
+        "text": "Это загружено из JSON!",
+        "textSize": 18,
+        "isBold": true,
+        "textColor": "#000000"
+      },
+      {
+        "type": "SPACE",
+        "height": 8
+      },
+      {
+        "type": "TEXT",
+        "text": "Теперь вы можете менять дизайн приложения, просто редактируя файл design_test.json в папке assets. Перекомпиляция не нужна (если реализовать перезагрузку).",
+        "textSize": 14,
+        "textColor": "#808080"
+      }
+    ]
+  },
+  {
+    "type": "BUTTON",
+    "text": "Показать Toast",
+    "backgroundColor": "#4CAF50",
+    "textColor": "#FFFFFF",
+    "margin": 16,
+    "height": 50,
+    "actionId": "toast_action"
+  },
+  {
+    "type": "BUTTON",
+    "text": "Вернуться назад",
+    "backgroundColor": "#F44336",
+    "textColor": "#FFFFFF",
+    "margin": 16,
+    "height": 50,
+    "actionId": "back_action"
+  }
+]

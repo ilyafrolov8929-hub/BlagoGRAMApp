@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 1. Серый круг (Фон) -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#808080"/>
+        </shape>
+    </item>
+
+    <!-- 2. Ссылка на векторную иконку (Стрелка) -->
+    <item
+        android:drawable="@drawable/ic_arrow_back_custom"
+        android:gravity="center" />
+</layer-list>

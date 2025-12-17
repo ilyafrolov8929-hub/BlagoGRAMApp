@@ -101,11 +101,11 @@ class ChatActivity : AppCompatActivity() {
 
         val avatar = intent.getStringExtra("chat_avatar")
         val avatarView = findViewById<ShapeableImageView>(R.id.chatAvatar)
-        
+
         // Попытаемся найти ID собеседника, если он не передан напрямую
         // К сожалению, в ChatActivity передается только chatId, имя и аватар.
         // Пока что мы будем искать собеседника по первому входящему сообщению (костыль, но рабочий для ЛС)
-        // Либо если мы пришли из поиска, где ID известен, надо было бы его передать. 
+        // Либо если мы пришли из поиска, где ID известен, надо было бы его передать.
         // Добавим логику: попытаемся найти sender_id из сообщений.
 
         sendBtn = findViewById(R.id.sendBtn)
@@ -124,22 +124,22 @@ class ChatActivity : AppCompatActivity() {
 
         chatId = intent.getIntExtra("chat_id", 0)
         val chatName = intent.getStringExtra("chat_name") ?: "Чат"
-        
+
         val nameView = findViewById<TextView>(R.id.chatName)
         nameView.text = chatName
 
         // ОБРАБОТЧИК КЛИКА НА ХЕДЕР (Аватар + Имя)
         val headerClickListener = View.OnClickListener {
-             if (targetUserId != 0) {
-                 val i = Intent(this, ProfileActivity::class.java)
-                 i.putExtra("user_id", targetUserId)
-                 startActivity(i)
-             } else {
-                 // Если ID еще не определен
-                 Toast.makeText(this, "Вы еще не беседовали с этим пользователем!", Toast.LENGTH_SHORT).show()
-             }
+            if (targetUserId != 0) {
+                val i = Intent(this, ProfileActivity::class.java)
+                i.putExtra("user_id", targetUserId)
+                startActivity(i)
+            } else {
+                // Если ID еще не определен
+                Toast.makeText(this, "Вы еще не беседовали с этим пользователем!", Toast.LENGTH_SHORT).show()
+            }
         }
-        
+
         avatarView.setOnClickListener(headerClickListener)
         nameView.setOnClickListener(headerClickListener)
 
@@ -223,9 +223,9 @@ class ChatActivity : AppCompatActivity() {
         val destinationUri = Uri.fromFile(File(cacheDir, destinationFileName))
 
         val uCrop = UCrop.of(uri, destinationUri)
-            .withAspectRatio(1f, 1f) 
+            .withAspectRatio(1f, 1f)
             .withMaxResultSize(1080, 1080)
-            
+
         cropLauncher.launch(uCrop.getIntent(this))
     }
 

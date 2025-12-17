@@ -11,8 +11,8 @@ android {
         applicationId "com.kia.blagogramapp"
         minSdk 21
         targetSdk 34
-        versionCode 3
-        versionName "0.2.0-alpha"
+        versionCode 4
+        versionName "0.3.0-beta"
     }
 
     buildTypes {
@@ -46,4 +46,7 @@ dependencies {
     implementation 'com.github.yalantis:ucrop:2.2.8'
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation libs.androidx.cardview
+    
+    // Библиотека для отображения iOS смайликов
+    implementation 'com.vanniktech:emoji-ios:0.16.0'
 }

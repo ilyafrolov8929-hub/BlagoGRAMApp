@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.BlagoGRAMApp" parent="android:Theme.Material.Light.NoActionBar" />
+
     <style name="Theme.App.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- без ActionBar -->
+        <!-- Светлая тема -->
+        <!-- Цвет статус-бара (белый) -->
+        <item name="android:statusBarColor">@android:color/white</item>
+        <!-- Темные иконки на светлом фоне (API 23+) -->
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
