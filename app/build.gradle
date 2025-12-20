@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.kia.blagogramapp"
-        minSdk 21
+        minSdk 23
         targetSdk 34
         versionCode 4
         versionName "0.3.0-beta"
@@ -49,4 +49,7 @@ dependencies {
     
     // Библиотека для отображения iOS смайликов
     implementation 'com.vanniktech:emoji-ios:0.16.0'
+
+    // Библиотека для медиа-уведомлений
+    implementation 'androidx.media:media:1.7.0'
 }

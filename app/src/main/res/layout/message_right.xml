@@ -29,32 +29,48 @@
             android:id="@+id/msgText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="50dp"
+            android:layout_marginEnd="30dp"
             android:maxWidth="260dp"
             android:paddingStart="10dp"
             android:paddingTop="6dp"
             android:paddingEnd="10dp"
-            android:paddingBottom="14dp"
+            android:paddingBottom="10dp"
             android:text="Текст сообщения"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="12sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/msgImages"
             app:layout_goneMarginTop="0dp" />
 
-        <TextView
-            android:id="@+id/msgTime"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="4dp"
-            android:text="12:00"
-            android:textColor="#CCFFFFFF"
-            android:textSize="11sp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <ImageView
+                android:id="@+id/msgEditedIcon"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginEnd="2dp"
+                android:src="@drawable/ic_edit"
+                android:visibility="gone"
+                app:tint="#CCFFFFFF" />
+
+            <TextView
+                android:id="@+id/msgTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="12:00"
+                android:textColor="#CCFFFFFF"
+                android:textSize="9sp" />
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

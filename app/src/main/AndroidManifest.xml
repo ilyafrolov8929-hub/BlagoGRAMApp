@@ -3,6 +3,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".App"
         android:label="@string/app_name"
@@ -20,7 +25,7 @@
         <activity android:name=".PhotoViewerActivity" />
         <activity android:name=".AboutActivity" />
         <activity android:name=".DesignEngineActivity" />
-        <activity android:name=".ThemeSelectionActivity" />
+        <activity android:name=".ThemeSelectionActivity"/>
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustResize"
@@ -44,6 +49,11 @@
                 <data android:scheme="blagogram" />
             </intent-filter>
         </activity>
+
+        <service 
+            android:name=".utils.MusicService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
 
         <meta-data
             android:name="preloaded_fonts"

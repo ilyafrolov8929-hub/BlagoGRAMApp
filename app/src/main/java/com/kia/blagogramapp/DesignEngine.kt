@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import coil.load
@@ -38,6 +39,12 @@ object LayoutHelper {
     fun createFrame(width: Int, height: Int, gravity: Int = Gravity.TOP or Gravity.START, left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0): FrameLayout.LayoutParams {
         val layoutParams = FrameLayout.LayoutParams(getSize(width), getSize(height))
         layoutParams.gravity = gravity
+        layoutParams.setMargins(dp(left), dp(top), dp(right), dp(bottom))
+        return layoutParams
+    }
+
+    fun createRelative(width: Int, height: Int, left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0): RelativeLayout.LayoutParams {
+        val layoutParams = RelativeLayout.LayoutParams(getSize(width), getSize(height))
         layoutParams.setMargins(dp(left), dp(top), dp(right), dp(bottom))
         return layoutParams
     }
@@ -239,7 +246,7 @@ class ContainerCell(context: Context) : LinearLayout(context) {
     init {
         orientation = VERTICAL
         background = GradientDrawable().apply {
-            setColor(DesignEngine.COLOR_CARD_BACKGROUND)
+            setColor(DesignEngine.Theme.colorCardBackground)
             cornerRadius = LayoutHelper.dp(12).toFloat()
         }
     }
@@ -377,7 +384,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
             gravity = Gravity.CENTER
             setPadding(LayoutHelper.dp(6), LayoutHelper.dp(2), LayoutHelper.dp(6), LayoutHelper.dp(2))
             background = GradientDrawable().apply {
-                setColor(DesignEngine.COLOR_BLUE)
+                setColor(DesignEngine.Theme.colorBlue)
                 cornerRadius = LayoutHelper.dp(14).toFloat()
             }
             visibility = View.GONE

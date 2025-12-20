@@ -117,6 +117,7 @@ class ApiRepository(private val api: BlagoApi) {
                 sender_id = (it["sender_id"] as Number).toInt(),
                 content = it["content"].toString(),
                 sent_at = it["sent_at"].toString(),
+                edited_at = it["edited_at"]?.toString(),
                 is_read = (it["is_read"] as Number).toInt(),
                 avatar = it["avatar"].toString(),
                 display_name = it["display_name"].toString(),
@@ -153,6 +154,24 @@ class ApiRepository(private val api: BlagoApi) {
 
         if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
 
+        return true
+    }
+
+    suspend fun editMessage(token: String, messageId: Int, text: String): Boolean {
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.editMessage(token = token, messageId = messageId, text = text)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["success"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        return true
+    }
+
+    suspend fun deleteMessage(token: String, messageId: Int): Boolean {
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.deleteMessage(token = token, messageId = messageId)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["success"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
         return true
     }
 

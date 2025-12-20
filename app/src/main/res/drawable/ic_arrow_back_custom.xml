@@ -4,10 +4,21 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+
+    <!-- Используем stroke (обводку) вместо fill (заливки) для легкого скругления -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z"/>
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M19,12H5M12,19l-7,-7 7,-7" />
+
+    <!--
+      Изменения:
+      1. strokeLineCap="round" — скругляет концы линий.
+      2. strokeLineJoin="round" — скругляет места соединения линий (уголок стрелки).
+      3. strokeWidth="2" — толщина линии (стандартная для иконок).
+      4. pathData — упрощенный путь стрелки, адаптированный под обводку.
+    -->
 </vector>
-    <!-- Обратите внимание: я изменил fillColor на #FFFFFF (белый),
-         так как стрелка на сером фоне должна быть видна.
-         Если нужна темная, верните #333333 -->

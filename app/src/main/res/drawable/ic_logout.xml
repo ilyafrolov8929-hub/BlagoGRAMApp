@@ -3,7 +3,31 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+
+    <!-- Квадратная скобка (дверь) -->
     <path
-        android:fillColor="#FF5555"
-        android:pathData="M14.08,15.59L15.5,17l5,-5l-5,-5l-1.41,1.41L17.17,11H8v2h9.17l-3.09,2.59M19,3H5a2,2 0 0,0 -2,2v3h2V5h14v14H5v-3H3v3a2,2 0 0,0 2,2h14a2,2 0 0,0 2,-2V5a2,2 0 0,0 -2,-2z"/>
+        android:fillColor="#00000000"
+        android:strokeColor="#FF5555"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M9,21H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h4" />
+
+    <!-- Стрелка выхода -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF5555"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M16,17l5,-5l-5,-5" />
+
+    <!-- Линия стрелки -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF5555"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M21,12H9" />
 </vector>

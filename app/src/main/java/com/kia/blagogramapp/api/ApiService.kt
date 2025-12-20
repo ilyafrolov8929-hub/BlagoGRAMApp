@@ -46,6 +46,23 @@ interface ApiService {
         @Part image: List<MultipartBody.Part>?
     ): SendMessageResponse
 
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun editMessage(
+        @Field("action") action: String = "messages.edit",
+        @Field("token") token: String,
+        @Field("message_id") messageId: Int,
+        @Field("text") text: String
+    ): Response<Map<String, Any>>
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun deleteMessage(
+        @Field("action") action: String = "messages.delete",
+        @Field("token") token: String,
+        @Field("message_id") messageId: Int
+    ): Response<Map<String, Any>>
+
 
     @FormUrlEncoded
     @POST("index.php")
