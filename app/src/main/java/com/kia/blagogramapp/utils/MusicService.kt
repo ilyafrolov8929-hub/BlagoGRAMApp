@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.kia.blagogramapp.ProfileActivity
 import com.kia.blagogramapp.R
 import com.kia.blagogramapp.models.Track
+import java.io.File
 import java.io.InputStream
 
 class MusicService : Service() {
@@ -77,7 +78,6 @@ class MusicService : Service() {
         mediaSession?.setPlaybackState(
             PlaybackStateCompat.Builder()
                 .setState(state, MusicManager.getCurrentPosition().toLong(), 1f)
-                // Добавляем ACTION_SEEK_TO чтобы появился ползунок
                 .setActions(
                     PlaybackStateCompat.ACTION_PLAY_PAUSE or 
                     PlaybackStateCompat.ACTION_SKIP_TO_NEXT or 
@@ -127,11 +127,17 @@ class MusicService : Service() {
     }
 
     private fun getAlbumArt(uriString: String?): Bitmap? {
-        if (uriString == null) return null
+        if (uriString.isNullOrEmpty()) return null
         return try {
-            val uri = Uri.parse(uriString)
-            val inputStream: InputStream? = contentResolver.openInputStream(uri)
-            BitmapFactory.decodeStream(inputStream)
+            val file = File(uriString)
+            if (file.exists()) {
+                BitmapFactory.decodeFile(uriString)
+            } else {
+                val uri = Uri.parse(uriString)
+                contentResolver.openInputStream(uri)?.use { 
+                    BitmapFactory.decodeStream(it)
+                }
+            }
         } catch (e: Exception) {
             null
         }

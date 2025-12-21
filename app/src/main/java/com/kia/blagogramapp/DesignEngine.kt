@@ -264,7 +264,8 @@ class ContainerCell(context: Context) : LinearLayout(context) {
 class TextCell(context: Context) : FrameLayout(context) {
     private val imageView: ImageView = ImageView(context)
     private val textView: TextView = TextView(context)
-    private val chevronView: ImageView = ImageView(context)
+    val chevronView: ImageView = ImageView(context)
+    val deleteView: ImageView = ImageView(context)
     
     init {
         val outValue = TypedValue()
@@ -281,11 +282,18 @@ class TextCell(context: Context) : FrameLayout(context) {
         textView.maxLines = 1
         textView.ellipsize = TextUtils.TruncateAt.END
         textView.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP or Gravity.START, 56, 0, 56, 0))
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP or Gravity.START, 56, 0, 80, 0))
         
         chevronView.setImageResource(R.drawable.ic_chevron_right)
         chevronView.colorFilter = PorterDuffColorFilter(DesignEngine.COLOR_CHEVRON, PorterDuff.Mode.SRC_IN)
         addView(chevronView, LayoutHelper.createFrame(24, 24, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 16, 0))
+
+        deleteView.setImageResource(R.drawable.ic_close_small) // Используем иконку логаута как крестик (обычно это крестик/выход)
+        deleteView.colorFilter = PorterDuffColorFilter(DesignEngine.COLOR_LOGOUT, PorterDuff.Mode.SRC_IN)
+        deleteView.visibility = View.GONE
+        deleteView.setPadding(LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4))
+        val deleteParams = LayoutHelper.createFrame(32, 32, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 12, 0)
+        addView(deleteView, deleteParams)
     }
 
     fun setData(text: String, iconResId: Int) {

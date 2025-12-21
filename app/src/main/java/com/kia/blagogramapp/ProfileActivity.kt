@@ -10,7 +10,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.WindowCompat
@@ -38,6 +38,13 @@ class ProfileActivity : AppCompatActivity() {
     
     private var miniPlayer: MiniPlayer? = null
     private var fullPlayer: FullPlayer? = null
+
+    private val musicPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            MusicManager.addTrack(this, it)
+            layout.updateMusicList()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         DesignEngine.init(this)
@@ -87,26 +94,26 @@ class ProfileActivity : AppCompatActivity() {
         layout.onTrackClicked = { track ->
             MusicManager.playTrack(track)
         }
+        
+        layout.onAddMusicClicked = {
+            musicPickerLauncher.launch("audio/*")
+        }
 
         observeMusic()
     }
 
     private fun checkPermissions() {
-        val permissions = mutableListOf<String>()
+        // Теперь нам не нужны разрешения на чтение внешнего хранилища для своей папки, 
+        // но оставим для уведомлений если нужно.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.READ_MEDIA_AUDIO)
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
         }
         
-        val toRequest = permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        if (toRequest.isNotEmpty()) {
-            requestPermissions(toRequest.toTypedArray(), 101)
-        } else {
-            MusicManager.scanMusic(this)
-            layout.updateMusicList()
-        }
+        // В любом случае сканируем локальную папку
+        MusicManager.scanMusic(this)
+        layout.updateMusicList()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -141,7 +148,7 @@ class ProfileActivity : AppCompatActivity() {
     private fun updateMiniPlayer(track: Track, playing: Boolean) {
         if (miniPlayer == null) {
             miniPlayer = MiniPlayer(this).apply {
-                val p = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, android.view.Gravity.BOTTOM, 16, 0, 16, 32) // Увеличил отступ снизу для красоты
+                val p = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, android.view.Gravity.BOTTOM, 16, 0, 16, 32)
                 layoutParams = p
                 setOnClickListener { showFullPlayer() }
             }

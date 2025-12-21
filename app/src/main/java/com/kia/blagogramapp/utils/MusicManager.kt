@@ -1,19 +1,22 @@
 package com.kia.blagogramapp.utils
 
 import android.animation.ValueAnimator
-import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import com.kia.blagogramapp.models.Track
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
+import java.io.FileOutputStream
 
 object MusicManager : AudioManager.OnAudioFocusChangeListener {
     private var mediaPlayer: MediaPlayer? = null
@@ -92,29 +95,81 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
 
     fun scanMusic(context: Context) {
         initPlayer(context)
+        val musicDir = File(context.filesDir, "music")
+        if (!musicDir.exists()) musicDir.mkdirs()
+        
+        val coversDir = File(context.filesDir, "music_covers")
+        if (!coversDir.exists()) coversDir.mkdirs()
+
         val tracks = mutableListOf<Track>()
-        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.ALBUM_ID
-        )
+        val mmr = MediaMetadataRetriever()
+        
+        musicDir.listFiles()?.forEach { file ->
+            if (file.extension == "mp3" || file.extension == "m4a" || file.extension == "wav") {
+                try {
+                    mmr.setDataSource(file.absolutePath)
+                    val title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.nameWithoutExtension
+                    val artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Artist"
+                    val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+                    
+                    val coverFile = File(coversDir, "${file.nameWithoutExtension}.jpg")
+                    if (!coverFile.exists()) {
+                        val art = mmr.embeddedPicture
+                        if (art != null) {
+                            FileOutputStream(coverFile).use { it.write(art) }
+                        }
+                    }
 
-        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-            val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-            val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-
-            while (cursor.moveToNext()) {
-                val albumId = cursor.getLong(albumIdCol)
-                val artworkUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId).toString()
-                tracks.add(Track(cursor.getLong(idCol), cursor.getString(titleCol), cursor.getString(artistCol), cursor.getString(dataCol), cursor.getLong(durationCol), artworkUri))
+                    tracks.add(Track(
+                        id = file.hashCode().toLong(),
+                        title = title,
+                        artist = artist,
+                        data = file.absolutePath,
+                        duration = duration,
+                        albumArtUri = if (coverFile.exists()) coverFile.absolutePath else ""
+                    ))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
         _playlist.value = tracks
+    }
+
+    fun addTrack(context: Context, uri: Uri) {
+        val musicDir = File(context.filesDir, "music")
+        if (!musicDir.exists()) musicDir.mkdirs()
+
+        val fileName = "track_${System.currentTimeMillis()}.mp3"
+        val destFile = File(musicDir, fileName)
+
+        try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            scanMusic(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun deleteTrack(context: Context, track: Track) {
+        val file = File(track.data)
+        if (file.exists()) {
+            if (file.delete()) {
+                val coverFile = File(track.albumArtUri)
+                if (coverFile.exists()) coverFile.delete()
+
+                if (_currentTrack.value?.data == track.data) {
+                    mediaPlayer?.stop()
+                    _currentTrack.value = null
+                    _isPlaying.value = false
+                }
+                scanMusic(context)
+            }
+        }
     }
 
     private fun updateService() {

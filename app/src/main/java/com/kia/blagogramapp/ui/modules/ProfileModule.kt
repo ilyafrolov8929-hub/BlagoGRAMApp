@@ -43,6 +43,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     private lateinit var tabsLayout: LinearLayout
     
     var onTrackClicked: ((Track) -> Unit)? = null
+    var onAddMusicClicked: (() -> Unit)? = null
 
     init {
         setBackgroundColor(DesignEngine.Theme.colorBackground)
@@ -268,11 +269,11 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         btnCreatePost = Button(context).apply {
             text = "Создать пост"
             typeface = Typeface.DEFAULT_BOLD
-            textSize = 16f
+            textSize = 14f
             setTextColor(Color.WHITE)
             background = context.getDrawable(R.drawable.bg_stat_pill)
             backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
-            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(50))
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(20))
             p.topMargin = LayoutHelper.dp(32)
             layoutParams = p
         }
@@ -378,6 +379,23 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     }
 
     private fun createMusicContent(): View {
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        
+        val btnAdd = Button(context).apply {
+            text = "Добавить музыку"
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            background = context.getDrawable(R.drawable.bg_stat_pill)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(15))
+            p.bottomMargin = LayoutHelper.dp(12)
+            layoutParams = p
+            setOnClickListener { onAddMusicClicked?.invoke() }
+        }
+        root.addView(btnAdd)
+
         val tracks = MusicManager.playlist.value
         
         if (tracks.isEmpty()) {
@@ -387,18 +405,24 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
                 gravity = Gravity.CENTER
                 setPadding(0, LayoutHelper.dp(20), 0, LayoutHelper.dp(20))
             }
-            return emptyTv
+            root.addView(emptyTv)
+            return root
         }
 
-        val recycler = RecyclerView(context).apply {
+        val recycler = object : RecyclerView(context) {
+            override fun onMeasure(widthSpec: Int, heightSpec: Int) {
+                val hSpec = MeasureSpec.makeMeasureSpec(LayoutHelper.dp(250), MeasureSpec.AT_MOST)
+                super.onMeasure(widthSpec, hSpec)
+            }
+        }.apply {
             layoutManager = LinearLayoutManager(context)
-            // Уменьшаем высоту списка (пользователь попросил высоту вместо ширины)
-            layoutParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(250))
+            layoutParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
             isNestedScrollingEnabled = true
             
             adapter = object : RecyclerView.Adapter<TrackViewHolder>() {
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
                     val cell = TextCell(context)
+                    cell.layoutParams = RecyclerView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(50))
                     return TrackViewHolder(cell)
                 }
 
@@ -407,6 +431,15 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
                     holder.cell.setData("${track.artist} - ${track.title}", R.drawable.ic_music)
                     holder.cell.setIconColor(DesignEngine.Theme.colorBlue)
                     holder.cell.setOnClickListener { onTrackClicked?.invoke(track) }
+                    
+                    // Скрываем стрелку, чтобы она не мешала кнопке удаления
+                    holder.cell.chevronView.visibility = View.GONE
+                    
+                    holder.cell.deleteView.visibility = View.VISIBLE
+                    holder.cell.deleteView.setOnClickListener {
+                        MusicManager.deleteTrack(context, track)
+                        updateMusicList()
+                    }
                 }
 
                 override fun getItemCount() = tracks.size
@@ -420,8 +453,9 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             layoutParams = p
             addView(recycler)
         }
+        root.addView(card)
         
-        return card
+        return root
     }
 
     class TrackViewHolder(val cell: TextCell) : RecyclerView.ViewHolder(cell)
