@@ -57,6 +57,8 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
+    fun getAudioSessionId(): Int = mediaPlayer?.audioSessionId ?: 0
+
     private fun requestAudioFocus(): Boolean {
         if (audioManager == null) return false
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

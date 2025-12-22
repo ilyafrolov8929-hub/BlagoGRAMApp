@@ -1,5 +1,7 @@
 package com.kia.blagogramapp.ui.modules
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -10,14 +12,15 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import coil.load
 import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.LayoutHelper
-import com.kia.blagogramapp.ProfileActivity
-import com.kia.blagogramapp.MusicActivity
 import com.kia.blagogramapp.R
 import com.kia.blagogramapp.models.Track
 import com.kia.blagogramapp.utils.MusicManager
@@ -120,6 +123,7 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
     private val timeTotal: TextView
     
     private var updateJob: Job? = null
+    var onCloseListener: (() -> Unit)? = null
 
     init {
         setBackgroundColor(DesignEngine.Theme.colorBackground)
@@ -163,6 +167,7 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
             val outValue = TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             if (outValue.resourceId != 0) background = context.getDrawable(outValue.resourceId)
+            setOnClickListener { onCloseListener?.invoke() ?: (parent as? ViewGroup)?.removeView(this@FullPlayer) }
         }
         addView(closeBtn, LayoutHelper.createRelative(48, 48, 16, 40, 0, 0))
 
@@ -219,14 +224,71 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         val bParams = RelativeLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
         bParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
         addView(bottomControls, bParams)
+    }
 
-        closeBtn.setOnClickListener { 
-            (parent as? ViewGroup)?.removeView(this)
-            when (context) {
-                is ProfileActivity -> context.onFullPlayerClosed()
-                is MusicActivity -> context.onFullPlayerClosed()
-            }
+    fun animateOpen(fromView: View) {
+        val location = IntArray(2)
+        fromView.getLocationInWindow(location)
+        
+        visibility = View.VISIBLE
+        alpha = 0f
+        
+        post {
+            val fromX = location[0].toFloat()
+            val fromY = location[1].toFloat()
+            val fromW = fromView.width.toFloat()
+            val fromH = fromView.height.toFloat()
+            
+            val screenW = width.toFloat()
+            val screenH = height.toFloat()
+            
+            if (screenW == 0f || screenH == 0f) return@post
+
+            translationX = fromX + fromW / 2 - screenW / 2
+            translationY = fromY + fromH / 2 - screenH / 2
+            scaleX = fromW / screenW
+            scaleY = fromH / screenH
+            
+            animate()
+                .alpha(1f)
+                .translationX(0f)
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(400)
+                .setInterpolator(DecelerateInterpolator())
+                .setListener(null)
+                .start()
         }
+    }
+
+    fun animateClose(toView: View, onEnd: () -> Unit) {
+        val location = IntArray(2)
+        toView.getLocationInWindow(location)
+        
+        val toX = location[0].toFloat()
+        val toY = location[1].toFloat()
+        val toW = toView.width.toFloat()
+        val toH = toView.height.toFloat()
+        
+        val screenW = width.toFloat()
+        val screenH = height.toFloat()
+        
+        animate()
+            .alpha(0f)
+            .translationX(toX + toW / 2 - screenW / 2)
+            .translationY(toY + toH / 2 - screenH / 2)
+            .scaleX(toW / screenW)
+            .scaleY(toH / screenH)
+            .setDuration(350)
+            .setInterpolator(AccelerateInterpolator())
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    visibility = View.GONE
+                    onEnd()
+                }
+            })
+            .start()
     }
 
     fun bind(track: Track, isPlaying: Boolean) {

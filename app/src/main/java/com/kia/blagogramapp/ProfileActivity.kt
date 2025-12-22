@@ -54,7 +54,6 @@ class ProfileActivity : AppCompatActivity() {
             themePrefs.getBoolean("use_monet", false)
         )
 
-        // Настройка Edge-to-Edge для прозрачности статус-бара и навигационной панели
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -103,15 +102,11 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun checkPermissions() {
-        // Теперь нам не нужны разрешения на чтение внешнего хранилища для своей папки, 
-        // но оставим для уведомлений если нужно.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
-        
-        // В любом случае сканируем локальную папку
         MusicManager.scanMusic(this)
         layout.updateMusicList()
     }
@@ -155,26 +150,36 @@ class ProfileActivity : AppCompatActivity() {
             layout.addView(miniPlayer)
         }
         miniPlayer?.bind(track, playing)
-        miniPlayer?.visibility = if (fullPlayer != null && fullPlayer!!.parent != null) View.GONE else View.VISIBLE
+        if (fullPlayer == null || fullPlayer?.parent == null) {
+            miniPlayer?.visibility = View.VISIBLE
+        }
     }
 
-    fun onFullPlayerClosed() {
-        miniPlayer?.visibility = View.VISIBLE
-        layout.topBar.visibility = View.VISIBLE
+    fun closeFullPlayer() {
+        val mp = miniPlayer ?: return
+        fullPlayer?.animateClose(mp) {
+            layout.removeView(fullPlayer)
+            mp.visibility = View.VISIBLE
+            mp.animate().alpha(1f).setDuration(200).start()
+            layout.topBar.visibility = View.VISIBLE
+        }
     }
 
     private fun showFullPlayer() {
         val track = MusicManager.currentTrack.value ?: return
+        val mp = miniPlayer ?: return
         if (fullPlayer == null) {
             fullPlayer = FullPlayer(this).apply {
                 layoutParams = FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT)
+                onCloseListener = { closeFullPlayer() }
             }
         }
         if (fullPlayer?.parent == null) {
             layout.addView(fullPlayer)
+            fullPlayer?.animateOpen(mp)
+            mp.animate().alpha(0f).setDuration(200).start()
+            layout.topBar.visibility = View.GONE
         }
-        miniPlayer?.visibility = View.GONE
-        layout.topBar.visibility = View.GONE
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
     }
 

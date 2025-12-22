@@ -133,7 +133,7 @@ class MusicActivity : AppCompatActivity() {
 
         mainContent.addView(header)
 
-        // Tabs (теперь выше поиска, чтобы он не прыгал выше них)
+        // Tabs
         tabsLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
@@ -192,6 +192,7 @@ class MusicActivity : AppCompatActivity() {
 
         // MiniPlayer
         miniPlayer = MiniPlayer(this).apply {
+            tag = "mini_player"
             visibility = View.GONE
             setOnClickListener { showFullPlayer() }
         }
@@ -219,7 +220,6 @@ class MusicActivity : AppCompatActivity() {
         if (currentMode == mode) return
         
         currentMode = mode
-        // Очищаем список при переключении
         recycler.adapter = null
         emptyTv.visibility = View.GONE
         
@@ -229,7 +229,6 @@ class MusicActivity : AppCompatActivity() {
         }
         
         if (mode == 1) {
-            // Плавное скрытие поиска и подтягивание списка
             val initialHeight = searchContainer.height
             val animator = ValueAnimator.ofInt(initialHeight, 0)
             animator.addUpdateListener { valueAnimator ->
@@ -254,12 +253,10 @@ class MusicActivity : AppCompatActivity() {
             
             loadMyMusic()
         } else {
-            // Плавное появление поиска и опускание списка
             searchContainer.visibility = View.VISIBLE
             searchContainer.alpha = 0f
             searchContainer.translationY = -LayoutHelper.dp(20).toFloat()
             
-            // Замеряем целевую высоту
             searchContainer.measure(
                 View.MeasureSpec.makeMeasureSpec(root.width, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -350,7 +347,9 @@ class MusicActivity : AppCompatActivity() {
         lifecycleScope.launchWhenStarted {
             MusicManager.currentTrack.collectLatest { track ->
                 if (track != null) {
-                    miniPlayer.visibility = if (fullPlayer != null && fullPlayer!!.parent != null) View.GONE else View.VISIBLE
+                    if (fullPlayer == null || fullPlayer!!.parent == null) {
+                        miniPlayer.visibility = View.VISIBLE
+                    }
                     miniPlayer.bind(track, MusicManager.isPlaying.value)
                     fullPlayer?.bind(track, MusicManager.isPlaying.value)
                 }
@@ -367,8 +366,12 @@ class MusicActivity : AppCompatActivity() {
         }
     }
 
-    fun onFullPlayerClosed() {
-        miniPlayer.visibility = View.VISIBLE
+    fun closeFullPlayer() {
+        fullPlayer?.animateClose(miniPlayer) {
+            root.removeView(fullPlayer)
+            miniPlayer.visibility = View.VISIBLE
+            miniPlayer.animate().alpha(1f).setDuration(200).start()
+        }
     }
 
     private fun showFullPlayer() {
@@ -376,12 +379,14 @@ class MusicActivity : AppCompatActivity() {
         if (fullPlayer == null) {
             fullPlayer = FullPlayer(this).apply {
                 layoutParams = FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT)
+                onCloseListener = { closeFullPlayer() }
             }
         }
         if (fullPlayer?.parent == null) {
             root.addView(fullPlayer)
+            fullPlayer?.animateOpen(miniPlayer)
+            miniPlayer.animate().alpha(0f).setDuration(200).start()
         }
-        miniPlayer.visibility = View.GONE
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
     }
 

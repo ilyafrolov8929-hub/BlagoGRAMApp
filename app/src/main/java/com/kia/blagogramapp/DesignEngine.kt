@@ -82,6 +82,10 @@ object DesignEngine {
     val COLOR_LOGOUT get() = Theme.colorLogout
     val COLOR_BLUE get() = Theme.colorBlue
 
+    enum class PlayerTheme {
+        DEFAULT, DYNAMIC, BLUR
+    }
+
     /**
      * Движок тем.
      */
@@ -101,9 +105,15 @@ object DesignEngine {
         var colorLogout: Int = 0xFFF44336.toInt()
         var colorBlue: Int = 0xFF007AFF.toInt()
 
+        var playerTheme: PlayerTheme = PlayerTheme.DEFAULT
+
         fun apply(isDark: Boolean, isMonet: Boolean = false) {
             val ctx = DesignEngine.context
             
+            val prefs = ctx?.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+            val pThemeStr = prefs?.getString("player_theme", "DEFAULT") ?: "DEFAULT"
+            playerTheme = try { PlayerTheme.valueOf(pThemeStr) } catch (e: Exception) { PlayerTheme.DEFAULT }
+
             // Проверка на Monet (Android 12+)
             if (isMonet && ctx != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (isDark) {
