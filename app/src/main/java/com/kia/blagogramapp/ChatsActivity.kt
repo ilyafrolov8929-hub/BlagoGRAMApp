@@ -87,6 +87,11 @@ class ChatsActivity : AppCompatActivity() {
             toggleDrawer()
         }
 
+        sideMenu.addItem("Музыка", R.drawable.ic_music) {
+            startActivity(Intent(this, MusicActivity::class.java))
+            toggleDrawer()
+        }
+
         sideMenu.addItem("Настройки", R.drawable.ic_settings) {
             startActivity(Intent(this, SettingsActivity::class.java))
             toggleDrawer()

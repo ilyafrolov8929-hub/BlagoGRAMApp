@@ -17,6 +17,7 @@ import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.LayoutHelper
 import com.kia.blagogramapp.ProfileActivity
+import com.kia.blagogramapp.MusicActivity
 import com.kia.blagogramapp.R
 import com.kia.blagogramapp.models.Track
 import com.kia.blagogramapp.utils.MusicManager
@@ -42,12 +43,11 @@ class MiniPlayer(context: Context) : CardView(context) {
         
         val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
 
-        // Прогресс-бар сверху мини-плеера
         progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             progressDrawable.setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
             max = 100
             progress = 0
-            scaleY = 0.5f // Делаем его тонким
+            scaleY = 0.5f
         }
         root.addView(progressBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 4))
 
@@ -222,7 +222,10 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
 
         closeBtn.setOnClickListener { 
             (parent as? ViewGroup)?.removeView(this)
-            (context as? ProfileActivity)?.onFullPlayerClosed()
+            when (context) {
+                is ProfileActivity -> context.onFullPlayerClosed()
+                is MusicActivity -> context.onFullPlayerClosed()
+            }
         }
     }
 

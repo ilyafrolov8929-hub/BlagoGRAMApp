@@ -11,11 +11,7 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.RelativeLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.core.content.ContextCompat
 import coil.load
 import com.google.android.material.imageview.ShapeableImageView
@@ -180,6 +176,91 @@ object DesignEngine {
 //              CELLS (ЯЧЕЙКИ)
 // ==========================================
 
+class MusicCell(context: Context) : FrameLayout(context) {
+    val coverView: ShapeableImageView
+    val titleView: TextView
+    val artistView: TextView
+    val moreBtn: ImageView
+    val loadingContainer: LinearLayout
+    val progressBar: ProgressBar
+    val progressText: TextView
+
+    init {
+        val outValue = TypedValue()
+        context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+        foreground = context.getDrawable(outValue.resourceId)
+        isClickable = true
+        
+        setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
+
+        coverView = ShapeableImageView(context).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(Color.LTGRAY)
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                .setAllCornerSizes(LayoutHelper.dp(8).toFloat())
+                .build()
+        }
+        addView(coverView, LayoutHelper.createFrame(48, 48, Gravity.CENTER_VERTICAL or Gravity.START))
+
+        val textContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        titleView = TextView(context).apply {
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.COLOR_TEXT_PRIMARY)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        artistView = TextView(context).apply {
+            textSize = 14f
+            setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        textContainer.addView(titleView)
+        textContainer.addView(artistView)
+        addView(textContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 64, 0, 80, 0))
+
+        moreBtn = ImageView(context).apply {
+            setImageResource(R.drawable.ic_more)
+            setColorFilter(DesignEngine.COLOR_ICON_PRIMARY, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+        }
+        addView(moreBtn, LayoutHelper.createFrame(40, 40, Gravity.CENTER_VERTICAL or Gravity.END))
+
+        loadingContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            visibility = View.GONE
+        }
+        
+        progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+            progressDrawable.setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
+            max = 100
+        }
+        progressText = TextView(context).apply {
+            textSize = 10f
+            setTextColor(DesignEngine.Theme.colorBlue)
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        loadingContainer.addView(progressBar, LayoutHelper.createLinear(60, 4))
+        loadingContainer.addView(progressText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 2, 0, 0))
+        
+        addView(loadingContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 8, 0))
+    }
+
+    fun setData(title: String, artist: String, imageUrl: String?) {
+        titleView.text = title
+        artistView.text = artist
+        coverView.load(imageUrl) {
+            placeholder(R.drawable.ic_music)
+            error(R.drawable.ic_music)
+        }
+    }
+}
+
 class ProfileHeaderCell(context: Context) : FrameLayout(context) {
     val avatarView: ShapeableImageView
     val nameView: TextView
@@ -262,8 +343,8 @@ class ContainerCell(context: Context) : LinearLayout(context) {
 }
 
 class TextCell(context: Context) : FrameLayout(context) {
-    private val imageView: ImageView = ImageView(context)
-    private val textView: TextView = TextView(context)
+    val imageView: ImageView = ImageView(context)
+    val textView: TextView = TextView(context)
     val chevronView: ImageView = ImageView(context)
     val deleteView: ImageView = ImageView(context)
     
@@ -288,7 +369,7 @@ class TextCell(context: Context) : FrameLayout(context) {
         chevronView.colorFilter = PorterDuffColorFilter(DesignEngine.COLOR_CHEVRON, PorterDuff.Mode.SRC_IN)
         addView(chevronView, LayoutHelper.createFrame(24, 24, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 16, 0))
 
-        deleteView.setImageResource(R.drawable.ic_close_small) // Используем иконку логаута как крестик (обычно это крестик/выход)
+        deleteView.setImageResource(R.drawable.ic_logout) // Используем иконку логаута как крестик
         deleteView.colorFilter = PorterDuffColorFilter(DesignEngine.COLOR_LOGOUT, PorterDuff.Mode.SRC_IN)
         deleteView.visibility = View.GONE
         deleteView.setPadding(LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4))

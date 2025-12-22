@@ -26,6 +26,7 @@
         <activity android:name=".AboutActivity" />
         <activity android:name=".DesignEngineActivity" />
         <activity android:name=".ThemeSelectionActivity"/>
+        <activity android:name=".MusicActivity" />
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustResize"

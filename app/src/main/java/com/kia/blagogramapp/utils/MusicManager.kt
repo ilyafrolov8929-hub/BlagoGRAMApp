@@ -12,11 +12,18 @@ import android.media.MediaPlayer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
+import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.models.Track
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 
 object MusicManager : AudioManager.OnAudioFocusChangeListener {
     private var mediaPlayer: MediaPlayer? = null
@@ -31,6 +38,8 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
 
     private val _playlist = MutableStateFlow<List<Track>>(emptyList())
     val playlist: StateFlow<List<Track>> = _playlist
+
+    private var resumeOnFocusGain = false
 
     fun initPlayer(context: Context) {
         appContext = context.applicationContext
@@ -68,12 +77,23 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
 
     override fun onAudioFocusChange(focusChange: Int) {
         when (focusChange) {
-            AudioManager.AUDIOFOCUS_LOSS -> pauseWithFade()
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pauseWithFade()
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> fadeVolume(0.2f)
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                resumeOnFocusGain = false
+                pauseWithFade()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                resumeOnFocusGain = _isPlaying.value
+                pauseWithFade()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                fadeVolume(0.2f)
+            }
             AudioManager.AUDIOFOCUS_GAIN -> {
                 fadeVolume(1.0f)
-                if (!_isPlaying.value) togglePlayPause()
+                if (resumeOnFocusGain) {
+                    if (!_isPlaying.value) togglePlayPause()
+                    resumeOnFocusGain = false
+                }
             }
         }
     }
@@ -90,7 +110,11 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
     }
 
     private fun pauseWithFade() {
-        if (_isPlaying.value) togglePlayPause()
+        if (_isPlaying.value) {
+            mediaPlayer?.pause()
+            _isPlaying.value = false
+            updateService()
+        }
     }
 
     fun scanMusic(context: Context) {
@@ -134,6 +158,81 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
             }
         }
         _playlist.value = tracks
+    }
+
+    fun downloadAndAddTrack(context: Context, downloadUrl: String, title: String, artist: String, imageUrl: String?, onProgress: (Int) -> Unit, onComplete: (Boolean) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            var success = false
+            try {
+                val musicDir = File(context.filesDir, "music")
+                if (!musicDir.exists()) musicDir.mkdirs()
+                
+                val fileName = "track_${System.currentTimeMillis()}.mp3"
+                val destFile = File(musicDir, fileName)
+
+                val request = Request.Builder()
+                    .url(downloadUrl)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .build()
+
+                ApiClient.downloadClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body
+                        if (body != null) {
+                            val contentLength = body.contentLength()
+                            val input = body.byteStream()
+                            val output = FileOutputStream(destFile)
+                            val buffer = ByteArray(8192)
+                            var bytesRead: Int
+                            var totalBytesRead: Long = 0
+                            
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                totalBytesRead += bytesRead
+                                if (contentLength > 0) {
+                                    val progress = (totalBytesRead * 100 / contentLength).toInt()
+                                    launch(Dispatchers.Main) { onProgress(progress) }
+                                }
+                            }
+                            output.flush()
+                            output.close()
+                            input.close()
+                            success = true
+                        }
+                    }
+                }
+
+                if (success && !imageUrl.isNullOrEmpty()) {
+                    val coversDir = File(context.filesDir, "music_covers")
+                    if (!coversDir.exists()) coversDir.mkdirs()
+                    val coverFile = File(coversDir, "${destFile.nameWithoutExtension}.jpg")
+                    
+                    val imgRequest = Request.Builder().url(imageUrl).build()
+                    ApiClient.client.newCall(imgRequest).execute().use { response ->
+                        if (response.isSuccessful) {
+                            response.body?.byteStream()?.use { input ->
+                                FileOutputStream(coverFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                success = false
+            }
+
+            launch(Dispatchers.Main) {
+                if (success) {
+                    scanMusic(context)
+                    onComplete(true)
+                } else {
+                    Toast.makeText(context, "Ошибка загрузки. Попробуйте VPN", Toast.LENGTH_LONG).show()
+                    onComplete(false)
+                }
+            }
+        }
     }
 
     fun addTrack(context: Context, uri: Uri) {
@@ -184,6 +283,7 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
         mediaPlayer?.start()
         _currentTrack.value = track
         _isPlaying.value = true
+        resumeOnFocusGain = false
         updateService()
     }
 
@@ -192,6 +292,7 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
             if (it.isPlaying) {
                 it.pause()
                 _isPlaying.value = false
+                resumeOnFocusGain = false
             } else {
                 if (requestAudioFocus()) {
                     it.start()

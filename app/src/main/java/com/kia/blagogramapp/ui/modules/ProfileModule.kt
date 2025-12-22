@@ -1,14 +1,17 @@
 package com.kia.blagogramapp.ui.modules
 
 import android.animation.ObjectAnimator
+import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.view.animation.DecelerateInterpolator
 import android.widget.*
 import androidx.cardview.widget.CardView
@@ -55,19 +58,21 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         addView(profileCover, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 300))
 
         topBar = RelativeLayout(context).apply {
-            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(40), LayoutHelper.dp(16), LayoutHelper.dp(10))
+            // Уменьшаем падинг, будем задавать отступ элементам вручную для точности
+            setPadding(LayoutHelper.dp(16), 0, LayoutHelper.dp(16), LayoutHelper.dp(10))
             elevation = LayoutHelper.dp(10).toFloat()
         }
 
         val backContainer = LinearLayout(context).apply {
             id = View.generateViewId()
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
             background = GradientDrawable().apply {
                 setColor(DesignEngine.Theme.colorDivider)
                 cornerRadius = LayoutHelper.dp(20).toFloat()
             }
+            minimumWidth = LayoutHelper.dp(46)
         }
         backButton = backContainer
         val backIcon = ImageView(context).apply {
@@ -75,7 +80,10 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
         }
         backContainer.addView(backIcon, LayoutHelper.createLinear(20, 20))
-        topBar.addView(backContainer, RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        
+        val backParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
+        backParams.topMargin = LayoutHelper.dp(45) // Фиксированный отступ от верха (зона статус-бара)
+        topBar.addView(backContainer, backParams)
 
         userID = TextView(context).apply {
             textSize = 20f
@@ -85,24 +93,33 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             gravity = Gravity.CENTER
         }
         val userParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
-        userParams.addRule(RelativeLayout.CENTER_IN_PARENT)
+        userParams.addRule(RelativeLayout.CENTER_HORIZONTAL)
+        // Центрируем текст по вертикали относительно кнопки "Назад"
+        userParams.addRule(RelativeLayout.ALIGN_TOP, backContainer.id)
+        userParams.addRule(RelativeLayout.ALIGN_BOTTOM, backContainer.id)
         topBar.addView(userID, userParams)
 
-        btnSettings = FrameLayout(context).apply {
+        val settingsContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
             background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
                 setColor(DesignEngine.Theme.colorDivider)
+                cornerRadius = LayoutHelper.dp(20).toFloat()
             }
-            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
+            minimumWidth = LayoutHelper.dp(46)
         }
+        btnSettings = settingsContainer
         val settingsIcon = ImageView(context).apply {
             setImageResource(R.drawable.ic_settings)
             setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
         }
-        (btnSettings as FrameLayout).addView(settingsIcon, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
-        val settingsParams = RelativeLayout.LayoutParams(LayoutHelper.dp(46), LayoutHelper.dp(46))
+        settingsContainer.addView(settingsIcon, LayoutHelper.createLinear(20, 20))
+        
+        val settingsParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
         settingsParams.addRule(RelativeLayout.ALIGN_PARENT_END)
-        topBar.addView(btnSettings, settingsParams)
+        settingsParams.addRule(RelativeLayout.ALIGN_TOP, backContainer.id)
+        topBar.addView(settingsContainer, settingsParams)
 
         addView(topBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
@@ -421,24 +438,24 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             
             adapter = object : RecyclerView.Adapter<TrackViewHolder>() {
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
-                    val cell = TextCell(context)
-                    cell.layoutParams = RecyclerView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(50))
+                    val cell = MusicCell(context)
+                    cell.layoutParams = RecyclerView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(60))
                     return TrackViewHolder(cell)
                 }
 
                 override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
                     val track = tracks[position]
-                    holder.cell.setData("${track.artist} - ${track.title}", R.drawable.ic_music)
-                    holder.cell.setIconColor(DesignEngine.Theme.colorBlue)
+                    holder.cell.setData(track.title, track.artist, track.albumArtUri)
                     holder.cell.setOnClickListener { onTrackClicked?.invoke(track) }
                     
-                    // Скрываем стрелку, чтобы она не мешала кнопке удаления
-                    holder.cell.chevronView.visibility = View.GONE
-                    
-                    holder.cell.deleteView.visibility = View.VISIBLE
-                    holder.cell.deleteView.setOnClickListener {
-                        MusicManager.deleteTrack(context, track)
-                        updateMusicList()
+                    holder.cell.moreBtn.setImageResource(R.drawable.ic_close_small)
+                    holder.cell.moreBtn.setColorFilter(DesignEngine.Theme.colorLogout, PorterDuff.Mode.SRC_IN)
+                    holder.cell.moreBtn.visibility = View.VISIBLE
+                    holder.cell.moreBtn.setOnClickListener {
+                        showCustomConfirmDialog(context, "Удаление трека", "Вы уверены, что хотите удалить трек \"${track.title}\"?") {
+                            MusicManager.deleteTrack(context, track)
+                            updateMusicList()
+                        }
                     }
                 }
 
@@ -458,7 +475,72 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         return root
     }
 
-    class TrackViewHolder(val cell: TextCell) : RecyclerView.ViewHolder(cell)
+    private fun showCustomConfirmDialog(context: Context, title: String, message: String, onConfirm: () -> Unit) {
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24))
+            background = GradientDrawable().apply {
+                setColor(DesignEngine.Theme.colorCardBackground)
+                cornerRadius = LayoutHelper.dp(28).toFloat()
+            }
+            layoutParams = FrameLayout.LayoutParams(LayoutHelper.dp(300), LayoutHelper.WRAP_CONTENT)
+        }
+        
+        val titleTv = TextView(context).apply {
+            text = title
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        }
+        root.addView(titleTv)
+        
+        val msgTv = TextView(context).apply {
+            text = message
+            textSize = 16f
+            setTextColor(DesignEngine.Theme.colorTextSecondary)
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
+            p.topMargin = LayoutHelper.dp(12)
+            layoutParams = p
+        }
+        root.addView(msgTv)
+        
+        val buttons = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
+            p.topMargin = LayoutHelper.dp(24)
+            layoutParams = p
+        }
+        
+        val btnCancel = Button(context).apply {
+            text = "ОТМЕНА"
+            background = null
+            setTextColor(DesignEngine.Theme.colorBlue)
+            setOnClickListener { dialog.dismiss() }
+        }
+        buttons.addView(btnCancel)
+        
+        val btnOk = Button(context).apply {
+            text = "УДАЛИТЬ"
+            background = null
+            setTextColor(DesignEngine.Theme.colorLogout)
+            setOnClickListener {
+                onConfirm()
+                dialog.dismiss()
+            }
+        }
+        buttons.addView(btnOk)
+        
+        root.addView(buttons)
+        dialog.setContentView(root)
+        dialog.show()
+    }
+
+    class TrackViewHolder(val cell: MusicCell) : RecyclerView.ViewHolder(cell)
 
     private fun createDocsContent(): View {
         val container = ContainerCell(context)
