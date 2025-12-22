@@ -15,6 +15,7 @@ import android.widget.RelativeLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.kia.blagogramapp.utils.IconManager
 
 /**
  * Экран "О приложении" на новом графическом движке.
@@ -70,7 +71,7 @@ class AboutActivity : AppCompatActivity() {
 
         // --- Логотип ---
         val logoView = ImageView(this).apply {
-            setImageResource(R.mipmap.ic_launcher)
+            setImageResource(IconManager.getSeasonalIconRes())
             layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(100), LayoutHelper.dp(100)).apply {
                 bottomMargin = LayoutHelper.dp(16)
             }
