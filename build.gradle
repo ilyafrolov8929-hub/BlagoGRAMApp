@@ -1,15 +1,2 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-        jcenter()
-        maven {
-            url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven")
-        }
-    }
-    dependencies {
-        classpath "com.android.tools.build:gradle:8.1.0"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.10"
-    }
-}
+// Этот файл устарел. Используйте build.gradle.kts в корне проекта.
+// Удалите этот файл (build.gradle) вручную, чтобы избежать конфликтов.

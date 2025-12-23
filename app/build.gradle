@@ -1,22 +1,29 @@
 plugins {
-    id 'com.android.application'
-    id 'kotlin-android'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
     namespace "com.kia.blagogramapp"
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.kia.blagogramapp"
         minSdk 23
-        targetSdk 34
-        versionCode 4
-        versionName "0.3.0-beta"
+        targetSdk 36
+        versionCode 5
+        versionName '0.6.1'
     }
 
     buildTypes {
-        release { minifyEnabled false }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     compileOptions {
@@ -27,32 +34,34 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    packaging {
+        jniLibs {
+            // Это заставляет систему сжимать библиотеки в APK, 
+            // что заставляет систему Android извлекать и выравнивать их при установке.
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.10"
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.appcompat
+    implementation libs.material
 
-    implementation "com.squareup.retrofit2:retrofit:2.9.0"
-    implementation "com.squareup.retrofit2:converter-gson:2.9.0"
-    implementation "com.squareup.okhttp3:logging-interceptor:4.10.0"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
-    implementation "io.coil-kt:coil:2.2.2"
-    implementation "com.github.Commit451:coil-transformations:2.0.2"
-    implementation "androidx.palette:palette-ktx:1.0.0"
+    implementation libs.retrofit
+    implementation libs.converter.gson
+    implementation libs.logging.interceptor
+    implementation libs.kotlinx.coroutines.android
+    implementation libs.coil
+    implementation libs.coil.transformations
+    implementation libs.androidx.palette.ktx
     
-    // Для зума картинок при просмотре
-    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
-
-    // Для редактирования (кроп, поворот)
-    implementation 'com.github.yalantis:ucrop:2.2.8'
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-    implementation "androidx.cardview:cardview:1.0.0"
+    implementation libs.photoview
+    implementation libs.ucrop
+    implementation libs.androidx.swiperefreshlayout
+    implementation libs.androidx.cardview
     
-    // Библиотека для отображения iOS смайликов
-    implementation 'com.vanniktech:emoji-ios:0.16.0'
-
-    // Библиотека для медиа-уведомлений
-    implementation 'androidx.media:media:1.7.0'
+    implementation libs.emoji.ios
+    implementation libs.androidx.media
 }

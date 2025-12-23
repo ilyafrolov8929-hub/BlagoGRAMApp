@@ -1,24 +1,27 @@
 package com.kia.blagogramapp
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.StatFs
 import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.RelativeLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.kia.blagogramapp.utils.IconManager
+import java.io.File
+import java.util.*
+import kotlin.math.log10
+import kotlin.math.pow
 
 /**
- * Экран "О приложении" на новом графическом движке.
+ * Экран "О приложении" с подробной технической информацией.
  */
 class AboutActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
@@ -27,7 +30,6 @@ class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализация тем
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
@@ -35,225 +37,242 @@ class AboutActivity : AppCompatActivity() {
 
         isCurrentThemeDark = isDarkTheme
         isCurrentUseMonet = useMonet
-
         DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
-        // 2. Настройка окна
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         if (!isDarkTheme) {
             window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         }
         window.statusBarColor = Color.TRANSPARENT
 
-        val statusBarHeight = getStatusBarHeight()
-
-        // Корневой FrameLayout
         val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
         setContentView(rootLayout)
 
-        // 3. Скролл-контейнер
         val scrollView = ScrollView(this)
         scrollView.isFillViewport = true
-        scrollView.clipToPadding = false
         scrollView.overScrollMode = View.OVER_SCROLL_NEVER
         
         val contentLayout = LinearLayout(this)
         contentLayout.orientation = LinearLayout.VERTICAL
-        contentLayout.gravity = Gravity.CENTER_HORIZONTAL
-        contentLayout.setPadding(0, 0, 0, LayoutHelper.dp(20))
-        
+        contentLayout.setPadding(0, 0, 0, LayoutHelper.dp(40))
         scrollView.addView(contentLayout)
         
-        // Отступ сверху под тулбар
-        val topMarginContent = LayoutHelper.dp(56)
-        contentLayout.addView(SpacerCell(this, topMarginContent))
+        // Отступ под тулбар
+        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(50)))
 
-        // --- Логотип ---
+        // --- Логотип (Центрируем) ---
         val logoView = ImageView(this).apply {
             setImageResource(IconManager.getSeasonalIconRes())
-            layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(100), LayoutHelper.dp(100)).apply {
-                bottomMargin = LayoutHelper.dp(16)
-            }
         }
-        contentLayout.addView(logoView)
+        val logoParams = LinearLayout.LayoutParams(LayoutHelper.dp(90), LayoutHelper.dp(90)).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            bottomMargin = LayoutHelper.dp(12)
+        }
+        contentLayout.addView(logoView, logoParams)
 
-        // --- Название ---
+        // --- Название (Центрируем) ---
         val appNameView = TextView(this).apply {
             text = "BlagoGRAM"
-            textSize = 24f
+            textSize = 28f
             setTextColor(DesignEngine.Theme.colorTextPrimary)
             typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
+            gravity = Gravity.CENTER_HORIZONTAL
         }
-        contentLayout.addView(appNameView)
+        contentLayout.addView(appNameView, LinearLayout.LayoutParams(-1, -2))
 
-        // --- Версия ---
+        // --- Версия (Центрируем) ---
         val versionTextView = TextView(this).apply {
-            textSize = 14f
-            setTextColor(DesignEngine.Theme.colorProfileStatus) // Серый цвет
-            gravity = Gravity.CENTER
-            setPadding(0, LayoutHelper.dp(4), 0, LayoutHelper.dp(32))
+            textSize = 16f
+            setTextColor(DesignEngine.Theme.colorTextSecondary)
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, LayoutHelper.dp(4), 0, LayoutHelper.dp(40))
+            
+            try {
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                val vName = packageInfo.versionName ?: "0.0.0"
+                val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode else packageInfo.versionCode
+                text = "Версия $vName ($vCode)"
+            } catch (e: Exception) {
+                text = "Версия 1.0.0"
+            }
         }
-        
-        // Логика получения версии
-        try {
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            versionTextView.text = "Версия ${packageInfo.versionName}"
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
-            versionTextView.text = "Версия не определена"
-        }
-        contentLayout.addView(versionTextView)
+        contentLayout.addView(versionTextView, LinearLayout.LayoutParams(-1, -2))
 
-        // --- Карточка с сайтом ---
-        val websiteCard = ContainerCell(this)
+        // --- Секции ---
         
-        // Создаем кастомную ячейку для сайта, так как там нужен цветной текст справа
-        val websiteCell = FrameLayout(this).apply {
-            val outValue = android.util.TypedValue()
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
-            foreground = context.getDrawable(outValue.resourceId)
-            isClickable = true
-            setOnClickListener {
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://blagogram.ru"))
-                startActivity(browserIntent)
-            }
-            
-            // Иконка
-            val icon = ImageView(context).apply {
-                setImageResource(R.drawable.ic_more)
-                setColorFilter(DesignEngine.Theme.colorIconPrimary, android.graphics.PorterDuff.Mode.SRC_IN)
-            }
-            addView(icon, LayoutHelper.createFrame(24, 24, Gravity.CENTER_VERTICAL or Gravity.START, 16, 0, 0, 0))
-            
-            // Текст "Наш сайт"
-            val title = TextView(context).apply {
-                text = "Наш сайт"
-                textSize = 16f
-                setTextColor(DesignEngine.Theme.colorTextPrimary)
-            }
-            // Отступ слева 56dp (16+24+16), отступ справа (под текст ссылки и шеврон)
-            addView(title, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START, 56, 0, 0, 0))
-            
-            // Ссылка справа (синяя)
-            val linkText = TextView(context).apply {
-                text = "blagogram.ru"
-                textSize = 14f
-                setTextColor(Color.parseColor("#00BCD4")) // Cyan цвет из XML
-            }
-            // Располагаем справа от шеврона (примерно 40dp от края)
-            addView(linkText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 40, 0))
-            
-            // Шеврон
-            val chevron = ImageView(context).apply {
-                setImageResource(R.drawable.ic_chevron_right)
-                setColorFilter(DesignEngine.Theme.colorChevron, android.graphics.PorterDuff.Mode.SRC_IN)
-            }
-            addView(chevron, LayoutHelper.createFrame(24, 24, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 8, 0))
-            
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LayoutHelper.dp(54))
+        // 1. ИНФОРМАЦИЯ
+        addSectionHeader(contentLayout, "ИНФОРМАЦИЯ")
+        val mainCard = ContainerCell(this)
+        addInfoRow(mainCard, "Имя пакета", packageName)
+        addInfoRow(mainCard, "Сайт проекта", "blagogram.ru", true) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://blagogram.ru")))
         }
-        
-        websiteCard.addView(websiteCell)
-        
-        // Добавляем карточку с отступами
-        val cardParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            leftMargin = LayoutHelper.dp(24)
-            rightMargin = LayoutHelper.dp(24)
-        }
-        contentLayout.addView(websiteCard, cardParams)
+        addInfoRow(mainCard, "Разработчик", "BlagoGRAM Team", isLast = true)
+        contentLayout.addView(mainCard, getCardParams())
 
-        // --- Копирайт ---
+        // 2. ПАМЯТЬ
+        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(24)))
+        addSectionHeader(contentLayout, "ИСПОЛЬЗОВАНИЕ ПАМЯТИ")
+        val memoryCard = ContainerCell(this)
+        addInfoRow(memoryCard, "Размер кэша", getCacheSize())
+        addInfoRow(memoryCard, "Размер приложения", getAppSize())
+        addInfoRow(memoryCard, "Свободно в системе", getFreeInternalSpace(), isLast = true)
+        contentLayout.addView(memoryCard, getCardParams())
+
+        // 3. СИСТЕМА
+        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(24)))
+        addSectionHeader(contentLayout, "СИСТЕМНЫЕ ДАННЫЕ")
+        val systemCard = ContainerCell(this)
+        addInfoRow(systemCard, "Android версия", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        addInfoRow(systemCard, "SDK Min / Target", "${applicationInfo.minSdkVersion} / ${applicationInfo.targetSdkVersion}")
+        addInfoRow(systemCard, "Устройство", "${Build.MANUFACTURER} ${Build.MODEL}")
+        addInfoRow(systemCard, "ОЗУ всего", getTotalRAM(), isLast = true)
+        contentLayout.addView(systemCard, getCardParams())
+
+        // Copyright
         val copyrightView = TextView(this).apply {
-            text = "© 2025 BlagoGRAM Inc."
-            textSize = 12f
-            setTextColor(Color.parseColor("#909090"))
+            val year = Calendar.getInstance().get(Calendar.YEAR)
+            text = "© $year BlagoGRAM Inc.\nСделано с любовью для Kia"
+            textSize = 13f
+            setLineSpacing(0f, 1.2f)
+            setTextColor(DesignEngine.Theme.colorTextSecondary)
             gravity = Gravity.CENTER
-            setPadding(0, LayoutHelper.dp(20), 0, LayoutHelper.dp(20))
+            setPadding(0, LayoutHelper.dp(40), 0, LayoutHelper.dp(20))
         }
-        contentLayout.addView(copyrightView)
+        contentLayout.addView(copyrightView, LinearLayout.LayoutParams(-1, -2))
 
         rootLayout.addView(scrollView)
 
-        // 4. Тулбар (Прозрачный)
-        val toolbarLayout = RelativeLayout(this)
-        toolbarLayout.setBackgroundColor(Color.TRANSPARENT)
-        toolbarLayout.setPadding(
-            LayoutHelper.dp(16), 
-            statusBarHeight + LayoutHelper.dp(10),
-            LayoutHelper.dp(16), 
-            LayoutHelper.dp(10)
-        )
+        setupToolbar(rootLayout)
+    }
+
+    private fun addSectionHeader(container: LinearLayout, title: String) {
+        val header = TextView(this).apply {
+            text = title
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorHeader)
+            setPadding(LayoutHelper.dp(32), 0, LayoutHelper.dp(16), LayoutHelper.dp(8))
+        }
+        container.addView(header)
+    }
+
+    private fun addInfoRow(card: ContainerCell, label: String, value: String, isLink: Boolean = false, isLast: Boolean = false, onClick: (() -> Unit)? = null) {
+        val frame = FrameLayout(this)
+        if (onClick != null) {
+            val outValue = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+            frame.foreground = getDrawable(outValue.resourceId)
+            frame.isClickable = true
+            frame.setOnClickListener { onClick() }
+        }
         
-        // Кнопка BACK
+        val labelView = TextView(this).apply {
+            text = label
+            textSize = 16f
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        }
+        frame.addView(labelView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START, 16, 0, 0, 0))
+        
+        val valueView = TextView(this).apply {
+            text = value
+            textSize = 15f
+            setTextColor(if (isLink) Color.parseColor("#007AFF") else DesignEngine.Theme.colorTextSecondary)
+            gravity = Gravity.END
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        frame.addView(valueView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END, 16, 0, 16, 0))
+        
+        card.addView(frame, LinearLayout.LayoutParams(-1, LayoutHelper.dp(54)))
+        
+        if (!isLast) {
+            val divider = View(this).apply { setBackgroundColor(DesignEngine.COLOR_DIVIDER) }
+            card.addView(divider, LayoutHelper.createLinear(-1, 1, 0f, 0, 16, 0, 0, 0))
+        }
+    }
+
+    private fun setupToolbar(root: FrameLayout) {
+        val statusBarHeight = getStatusBarHeight()
+        val toolbarLayout = RelativeLayout(this).apply {
+            setPadding(LayoutHelper.dp(16), statusBarHeight + LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
+        }
+        
         val backBtn = LinearLayout(this).apply {
-            id = View.generateViewId()
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setBackgroundResource(R.drawable.bg_stat_pill)
-            val btnColor = if (isDarkTheme) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
-            backgroundTintList = android.content.res.ColorStateList.valueOf(btnColor)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isCurrentThemeDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
             setOnClickListener { finish() }
         }
-        val backIcon = ImageView(this).apply {
+        backBtn.addView(ImageView(this).apply {
             setImageResource(R.drawable.ic_back)
-            val iconColor = if (isDarkTheme) Color.WHITE else Color.BLACK
-            setColorFilter(iconColor)
+            setColorFilter(if (isCurrentThemeDark) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
-        }
-        backBtn.addView(backIcon)
+        })
         
-        // Заголовок
         val titleView = TextView(this).apply {
             text = "О приложении"
             textSize = 20f
-            setTextColor(DesignEngine.Theme.colorTextPrimary) // Используем цвет текста темы (черный/белый), а не фиксированный белый, т.к. фон страницы может быть светлым
-            // В оригинале заголовок был черным на белом фоне.
-            // В нашем движке на светлой теме фон серый, текст черный. На темной - фон черный, текст белый.
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
             typeface = Typeface.DEFAULT_BOLD
         }
         
-        val toolbarContent = RelativeLayout(this)
-        toolbarContent.layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT)
-        
-        toolbarContent.addView(backBtn, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_START)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-        })
-        
-        toolbarContent.addView(titleView, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        })
-        
+        val toolbarContent = RelativeLayout(this).apply {
+            layoutParams = RelativeLayout.LayoutParams(-1, -2)
+        }
+        toolbarContent.addView(backBtn, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.ALIGN_PARENT_START); addRule(RelativeLayout.CENTER_VERTICAL) })
+        toolbarContent.addView(titleView, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
         toolbarLayout.addView(toolbarContent)
         
-        rootLayout.addView(toolbarLayout, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-            gravity = Gravity.TOP
-        })
+        root.addView(toolbarLayout, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
     }
-    
+
+    private fun getCardParams() = LinearLayout.LayoutParams(-1, -2).apply { leftMargin = LayoutHelper.dp(16); rightMargin = LayoutHelper.dp(16) }
     private fun getStatusBarHeight(): Int {
-        var result = 0
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        if (resourceId > 0) {
-            result = resources.getDimensionPixelSize(resourceId)
-        }
-        return result
+        val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else 0
+    }
+
+    private fun getCacheSize(): String {
+        var s = getFolderSize(cacheDir) + getFolderSize(externalCacheDir)
+        return formatSize(s)
+    }
+
+    private fun getAppSize(): String {
+        var s: Long = 0
+        try {
+            s = File(packageManager.getApplicationInfo(packageName, 0).publicSourceDir).length() + getFolderSize(filesDir)
+        } catch (e: Exception) {}
+        return formatSize(s)
+    }
+
+    private fun getFreeInternalSpace() = formatSize(StatFs(Environment.getDataDirectory().path).let { it.blockSizeLong * it.availableBlocksLong })
+
+    private fun getTotalRAM(): String {
+        val mi = ActivityManager.MemoryInfo()
+        (getSystemService(ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(mi)
+        return formatSize(mi.totalMem)
+    }
+
+    private fun getFolderSize(f: File?): Long {
+        if (f == null || !f.exists()) return 0
+        if (!f.isDirectory) return f.length()
+        return f.listFiles()?.sumOf { getFolderSize(it) } ?: 0
+    }
+
+    private fun formatSize(size: Long): String {
+        if (size <= 0) return "0 Б"
+        val units = arrayOf("Б", "КБ", "МБ", "ГБ", "ТБ")
+        val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
+        return String.format(Locale.getDefault(), "%.2f %s", size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
     }
 
     override fun onResume() {
         super.onResume()
-
-        // Проверяем смену темы
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
-        val isNowMonet = themePrefs.getBoolean("use_monet", false)
-
-        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
-            recreate()
-            return
-        }
+        val p = getSharedPreferences("app_theme", MODE_PRIVATE)
+        if (p.getBoolean("is_dark_theme", false) != isCurrentThemeDark || p.getBoolean("use_monet", false) != isCurrentUseMonet) recreate()
     }
 }

@@ -9,17 +9,18 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven") }
     }
 }
-dependencyResolutionManagement {repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // Add this line:
         maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven") }
     }
 }
-
 
 rootProject.name = "BlagoGRAMApp"
 include(":app")

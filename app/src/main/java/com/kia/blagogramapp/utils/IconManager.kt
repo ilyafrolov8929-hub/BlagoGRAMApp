@@ -3,6 +3,7 @@ package com.kia.blagogramapp.utils
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import com.kia.blagogramapp.BuildConfig
 import com.kia.blagogramapp.R
 import java.util.Calendar
 
@@ -14,6 +15,16 @@ object IconManager {
     private const val MART8_ALIAS = "com.kia.blagogramapp.Launcher8Mart"
 
     fun updateIconIfNeeded(context: Context) {
+        // В режиме отладки отключаем автоматическую смену, 
+        // чтобы не ломать запуск из Android Studio (ошибка "Activity class does not exist")
+        if (BuildConfig.DEBUG) {
+            // Убеждаемся, что дефолтный алиас включен для отладки
+            if (getCurrentEnabledAlias(context) != DEFAULT_ALIAS) {
+                enableAlias(context, DEFAULT_ALIAS)
+            }
+            return
+        }
+
         val targetAlias = getTargetAlias()
         val currentAlias = getCurrentEnabledAlias(context)
 
