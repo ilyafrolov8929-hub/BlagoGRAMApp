@@ -420,6 +420,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
     val messageView: TextView
     val timeView: TextView
     val unreadBadge: TextView
+    val pinView: ImageView
 
     init {
         val outValue = TypedValue()
@@ -468,7 +469,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
         // 3. Мета
         val metaContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
+            gravity = Gravity.END or Gravity.TOP
         }
         
         timeView = TextView(context).apply {
@@ -476,6 +477,20 @@ class ChatCell(context: Context) : FrameLayout(context) {
             setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
         }
         
+        val badgeContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+        }
+
+        pinView = ImageView(context).apply {
+            setImageResource(R.drawable.ic_pin) // Используем ic_more как временный символ закрепа
+            rotation = 90f
+            scaleX = 0.7f
+            scaleY = 0.7f
+            setColorFilter(DesignEngine.COLOR_TEXT_SECONDARY, PorterDuff.Mode.SRC_IN)
+            visibility = View.GONE
+        }
+
         unreadBadge = TextView(context).apply {
             textSize = 13f
             typeface = Typeface.DEFAULT_BOLD
@@ -489,13 +504,16 @@ class ChatCell(context: Context) : FrameLayout(context) {
             visibility = View.GONE
         }
         
+        badgeContainer.addView(pinView, LayoutHelper.createLinear(16, 16, 0f, 0, 0, 0, 4, 0))
+        badgeContainer.addView(unreadBadge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        
         metaContainer.addView(timeView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
-        metaContainer.addView(unreadBadge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 4, 0, 0))
+        metaContainer.addView(badgeContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 4, 0, 0))
         
         addView(metaContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END))
     }
 
-    fun setData(name: String, message: String, time: String, unread: Int, avatarUrl: String?) {
+    fun setData(name: String, message: String, time: String, unread: Int, avatarUrl: String?, pinned: Boolean = false) {
         nameView.text = name
         messageView.text = message
         timeView.text = time
@@ -508,6 +526,9 @@ class ChatCell(context: Context) : FrameLayout(context) {
             unreadBadge.visibility = View.GONE
             timeView.setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
         }
+        
+        pinView.visibility = if (pinned) View.VISIBLE else View.GONE
+        setBackgroundColor(if (pinned) DesignEngine.COLOR_DIVIDER else Color.TRANSPARENT)
         
         avatarView.load(avatarUrl) {
             crossfade(true)

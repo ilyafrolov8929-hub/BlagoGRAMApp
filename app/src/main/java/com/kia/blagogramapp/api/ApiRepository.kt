@@ -81,7 +81,8 @@ class ApiRepository(private val api: BlagoApi) {
                 last_time = it["last_time"]?.toString(),
                 unread = (it["unread"] as Number).toInt(),
                 last_sender_id = (it["last_sender_id"] as Number?)?.toInt(),
-                user_id = userId
+                user_id = userId,
+                pinned = it["pinned"] == true || it["pinned"] == 1 || it["pinned"] == "1"
             )
         }
     }
@@ -233,6 +234,15 @@ class ApiRepository(private val api: BlagoApi) {
         val result = body["result"] as Map<String, Any>
 
         return (result["chat_id"] as Number).toInt()
+    }
+
+    suspend fun deleteChat(token: String, chatId: Int, mode: String): Boolean {
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.deleteChat(token = token, chatId = chatId, mode = mode)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        return true
     }
 
     // -------------------------------------------------

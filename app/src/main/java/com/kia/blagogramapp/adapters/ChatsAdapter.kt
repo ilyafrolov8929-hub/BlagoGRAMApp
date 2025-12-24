@@ -8,13 +8,18 @@ import com.kia.blagogramapp.utils.TimeUtils
 
 class ChatsAdapter(
     val items: List<ChatItem>,
-    val onClick: (ChatItem) -> Unit
+    val onClick: (ChatItem) -> Unit,
+    val onLongClick: (ChatItem) -> Unit
 ) : RecyclerView.Adapter<ChatsAdapter.ViewHolder>() {
 
     inner class ViewHolder(val cell: ChatCell) : RecyclerView.ViewHolder(cell) {
         init {
             cell.setOnClickListener {
                 onClick(items[adapterPosition])
+            }
+            cell.setOnLongClickListener {
+                onLongClick(items[adapterPosition])
+                true
             }
         }
     }
@@ -40,7 +45,8 @@ class ChatsAdapter(
             message = c.last_message ?: "",
             time = time,
             unread = c.unread,
-            avatarUrl = "https://blagogram.ru/avatars/${c.avatar}"
+            avatarUrl = "https://blagogram.ru/avatars/${c.avatar}",
+            pinned = c.pinned
         )
     }
 }

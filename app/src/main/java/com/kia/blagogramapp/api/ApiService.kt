@@ -73,6 +73,15 @@ interface ApiService {
     ): CreateChatResponse
 
     @FormUrlEncoded
+    @POST("index.php")
+    suspend fun deleteChat(
+        @Field("action") action: String = "chat.delete",
+        @Field("token") token: String,
+        @Field("chat_id") chatId: Int,
+        @Field("mode") mode: String
+    ): Response<Map<String, Any>>
+
+    @FormUrlEncoded
     @POST("get_chats.php")
     suspend fun getChats(
         @Field("user_id") userId: Int

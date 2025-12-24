@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.google.gson.Gson
@@ -14,6 +15,7 @@ import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.models.ChatItem
 import com.kia.blagogramapp.network.RetrofitClient
 import com.kia.blagogramapp.ui.modules.ChatListLayout
+import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
 import com.kia.blagogramapp.ui.modules.SideMenuModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -168,17 +170,56 @@ class ChatsActivity : AppCompatActivity() {
                 avatar = c.avatar,
                 last_message = prefix + (c.last_msg ?: ""),
                 last_time = c.last_time,
-                unread = c.unread
+                unread = c.unread,
+                pinned = c.pinned
             )
         }
-        layout.recycler.adapter = ChatsAdapter(items) { chat ->
-            val i = Intent(this, ChatActivity::class.java)
-            i.putExtra("chat_id", chat.chat_id)
-            i.putExtra("chat_name", chat.name)
-            i.putExtra("chat_avatar", chat.avatar)
-            i.putExtra("target_user_id", chat.user_id)
-            startActivity(i)
-        }
+        layout.recycler.adapter = ChatsAdapter(
+            items = items,
+            onClick = { chat ->
+                val i = Intent(this, ChatActivity::class.java)
+                i.putExtra("chat_id", chat.chat_id)
+                i.putExtra("chat_name", chat.name)
+                i.putExtra("chat_avatar", chat.avatar)
+                i.putExtra("target_user_id", chat.user_id)
+                startActivity(i)
+            },
+            onLongClick = { chat ->
+                showChatMenu(chat)
+            }
+        )
+    }
+
+    private fun showChatMenu(chat: ChatItem) {
+        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        MessageOptionsSheet.showForChat(
+            context = this,
+            pinned = chat.pinned,
+            onPinToggle = {
+                Toast.makeText(this, "API скоро будет: pin/unpin ${chat.chat_id}", Toast.LENGTH_SHORT).show()
+            },
+            onDelete = {
+                MessageOptionsSheet.showDeleteConfirm(this, chat.name, chat.avatar) { forBoth ->
+                    val mode = if (forBoth) "for_everyone" else "for_me"
+                    
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val success = repo.deleteChat(token, chat.chat_id, mode)
+                            if (success) {
+                                runOnUiThread {
+                                    Toast.makeText(this@ChatsActivity, "Чат удален", Toast.LENGTH_SHORT).show()
+                                    loadChats() // Обновляем список
+                                }
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread {
+                                Toast.makeText(this@ChatsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            }
+        )
     }
 
     private fun getStatusBarHeight(): Int {
