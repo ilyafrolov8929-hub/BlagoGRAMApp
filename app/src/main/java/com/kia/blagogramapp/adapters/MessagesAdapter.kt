@@ -1,6 +1,5 @@
 package com.kia.blagogramapp.adapters
 
-import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -9,29 +8,27 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.kia.blagogramapp.DesignEngine
-import com.kia.blagogramapp.LayoutHelper
 import com.kia.blagogramapp.R
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.models.ChatListItem
 import com.kia.blagogramapp.utils.TimeUtils
+import com.kia.blagogramapp.LayoutHelper
 
 class MessagesAdapter(
-    itemsInput: List<ChatListItem>,
     private val myId: Int,
     private val onImageClick: (String, Message) -> Unit,
     private val onLongClick: (Message) -> Unit
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    private var items: MutableList<ChatListItem> = itemsInput.toMutableList()
+) : ListAdapter<ChatListItem, RecyclerView.ViewHolder>(DiffCallback()) {
 
     private val typeHeader = 0
     private val typeLeft = 1
     private val typeRight = 2
 
     override fun getItemViewType(position: Int): Int {
-        return when (val item = items[position]) {
+        return when (val item = getItem(position)) {
             is ChatListItem.Header -> typeHeader
             is ChatListItem.Msg ->
                 if (item.message.sender_id == myId) typeRight else typeLeft
@@ -39,7 +36,6 @@ class MessagesAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-
         return when (viewType) {
             typeHeader -> {
                 val v = LayoutInflater.from(parent.context)
@@ -60,61 +56,56 @@ class MessagesAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-
-            is ChatListItem.Header -> {
-                (holder as HeaderHolder).bind(item.title)
-            }
-
+        when (val item = getItem(position)) {
+            is ChatListItem.Header -> (holder as HeaderHolder).bind(item.title)
             is ChatListItem.Msg -> {
-                (holder as MsgHolder).bind(item.message, onImageClick, onLongClick)
+                val prev = if (position > 0) getItem(position - 1) else null
+                val next = if (position < itemCount - 1) getItem(position + 1) else null
+
+                val isPrevSame = prev is ChatListItem.Msg && prev.message.sender_id == item.message.sender_id
+                val isNextSame = next is ChatListItem.Msg && next.message.sender_id == item.message.sender_id
+
+                (holder as MsgHolder).bind(
+                    item.message,
+                    onImageClick,
+                    onLongClick,
+                    isPrevSame,
+                    isNextSame
+                )
             }
         }
     }
 
-    override fun getItemCount() = items.size
-
-    fun update(messages: List<Message>) {
-        val newItems = buildList(messages)
-        val diffCallback = MessagesDiffCallback(items, newItems)
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
-        items.clear()
-        items.addAll(newItems)
-        diffResult.dispatchUpdatesTo(this)
+    fun update(messages: List<Message>, onUpdated: (() -> Unit)? = null) {
+        submitList(buildList(messages), onUpdated)
     }
 
-    fun addMessage(message: Message) {
+    fun addMessage(message: Message, onAdded: (() -> Unit)? = null) {
+        val currentItems = currentList.toMutableList()
         val header = TimeUtils.headerFor(message.sent_at)
-        val lastItem = items.lastOrNull()
+        val lastItem = currentItems.lastOrNull()
+        
         var needsHeader = true
         if (lastItem is ChatListItem.Msg) {
-            val lastHeader = TimeUtils.headerFor(lastItem.message.sent_at)
-            if (lastHeader == header) {
-                needsHeader = false
-            }
+            if (TimeUtils.headerFor(lastItem.message.sent_at) == header) needsHeader = false
         } else if (lastItem is ChatListItem.Header) {
-            if (lastItem.title == header) {
-                needsHeader = false
-            }
-        } else if (items.isEmpty()) {
+            if (lastItem.title == header) needsHeader = false
+        } else if (currentItems.isEmpty()) {
             needsHeader = true
         }
 
         if (needsHeader) {
-            items.add(ChatListItem.Header(header))
-            notifyItemInserted(items.size - 1)
+            currentItems.add(ChatListItem.Header(header))
         }
-        items.add(ChatListItem.Msg(message))
-        notifyItemInserted(items.size - 1)
+        currentItems.add(ChatListItem.Msg(message))
+        submitList(currentItems, onAdded)
     }
 
     private fun buildList(messages: List<Message>): List<ChatListItem> {
         val list = mutableListOf<ChatListItem>()
         var lastHeader = ""
-
         for (m in messages) {
             val header = TimeUtils.headerFor(m.sent_at)
-
             if (header != lastHeader) {
                 list.add(ChatListItem.Header(header))
                 lastHeader = header
@@ -131,46 +122,64 @@ class MessagesAdapter(
         val editedIcon: ImageView = v.findViewById(R.id.msgEditedIcon)
         val bubble: View = if (isOutgoing) v.findViewById(R.id.bubbleRight) else v.findViewById(R.id.bubbleLeft)
 
-        fun bind(msg: Message, onImageClick: (String, Message) -> Unit, onLongClick: (Message) -> Unit) {
+        fun bind(
+            msg: Message,
+            onImageClick: (String, Message) -> Unit,
+            onLongClick: (Message) -> Unit,
+            isPrevSame: Boolean,
+            isNextSame: Boolean
+        ) {
             text.text = msg.content
             time.text = TimeUtils.formatTime(msg.sent_at)
-
             editedIcon.visibility = if (msg.edited_at != null) View.VISIBLE else View.GONE
 
-            // --- Apply Theme Colors ---
-            val bubbleDrawable = bubble.background as GradientDrawable
+            val bubbleDrawable = (bubble.background as GradientDrawable).mutate() as GradientDrawable
+            
+            val radius = LayoutHelper.dp(16).toFloat()
+            val smallRadius = LayoutHelper.dp(4).toFloat()
+
             if (isOutgoing) {
                 bubbleDrawable.setColor(DesignEngine.Theme.colorBlue)
                 text.setTextColor(0xFFFFFFFF.toInt())
                 time.setTextColor(0xCCFFFFFF.toInt())
+
+                val tr = if (isPrevSame) smallRadius else radius
+                val br = if (isNextSame) smallRadius else radius
+
+                bubbleDrawable.cornerRadii = floatArrayOf(
+                    radius, radius, // Top-left
+                    tr, tr,         // Top-right
+                    br, br,         // Bottom-right
+                    radius, radius  // Bottom-left
+                )
             } else {
                 bubbleDrawable.setColor(DesignEngine.Theme.colorCardBackground)
                 text.setTextColor(DesignEngine.Theme.colorTextPrimary)
                 time.setTextColor(DesignEngine.Theme.colorTextSecondary)
+
+                val tl = if (isPrevSame) smallRadius else radius
+                val bl = if (isNextSame) smallRadius else radius
+
+                bubbleDrawable.cornerRadii = floatArrayOf(
+                    tl, tl,         // Top-left
+                    radius, radius, // Top-right
+                    radius, radius, // Bottom-right
+                    bl, bl          // Bottom-left
+                )
             }
 
-            if (msg.content.isEmpty()) {
-                text.visibility = View.GONE
-            } else {
-                text.visibility = View.VISIBLE
-            }
+            text.visibility = if (msg.content.isEmpty()) View.GONE else View.VISIBLE
 
             if (msg.images.isNotEmpty()) {
                 imagesRecycler.visibility = View.VISIBLE
                 imagesRecycler.layoutManager = LinearLayoutManager(itemView.context)
-
                 val urls = msg.images.map {
-                    if (it.startsWith("content:") || it.startsWith("file:")) {
-                        it
-                    } else {
-                        "https://blagogram.ru/uploads/${msg.sender_id}/$it"
-                    }
+                    if (it.startsWith("content:") || it.startsWith("file:")) it
+                    else "https://blagogram.ru/uploads/${msg.sender_id}/$it"
                 }
-
                 imagesRecycler.adapter = MessageImagesAdapter(urls) { clickedUrl ->
                     onImageClick(clickedUrl, msg)
                 }
-
             } else {
                 imagesRecycler.visibility = View.GONE
             }
@@ -184,7 +193,6 @@ class MessagesAdapter(
 
     class HeaderHolder(v: View) : RecyclerView.ViewHolder(v) {
         val title: TextView = v.findViewById(R.id.dayTitle)
-        
         fun bind(text: String) {
             title.text = text
             val bg = title.background as GradientDrawable
@@ -194,36 +202,22 @@ class MessagesAdapter(
         }
     }
 
-    class MessagesDiffCallback(
-        private val oldList: List<ChatListItem>,
-        private val newList: List<ChatListItem>
-    ) : DiffUtil.Callback() {
-
-        override fun getOldListSize(): Int = oldList.size
-        override fun getNewListSize(): Int = newList.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val oldItem = oldList[oldItemPosition]
-            val newItem = newList[newItemPosition]
-
+    class DiffCallback : DiffUtil.ItemCallback<ChatListItem>() {
+        override fun areItemsTheSame(oldItem: ChatListItem, newItem: ChatListItem): Boolean {
             if (oldItem is ChatListItem.Header && newItem is ChatListItem.Header) {
                 return oldItem.title == newItem.title
             }
-
             if (oldItem is ChatListItem.Msg && newItem is ChatListItem.Msg) {
                 val oldMsg = oldItem.message
                 val newMsg = newItem.message
                 if (oldMsg.id != 0 && oldMsg.id == newMsg.id) return true
-                if (oldMsg.id == 0 && newMsg.sender_id == oldMsg.sender_id && newMsg.content == oldMsg.content) {
-                    return true
-                }
-                return false
+                return oldMsg.id == 0 && newMsg.sender_id == oldMsg.sender_id && newMsg.content == oldMsg.content && oldMsg.sent_at == newMsg.sent_at
             }
             return false
         }
 
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition] == newList[newItemPosition]
+        override fun areContentsTheSame(oldItem: ChatListItem, newItem: ChatListItem): Boolean {
+            return oldItem == newItem
         }
     }
 }

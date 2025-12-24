@@ -37,8 +37,6 @@ android {
 
     packaging {
         jniLibs {
-            // Это заставляет систему сжимать библиотеки в APK, 
-            // что заставляет систему Android извлекать и выравнивать их при установке.
             useLegacyPackaging = true
         }
     }
@@ -48,6 +46,9 @@ dependencies {
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat
     implementation libs.material
+
+    implementation libs.androidx.lifecycle.runtime.ktx
+    implementation libs.androidx.lifecycle.viewmodel.ktx
 
     implementation libs.retrofit
     implementation libs.converter.gson

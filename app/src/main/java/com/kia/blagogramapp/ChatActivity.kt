@@ -18,9 +18,10 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -32,11 +33,12 @@ import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.BlagoApi
 import com.kia.blagogramapp.model.Message
+import com.kia.blagogramapp.ui.ChatViewModel
 import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
 import com.yalantis.ucrop.UCrop
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -44,11 +46,12 @@ import java.util.*
 
 class ChatActivity : AppCompatActivity() {
 
-    private lateinit var repo: ApiRepository
+    private lateinit var viewModel: ChatViewModel
     private var chatId: Int = 0
     private var targetUserId: Int = 0 
+    private var token: String = ""
+    private var myId: Int = 0
 
-    // UI Elements
     private lateinit var rootLayout: FrameLayout
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var recycler: RecyclerView
@@ -59,6 +62,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var attachmentsRecycler: RecyclerView
     private lateinit var attachmentsAdapter: AttachmentsAdapter
     private lateinit var headerContainer: LinearLayout
+    private lateinit var inputContainer: LinearLayout
     private lateinit var emptyText: TextView
     private lateinit var chatNameView: TextView
     private lateinit var chatAvatarView: ShapeableImageView
@@ -68,10 +72,8 @@ class ChatActivity : AppCompatActivity() {
     private var editingPosition = -1
     private var editingMessageId: Int = -1
     
-    // Флаг для принудительного разрешения обновления при свайпе хедера
     private var forceRefresh = false
 
-    // Launchers
     private val pickImagesLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isNotEmpty()) {
             selectedImages.addAll(uris)
@@ -116,6 +118,11 @@ class ChatActivity : AppCompatActivity() {
             return
         }
 
+        token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+
+        setupViewModel()
+
         val chatName = intent.getStringExtra("chat_name") ?: "Чат"
         val avatarUrl = intent.getStringExtra("chat_avatar")
 
@@ -138,11 +145,7 @@ class ChatActivity : AppCompatActivity() {
         
         setupHeaderSwipe(headerClickListener)
 
-        repo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
-
         adapter = MessagesAdapter(
-            itemsInput = emptyList(),
             myId = myId,
             onImageClick = { url, message ->
                 openViewer(
@@ -182,7 +185,8 @@ class ChatActivity : AppCompatActivity() {
             val text = messageInput.text.toString().trim()
             if (editingMessageId != -1) {
                 if (text.isNotBlank()) {
-                    saveEditedMessage(editingMessageId, text)
+                    viewModel.editMessage(token, editingMessageId, text, chatId)
+                    cancelEditing()
                 }
             } else {
                 if (text.isNotBlank() || selectedImages.isNotEmpty()) {
@@ -193,10 +197,87 @@ class ChatActivity : AppCompatActivity() {
         }
 
         swipeRefresh.setOnRefreshListener {
-            loadMessages(myId)
+            viewModel.loadMessages(token, chatId)
         }
 
-        loadMessages(myId)
+        viewModel.loadMessages(token, chatId)
+        setupInsets()
+    }
+
+    private fun setupViewModel() {
+        val repo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
+        val factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return ChatViewModel(repo) as T
+            }
+        }
+        viewModel = ViewModelProvider(this, factory)[ChatViewModel::class.java]
+
+        viewModel.messages.observe(this) { messages ->
+            swipeRefresh.isRefreshing = false
+            if (targetUserId == 0) {
+                val otherMsg = messages.find { it.sender_id != myId }
+                if (otherMsg != null) {
+                    targetUserId = otherMsg.sender_id
+                }
+            }
+            emptyText.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
+            
+            val isAtBottom = !recycler.canScrollVertically(1)
+            adapter.update(messages) {
+                if (isFirstLoad) {
+                    recycler.scrollToPosition(adapter.itemCount - 1)
+                    isFirstLoad = false
+                } else if (isAtBottom) {
+                    recycler.smoothScrollToPosition(adapter.itemCount - 1)
+                }
+            }
+        }
+
+        viewModel.error.observe(this) { errorMsg ->
+            swipeRefresh.isRefreshing = false
+            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show()
+        }
+        
+        viewModel.isMessageSent.observe(this) {
+             selectedImages.clear()
+             updateAttachmentsPreview()
+        }
+    }
+
+    private fun setupInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+            val imeVisible = windowInsets.isVisible(WindowInsetsCompat.Type.ime())
+            
+            headerContainer.setPadding(0, systemBars.top, 0, 0)
+            val bottomInset = if (imeVisible) ime.bottom else systemBars.bottom
+            inputContainer.setPadding(0, 0, 0, bottomInset)
+            
+            val headerHeight = systemBars.top + LayoutHelper.dp(56)
+            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(64) + bottomInset)
+            swipeRefresh.setProgressViewOffset(false, systemBars.top, headerHeight + LayoutHelper.dp(16))
+            
+            windowInsets
+        }
+
+        ViewCompat.setWindowInsetsAnimationCallback(
+            inputContainer,
+            object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_STOP) {
+                override fun onProgress(
+                    insets: WindowInsetsCompat,
+                    runningAnimations: MutableList<WindowInsetsAnimationCompat>
+                ): WindowInsetsCompat {
+                    val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+                    val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                    val bottom = if (ime.bottom > systemBars.bottom) ime.bottom else systemBars.bottom
+                    inputContainer.setPadding(0, 0, 0, bottom)
+                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height)
+                    return insets
+                }
+            }
+        )
     }
 
     private fun setupHeaderSwipe(clickListener: View.OnClickListener) {
@@ -204,22 +285,20 @@ class ChatActivity : AppCompatActivity() {
         var isProxying = false
 
         val touchListener = View.OnTouchListener { v, event ->
-            // Подготавливаем событие для проброса в SwipeRefreshLayout
             val offsetEvent = MotionEvent.obtain(event)
             val loc = IntArray(2)
             swipeRefresh.getLocationOnScreen(loc)
             val vLoc = IntArray(2)
             v.getLocationOnScreen(vLoc)
-            // Корректируем координаты относительно SwipeRefreshLayout
             offsetEvent.offsetLocation((vLoc[0] - loc[0]).toFloat(), (vLoc[1] - loc[1]).toFloat())
 
             val result = when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startY = event.rawY
                     isProxying = false
-                    forceRefresh = true // Разрешаем перехват
+                    forceRefresh = true
                     swipeRefresh.dispatchTouchEvent(offsetEvent)
-                    true // Забираем тач, чтобы отследить движение
+                    true 
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val diff = event.rawY - startY
@@ -234,9 +313,7 @@ class ChatActivity : AppCompatActivity() {
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     swipeRefresh.dispatchTouchEvent(offsetEvent)
                     forceRefresh = false
-                    
                     if (!isProxying && event.action == MotionEvent.ACTION_UP) {
-                        // Если это был просто тап (не свайп), вызываем клик
                         clickListener.onClick(v)
                     }
                     isProxying = false
@@ -247,7 +324,6 @@ class ChatActivity : AppCompatActivity() {
             offsetEvent.recycle()
             result
         }
-        
         headerContainer.setOnTouchListener(touchListener)
         chatAvatarView.setOnTouchListener(touchListener)
     }
@@ -282,54 +358,15 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveEditedMessage(messageId: Int, text: String) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
-        
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                repo.editMessage(token, messageId, text)
-                runOnUiThread {
-                    cancelEditing()
-                    loadMessages(myId)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                runOnUiThread {
-                    Toast.makeText(this@ChatActivity, "Ошибка при редактировании: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
     private fun confirmDeleteMessage(message: Message) {
         AlertDialog.Builder(this)
             .setTitle("Удалить сообщение?")
             .setMessage("Это действие нельзя отменить.")
             .setPositiveButton("Удалить") { _, _ ->
-                deleteMessage(message.id)
+                viewModel.deleteMessage(token, message.id, chatId)
             }
             .setNegativeButton("Отмена", null)
             .show()
-    }
-
-    private fun deleteMessage(messageId: Int) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
-        
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                repo.deleteMessage(token, messageId)
-                runOnUiThread {
-                    loadMessages(myId)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                runOnUiThread {
-                    Toast.makeText(this@ChatActivity, "Ошибка при удалении: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
 
     private fun createUI() {
@@ -377,9 +414,9 @@ class ChatActivity : AppCompatActivity() {
         infoContainer.addView(chatNameView)
 
         headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP))
+        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(30), Gravity.TOP))
 
-        val inputContainer = LinearLayout(this).apply {
+        inputContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(DesignEngine.Theme.colorCardBackground)
             elevation = LayoutHelper.dp(8).toFloat() 
@@ -433,8 +470,6 @@ class ChatActivity : AppCompatActivity() {
         rootLayout.addView(inputContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
 
         val listContainer = FrameLayout(this)
-        
-        // Кастомный SwipeRefreshLayout для поддержки свайпа за хедер
         swipeRefresh = object : SwipeRefreshLayout(this) {
             override fun canChildScrollUp(): Boolean {
                 return if (forceRefresh) false else super.canChildScrollUp()
@@ -464,34 +499,6 @@ class ChatActivity : AppCompatActivity() {
         listContainer.addView(emptyText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
 
         rootLayout.addView(listContainer, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
-
-        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
-            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            headerContainer.setPadding(0, systemBars.top + LayoutHelper.dp(4), 0, LayoutHelper.dp(4))
-            headerContainer.layoutParams.height = systemBars.top + LayoutHelper.dp(60)
-            val bottomPadding = if (ime.bottom > 0) ime.bottom else systemBars.bottom
-            inputContainer.setPadding(0, 0, 0, bottomPadding)
-            recycler.setPadding(0, systemBars.top + LayoutHelper.dp(60), 0, LayoutHelper.dp(80))
-            
-            // Настройка индикатора: он стартует под хедером и выезжает чуть ниже него
-            val headerHeight = systemBars.top + LayoutHelper.dp(60)
-            swipeRefresh.setProgressViewOffset(false, systemBars.top, headerHeight + LayoutHelper.dp(30))
-            
-            WindowInsetsCompat.CONSUMED
-        }
-        
-        ViewCompat.setOnApplyWindowInsetsListener(inputContainer) { view, windowInsets ->
-            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val bottomInset = if (ime.bottom > 0) ime.bottom else systemBars.bottom
-            view.setPadding(0, 0, 0, bottomInset)
-            recycler.setPadding(0, headerContainer.height, 0, LayoutHelper.dp(60) + bottomInset)
-            if (ime.bottom > 0 && adapter.itemCount > 0) {
-                 recycler.post { recycler.smoothScrollToPosition(adapter.itemCount - 1) }
-            }
-            WindowInsetsCompat.CONSUMED
-        }
     }
 
     private fun startCrop(uri: Uri) {
@@ -523,44 +530,10 @@ class ChatActivity : AppCompatActivity() {
         return getDrawable(outValue.resourceId)!!
     }
 
-    private fun loadMessages(myId: Int) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val messages: List<Message> = repo.getMessages(token, chatId)
-                if (targetUserId == 0) {
-                    val otherMsg = messages.find { it.sender_id != myId }
-                    if (otherMsg != null) {
-                        targetUserId = otherMsg.sender_id
-                    }
-                }
-                runOnUiThread {
-                    swipeRefresh.isRefreshing = false
-                    if (messages.isEmpty()) {
-                        emptyText.visibility = View.VISIBLE
-                    } else {
-                        emptyText.visibility = View.GONE
-                    }
-                    adapter.update(messages)
-                    if (isFirstLoad && messages.isNotEmpty()) {
-                        recycler.scrollToPosition(adapter.itemCount - 1)
-                        isFirstLoad = false
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                runOnUiThread {
-                    swipeRefresh.isRefreshing = false
-                }
-            }
-        }
-    }
-
     private fun sendMessage(text: String) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
-        val localImageUris = selectedImages.map { it.toString() }
+        val localImageUris = selectedImages.toList().map { it.toString() }
         val sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        
         val tempMessage = Message(
             id = 0,
             chat_id = chatId,
@@ -572,25 +545,17 @@ class ChatActivity : AppCompatActivity() {
             avatar = "",
             images = localImageUris
         )
-        runOnUiThread {
-            adapter.addMessage(tempMessage)
+        
+        // Передаем коллбэк для скролла после обновления списка
+        adapter.addMessage(tempMessage) {
             recycler.scrollToPosition(adapter.itemCount - 1)
-            selectedImages.clear()
-            updateAttachmentsPreview()
         }
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val filesToUpload = localImageUris.mapNotNull { uriString ->
-                    uriToCompressedFile(Uri.parse(uriString))
-                }
-                repo.sendMessage(token, chatId, text, filesToUpload)
-                loadMessages(myId)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                runOnUiThread {
-                    Toast.makeText(this@ChatActivity, "Ошибка отправки: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+
+        lifecycleScope.launch {
+            val filesToUpload = withContext(Dispatchers.IO) {
+                selectedImages.mapNotNull { uri -> uriToCompressedFile(uri) }
             }
+            viewModel.sendMessage(token, chatId, text, filesToUpload)
         }
     }
 
@@ -598,8 +563,7 @@ class ChatActivity : AppCompatActivity() {
         return try {
             val cr = contentResolver
             val mimeType = cr.getType(uri)
-            val extension = MimeTypeMap.getSingleton()
-                .getExtensionFromMimeType(mimeType) ?: "jpg"
+            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
             val originalFile = File(cacheDir, "original_${System.currentTimeMillis()}.$extension")
             cr.openInputStream(uri)?.use { input ->
                 FileOutputStream(originalFile).use { output ->
