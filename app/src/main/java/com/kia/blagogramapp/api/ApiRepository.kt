@@ -82,7 +82,12 @@ class ApiRepository(private val api: BlagoApi) {
                 unread = (it["unread"] as Number).toInt(),
                 last_sender_id = (it["last_sender_id"] as Number?)?.toInt(),
                 user_id = userId,
-                pinned = it["pinned"] == true || it["pinned"] == 1 || it["pinned"] == "1"
+                pinned = when (val p = it["pinned"]) {
+                    is Boolean -> p
+                    is Number -> p.toInt() == 1
+                    is String -> p == "1" || p == "true"
+                    else -> false
+                }
             )
         }
     }
@@ -239,6 +244,24 @@ class ApiRepository(private val api: BlagoApi) {
     suspend fun deleteChat(token: String, chatId: Int, mode: String): Boolean {
         val svc = ApiClient.retrofit.create(ApiService::class.java)
         val resp = svc.deleteChat(token = token, chatId = chatId, mode = mode)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        return true
+    }
+
+    suspend fun pinChat(token: String, chatId: Int): Boolean {
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.pinChat(token = token, chatId = chatId)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        return true
+    }
+
+    suspend fun unpinChat(token: String, chatId: Int): Boolean {
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.unpinChat(token = token, chatId = chatId)
         if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
         val body = resp.body() ?: throw Exception("Empty response")
         if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")

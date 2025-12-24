@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.*
 import androidx.core.content.ContextCompat
 import coil.load
+import coil.transform.CircleCropTransformation
 import com.google.android.material.imageview.ShapeableImageView
 
 /**
@@ -483,10 +484,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
         }
 
         pinView = ImageView(context).apply {
-            setImageResource(R.drawable.ic_pin) // Используем ic_more как временный символ закрепа
-            rotation = 90f
-            scaleX = 0.7f
-            scaleY = 0.7f
+            setImageResource(R.drawable.ic_pin)
             setColorFilter(DesignEngine.COLOR_TEXT_SECONDARY, PorterDuff.Mode.SRC_IN)
             visibility = View.GONE
         }
@@ -504,7 +502,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
             visibility = View.GONE
         }
         
-        badgeContainer.addView(pinView, LayoutHelper.createLinear(16, 16, 0f, 0, 0, 0, 4, 0))
+        badgeContainer.addView(pinView, LayoutHelper.createLinear(20, 20, 0f, 0, 0, 0, 4, 0))
         badgeContainer.addView(unreadBadge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
         
         metaContainer.addView(timeView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
@@ -513,7 +511,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
         addView(metaContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END))
     }
 
-    fun setData(name: String, message: String, time: String, unread: Int, avatarUrl: String?, pinned: Boolean = false) {
+    fun setData(name: String, message: String, time: String, unread: Int, avatar: String?, pinned: Boolean = false) {
         nameView.text = name
         messageView.text = message
         timeView.text = time
@@ -530,10 +528,47 @@ class ChatCell(context: Context) : FrameLayout(context) {
         pinView.visibility = if (pinned) View.VISIBLE else View.GONE
         setBackgroundColor(if (pinned) DesignEngine.COLOR_DIVIDER else Color.TRANSPARENT)
         
-        avatarView.load(avatarUrl) {
-            crossfade(true)
-            placeholder(R.drawable.ic_user_placeholder)
-            error(R.drawable.ic_user_placeholder)
+        if (avatar == "action_saved") {
+            avatarView.setPadding(0, 0, 0, 0) // Убираем падинги, чтобы фон не сжимался
+            avatarView.scaleType = ImageView.ScaleType.CENTER
+            avatarView.setImageResource(R.drawable.ic_saved_messages)
+            avatarView.setBackgroundResource(R.drawable.bg_saved_messages_circle)
+        } else {
+            avatarView.scaleType = ImageView.ScaleType.CENTER_CROP
+            avatarView.setPadding(0, 0, 0, 0)
+            avatarView.setBackgroundResource(0)
+            val avatarUrl = if (!avatar.isNullOrEmpty()) "https://blagogram.ru/avatars/$avatar" else null
+            avatarView.load(avatarUrl) {
+                crossfade(true)
+                placeholder(R.drawable.ic_user_placeholder)
+                error(R.drawable.ic_user_placeholder)
+                transformations(CircleCropTransformation())
+            }
         }
+    }
+}
+
+/**
+ * Заголовок секции чатов (как на скриншоте)
+ */
+class ChatSectionHeaderCell(context: Context) : FrameLayout(context) {
+    private val textView: TextView
+    init {
+        setPadding(0, LayoutHelper.dp(20), 0, LayoutHelper.dp(12))
+        textView = TextView(context).apply {
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(6), LayoutHelper.dp(24), LayoutHelper.dp(6))
+            background = GradientDrawable().apply {
+                setColor(0xFFBCBCBC.toInt()) // Солидный серый как на скриншоте
+                cornerRadius = LayoutHelper.dp(20).toFloat()
+            }
+        }
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
+    }
+    fun setTitle(title: String) {
+        textView.text = title
     }
 }

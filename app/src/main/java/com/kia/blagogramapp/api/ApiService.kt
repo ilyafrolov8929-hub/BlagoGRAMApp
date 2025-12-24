@@ -82,6 +82,22 @@ interface ApiService {
     ): Response<Map<String, Any>>
 
     @FormUrlEncoded
+    @POST("index.php")
+    suspend fun pinChat(
+        @Field("action") action: String = "chat.pin",
+        @Field("token") token: String,
+        @Field("chat_id") chatId: Int
+    ): Response<Map<String, Any>>
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun unpinChat(
+        @Field("action") action: String = "chat.unpin",
+        @Field("token") token: String,
+        @Field("chat_id") chatId: Int
+    ): Response<Map<String, Any>>
+
+    @FormUrlEncoded
     @POST("get_chats.php")
     suspend fun getChats(
         @Field("user_id") userId: Int

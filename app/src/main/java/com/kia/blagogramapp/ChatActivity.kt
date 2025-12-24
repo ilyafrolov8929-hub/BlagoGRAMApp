@@ -127,10 +127,21 @@ class ChatActivity : AppCompatActivity() {
         val avatarUrl = intent.getStringExtra("chat_avatar")
 
         chatNameView.text = chatName
-        chatAvatarView.load("https://blagogram.ru/avatars/$avatarUrl") {
-            crossfade(true)
-            placeholder(R.drawable.ic_user_placeholder)
-            error(R.drawable.ic_user_placeholder)
+        
+        if (avatarUrl == "action_saved") {
+            chatAvatarView.setPadding(0, 0, 0, 0)
+            chatAvatarView.scaleType = ImageView.ScaleType.CENTER
+            chatAvatarView.setImageResource(R.drawable.ic_saved_messages)
+            chatAvatarView.setBackgroundResource(R.drawable.bg_saved_messages_circle)
+        } else {
+            chatAvatarView.scaleType = ImageView.ScaleType.CENTER_CROP
+            chatAvatarView.setPadding(0, 0, 0, 0)
+            chatAvatarView.setBackgroundResource(0)
+            chatAvatarView.load("https://blagogram.ru/avatars/$avatarUrl") {
+                crossfade(true)
+                placeholder(R.drawable.ic_user_placeholder)
+                error(R.drawable.ic_user_placeholder)
+            }
         }
 
         val headerClickListener = View.OnClickListener {
@@ -138,7 +149,7 @@ class ChatActivity : AppCompatActivity() {
                 val i = Intent(this, ProfileActivity::class.java)
                 i.putExtra("user_id", targetUserId)
                 startActivity(i)
-            } else {
+            } else if (avatarUrl != "action_saved") {
                 Toast.makeText(this, "Пользователь не найден", Toast.LENGTH_SHORT).show()
             }
         }
@@ -256,7 +267,7 @@ class ChatActivity : AppCompatActivity() {
             inputContainer.setPadding(0, 0, 0, bottomInset)
             
             val headerHeight = systemBars.top + LayoutHelper.dp(56)
-            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(64) + bottomInset)
+            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(64 + 8) + bottomInset)
             swipeRefresh.setProgressViewOffset(false, systemBars.top, headerHeight + LayoutHelper.dp(16))
             
             windowInsets
@@ -273,7 +284,7 @@ class ChatActivity : AppCompatActivity() {
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                     val bottom = if (ime.bottom > systemBars.bottom) ime.bottom else systemBars.bottom
                     inputContainer.setPadding(0, 0, 0, bottom)
-                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height)
+                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height + LayoutHelper.dp(8))
                     return insets
                 }
             }

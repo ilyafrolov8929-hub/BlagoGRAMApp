@@ -89,6 +89,30 @@ class ChatsActivity : AppCompatActivity() {
             toggleDrawer()
         }
 
+        sideMenu.addItem("Избранное", R.drawable.ic_saved_messages) {
+            val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+
+            // Пытаемся найти чат "Избранное" в текущем списке
+            val savedChat = (layout.recycler.adapter as? ChatsAdapter)?.items?.find {
+                it is ChatItem && it.user_id == myId
+            } as? ChatItem
+
+            if (savedChat != null) {
+                val i = Intent(this, ChatActivity::class.java)
+                i.putExtra("chat_id", savedChat.chat_id)
+                i.putExtra("chat_name", "Избранное")
+                i.putExtra("chat_avatar", "action_saved")
+                i.putExtra("target_user_id", myId)
+                startActivity(i)
+            } else {
+                // Если чата еще нет в списке, можно либо вызвать API
+                // создания чата с самим собой, либо просто показать тост
+                Toast.makeText(this, "Напишите самому себе, чтобы активировать Избранное", Toast.LENGTH_SHORT).show()
+            }
+            toggleDrawer()
+        }
+
+
         sideMenu.addItem("Музыка", R.drawable.ic_music) {
             startActivity(Intent(this, MusicActivity::class.java))
             toggleDrawer()
@@ -162,12 +186,17 @@ class ChatsActivity : AppCompatActivity() {
     private fun updateAdapter(chats: List<Chat>) {
         val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val items = chats.map { c ->
-            val prefix = if (c.last_sender_id == myId) "Вы: " else ""
+            val isSavedMessages = c.user_id == myId // Чат с самим собой
+
+            val prefix = if (c.last_sender_id == myId && !isSavedMessages) "Вы: " else ""
+
             ChatItem(
                 chat_id = c.id,
                 user_id = c.user_id ?: 0,
-                name = (c.name ?: "").ifBlank { "Неизвестно" },
-                avatar = c.avatar,
+                // Если это избранное, меняем имя
+                name = if (isSavedMessages) "Избранное" else (c.name ?: "").ifBlank { "Неизвестно" },
+                // Можно передать флаг или специальную строку для аватара
+                avatar = if (isSavedMessages) "action_saved" else c.avatar,
                 last_message = prefix + (c.last_msg ?: ""),
                 last_time = c.last_time,
                 unread = c.unread,
@@ -196,7 +225,36 @@ class ChatsActivity : AppCompatActivity() {
             context = this,
             pinned = chat.pinned,
             onPinToggle = {
-                Toast.makeText(this, "API скоро будет: pin/unpin ${chat.chat_id}", Toast.LENGTH_SHORT).show()
+                // Проверка лимита закреплений (максимум 5)
+                if (!chat.pinned) {
+                    val adapter = layout.recycler.adapter as? ChatsAdapter
+                    val pinnedCount = adapter?.items?.filterIsInstance<ChatItem>()?.count { it.pinned } ?: 0
+                    if (pinnedCount >= 5) {
+                        Toast.makeText(this, "Максимально можно закрепить 5 человек", Toast.LENGTH_SHORT).show()
+                        return@showForChat
+                    }
+                }
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val success = if (chat.pinned) {
+                            repo.unpinChat(token, chat.chat_id)
+                        } else {
+                            repo.pinChat(token, chat.chat_id)
+                        }
+                        if (success) {
+                            runOnUiThread {
+                                val msg = if (chat.pinned) "Чат откреплен" else "Чат закреплен"
+                                Toast.makeText(this@ChatsActivity, msg, Toast.LENGTH_SHORT).show()
+                                loadChats()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        runOnUiThread {
+                            Toast.makeText(this@ChatsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             },
             onDelete = {
                 MessageOptionsSheet.showDeleteConfirm(this, chat.name, chat.avatar) { forBoth ->

@@ -29,7 +29,7 @@
             android:id="@+id/msgText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="30dp"
+            android:layout_marginEnd="45dp"
             android:maxWidth="260dp"
             android:paddingStart="10dp"
             android:paddingTop="6dp"
@@ -70,6 +70,14 @@
                 android:text="12:00"
                 android:textColor="#CCFFFFFF"
                 android:textSize="9sp" />
+
+            <ImageView
+                android:id="@+id/msgStatusIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_check"
+                app:tint="#CCFFFFFF" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

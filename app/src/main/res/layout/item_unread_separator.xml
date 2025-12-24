@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingVertical="8dp">
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="center"
+        android:background="#1A000000" />
+
+    <TextView
+        android:id="@+id/unreadTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/day_header_background"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:text="Непрочитанные сообщения"
+        android:textColor="#CC000000"
+        android:textSize="12sp" />
+
+</FrameLayout>
