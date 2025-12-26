@@ -1,6 +1,8 @@
 package com.kia.blagogramapp
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -8,6 +10,7 @@ import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.Gravity
@@ -18,6 +21,7 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -35,6 +39,7 @@ import com.kia.blagogramapp.BlagoApi
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.ui.ChatViewModel
 import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
+import com.kia.blagogramapp.ui.modules.MediaPickerSheet
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -78,6 +83,16 @@ class ChatActivity : AppCompatActivity() {
         if (uris.isNotEmpty()) {
             selectedImages.addAll(uris)
             updateAttachmentsPreview()
+        }
+    }
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            openMediaPicker()
+        } else {
+            Toast.makeText(this, "Нужно разрешение для доступа к галерее", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -189,7 +204,7 @@ class ChatActivity : AppCompatActivity() {
 
         attachBtn.setOnClickListener {
             if (editingMessageId != -1) return@setOnClickListener 
-            pickImagesLauncher.launch("image/*")
+            checkPermissionAndOpenPicker()
         }
 
         sendBtn.setOnClickListener {
@@ -213,6 +228,29 @@ class ChatActivity : AppCompatActivity() {
 
         viewModel.loadMessages(token, chatId)
         setupInsets()
+    }
+
+    private fun checkPermissionAndOpenPicker() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            openMediaPicker()
+        } else {
+            requestPermissionLauncher.launch(permission)
+        }
+    }
+
+    private fun openMediaPicker() {
+        MediaPickerSheet.show(this) { uris ->
+            if (uris.isNotEmpty()) {
+                selectedImages.addAll(uris)
+                updateAttachmentsPreview()
+            }
+        }
     }
 
     private fun setupViewModel() {
@@ -365,7 +403,7 @@ class ChatActivity : AppCompatActivity() {
         sendBtn.setImageResource(R.drawable.ic_send)
         attachBtn.setImageResource(R.drawable.ic_add)
         attachBtn.setOnClickListener {
-            pickImagesLauncher.launch("image/*")
+            checkPermissionAndOpenPicker()
         }
     }
 
