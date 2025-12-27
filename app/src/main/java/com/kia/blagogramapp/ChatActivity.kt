@@ -245,9 +245,13 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun openMediaPicker() {
-        MediaPickerSheet.show(this) { uris ->
+        MediaPickerSheet.show(this) { uris, caption ->
             if (uris.isNotEmpty()) {
+                selectedImages.clear()
                 selectedImages.addAll(uris)
+                val text = caption ?: ""
+                sendMessage(text)
+                messageInput.text.clear()
                 updateAttachmentsPreview()
             }
         }
@@ -304,8 +308,8 @@ class ChatActivity : AppCompatActivity() {
             val bottomInset = if (imeVisible) ime.bottom else systemBars.bottom
             inputContainer.setPadding(0, 0, 0, bottomInset)
             
-            val headerHeight = systemBars.top + LayoutHelper.dp(56)
-            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(64 + 8) + bottomInset)
+            val headerHeight = systemBars.top + LayoutHelper.dp(30)
+            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(80) + bottomInset)
             swipeRefresh.setProgressViewOffset(false, systemBars.top, headerHeight + LayoutHelper.dp(16))
             
             windowInsets
@@ -322,7 +326,7 @@ class ChatActivity : AppCompatActivity() {
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                     val bottom = if (ime.bottom > systemBars.bottom) ime.bottom else systemBars.bottom
                     inputContainer.setPadding(0, 0, 0, bottom)
-                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height + LayoutHelper.dp(8))
+                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height + LayoutHelper.dp(16))
                     return insets
                 }
             }
@@ -463,7 +467,7 @@ class ChatActivity : AppCompatActivity() {
         infoContainer.addView(chatNameView)
 
         headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(30), Gravity.TOP))
+        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(30), Gravity.TOP)) 
 
         inputContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -595,7 +599,6 @@ class ChatActivity : AppCompatActivity() {
             images = localImageUris
         )
         
-        // Передаем коллбэк для скролла после обновления списка
         adapter.addMessage(tempMessage) {
             recycler.scrollToPosition(adapter.itemCount - 1)
         }

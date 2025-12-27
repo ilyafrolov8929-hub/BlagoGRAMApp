@@ -24,6 +24,8 @@
         <activity android:name=".SearchUserActivity" />
         <activity android:name=".PhotoViewerActivity" />
         <activity android:name=".AboutActivity" />
+        <activity android:name=".AiChatActivity" />
+        <activity android:name=".AiSettingsActivity" />
         <activity android:name=".DesignEngineActivity" />
         <activity android:name=".ThemeSelectionActivity"/>
         <activity android:name=".MusicActivity" />

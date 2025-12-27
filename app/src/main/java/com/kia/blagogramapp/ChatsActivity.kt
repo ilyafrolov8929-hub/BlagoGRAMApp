@@ -89,6 +89,11 @@ class ChatsActivity : AppCompatActivity() {
             toggleDrawer()
         }
 
+        sideMenu.addItem("AI Assistant", R.drawable.ic_launcher_foreground) {
+            startActivity(Intent(this, AiChatActivity::class.java))
+            toggleDrawer()
+        }
+
         sideMenu.addItem("Избранное", R.drawable.ic_saved_messages) {
             val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
@@ -111,7 +116,6 @@ class ChatsActivity : AppCompatActivity() {
             }
             toggleDrawer()
         }
-
 
         sideMenu.addItem("Музыка", R.drawable.ic_music) {
             startActivity(Intent(this, MusicActivity::class.java))

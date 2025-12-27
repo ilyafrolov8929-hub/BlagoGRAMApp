@@ -26,6 +26,7 @@ swiperefreshlayout = "1.1.0"
 cardview = "1.0.0"
 ucrop = "2.2.8"
 ucropNEdit = "2.2.9-native1.0"
+room = "2.7.0-alpha11"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -60,8 +61,12 @@ play-services-mlkit-face-detection = { module = "com.google.android.gms:play-ser
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 ucrop-n-edit = { module = "com.github.jens-muenker:uCrop-n-Edit", version.ref = "ucropNEdit" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }

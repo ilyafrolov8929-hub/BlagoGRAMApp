@@ -119,6 +119,10 @@ class SettingsActivity : AppCompatActivity() {
         settingsCard.addCell(TextCell(this).apply {
             setData("Темы и кастомизация", R.drawable.ic_brush)
             setOnClickListener { startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java)) }
+        })
+        settingsCard.addCell(TextCell(this).apply {
+            setData("Настройки нейросети", R.drawable.ic_launcher_foreground)
+            setOnClickListener { startActivity(android.content.Intent(context, AiSettingsActivity::class.java)) }
         }, isLast = true)
 
         sheetContainer.addView(settingsCard)
