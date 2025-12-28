@@ -95,8 +95,8 @@ object DesignEngine {
         var colorBackground: Int = 0xFFf7f7f7.toInt()
         var colorSheetBackground: Int = 0xFFE6E6E6.toInt()
         var colorCardBackground: Int = 0xFFFFFFFF.toInt()
-        var colorProfileName: Int = 0xFFFFFFFF.toInt()
-        var colorProfileStatus: Int = 0xFFB0B0B0.toInt()
+        var colorProfileName: Int = 0xFF000000.toInt()
+        var colorProfileStatus: Int = 0xFF8E8E93.toInt()
         var colorHeader: Int = 0xFF707070.toInt()
         var colorTextPrimary: Int = 0xFF000000.toInt()
         var colorTextSecondary: Int = 0xFF8E8E93.toInt()
@@ -120,8 +120,8 @@ object DesignEngine {
                 if (isDark) {
                     // --- MONET DARK ---
                     colorBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_900)
-                    colorSheetBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_900)
-                    colorCardBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_800)
+                    colorSheetBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_800)
+                    colorCardBackground = ContextCompat.getColor(ctx, android.R.color.system_neutral1_700)
                     colorProfileName = ContextCompat.getColor(ctx, android.R.color.system_accent1_100)
                     colorProfileStatus = ContextCompat.getColor(ctx, android.R.color.system_accent2_200)
                     colorHeader = ContextCompat.getColor(ctx, android.R.color.system_accent2_300)
@@ -151,7 +151,7 @@ object DesignEngine {
             } else if (isDark) {
                 // --- STANDART DARK ---
                 colorBackground = 0xFF1A1A1A.toInt()
-                colorSheetBackground = 0xFF000000.toInt()
+                colorSheetBackground = 0xFF202020.toInt()
                 colorCardBackground = 0xFF2C2C2E.toInt()
                 colorProfileName = 0xFFFFFFFF.toInt()
                 colorProfileStatus = 0xFFEBEBF5.toInt()
@@ -168,8 +168,8 @@ object DesignEngine {
                 colorBackground = 0xFFF2F2F7.toInt()
                 colorSheetBackground = 0xFFFFFFFF.toInt()
                 colorCardBackground = 0xFFFFFFFF.toInt()
-                colorProfileName = 0xFFFFFFFF.toInt()
-                colorProfileStatus = 0xFFB0B0B0.toInt()
+                colorProfileName = 0xFF000000.toInt()
+                colorProfileStatus = 0xFF8E8E93.toInt()
                 colorHeader = 0xFF8E8E93.toInt()
                 colorTextPrimary = 0xFF000000.toInt()
                 colorTextSecondary = 0xFF8E8E93.toInt()

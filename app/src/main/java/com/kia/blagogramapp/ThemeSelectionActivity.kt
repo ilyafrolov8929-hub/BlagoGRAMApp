@@ -27,16 +27,16 @@ class ThemeSelectionActivity : AppCompatActivity() {
 
         DesignEngine.init(this)
         
-        // Читаем настройки
         val prefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDark = prefs.getBoolean("is_dark_theme", false)
         val useMonet = prefs.getBoolean("use_monet", false)
 
         DesignEngine.Theme.apply(isDark, useMonet)
 
-        // Настройка окна
+        // Настройка прозрачности системных панелей
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
         
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.isAppearanceLightStatusBars = !isDark
@@ -129,11 +129,9 @@ class ThemeSelectionActivity : AppCompatActivity() {
         cardsContainer.addView(darkCard, LayoutHelper.createLinear(110, 180, 0f, 0, 8, 0, 8, 0))
 
         scrollView.addView(cardsContainer)
-        
-        // Карточки по центру, но сверху
         rootLayout.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 8, 0, 24))
 
-        // --- MONET SWITCH (Android 12+) ---
+        // --- MONET SWITCH ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
              val switchContainer = LinearLayout(this).apply {
                  orientation = LinearLayout.HORIZONTAL
@@ -185,13 +183,17 @@ class ThemeSelectionActivity : AppCompatActivity() {
              rootLayout.addView(switchContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 16, 0))
         }
 
-        // Handle Insets
-        ViewCompat.setOnApplyWindowInsetsListener(header) { view, windowInsets ->
+        // Обработка системных отступов (Insets)
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(0, insets.top, 0, 0)
-            view.layoutParams.height = insets.top + LayoutHelper.dp(56)
-            view.requestLayout()
-            WindowInsetsCompat.CONSUMED
+            // Тулбару задаем верхний отступ (статус-бар)
+            header.setPadding(0, insets.top, 0, 0)
+            header.layoutParams.height = insets.top + LayoutHelper.dp(56)
+            
+            // Всему корневому слою задаем нижний отступ (док-бар)
+            view.setPadding(0, 0, 0, insets.bottom)
+            
+            windowInsets
         }
     }
 
@@ -231,7 +233,6 @@ class ThemePreviewCell(
         orientation = VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
 
-        // 1. Контейнер превью
         container = FrameLayout(context).apply {
             elevation = LayoutHelper.dp(4).toFloat()
         }
@@ -246,7 +247,6 @@ class ThemePreviewCell(
             setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
         }
         
-        // Mini Header
         val miniHeader = View(context).apply {
             background = GradientDrawable().apply {
                 setColor(previewCard)
@@ -255,7 +255,6 @@ class ThemePreviewCell(
         }
         screen.addView(miniHeader, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 12, 0f, 0, 0, 0, 0, 8))
         
-        // Chat Bubbles
         val bubbleRight = View(context).apply {
             background = GradientDrawable().apply {
                 setColor(previewAccent)
@@ -272,7 +271,6 @@ class ThemePreviewCell(
         }
         screen.addView(bubbleLeft, LayoutHelper.createLinear(50, 20, 0f, Gravity.START, 0, 0, 0, 8))
 
-        // Bottom Bar
         val bottomBar = View(context).apply {
              background = GradientDrawable().apply {
                 setColor(previewCard)
@@ -283,9 +281,8 @@ class ThemePreviewCell(
 
         container.addView(screen, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
         
-        // Check Icon
         checkIcon = ImageView(context).apply {
-            setImageResource(R.drawable.ic_edit) // Placeholder, если нет ic_check
+            setImageResource(R.drawable.ic_edit)
             setColorFilter(Color.WHITE)
             background = GradientDrawable().apply {
                 setColor(strokeColor)

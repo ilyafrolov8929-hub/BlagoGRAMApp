@@ -17,6 +17,7 @@ import com.kia.blagogramapp.network.RetrofitClient
 import com.kia.blagogramapp.ui.modules.ChatListLayout
 import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
 import com.kia.blagogramapp.ui.modules.SideMenuModule
+import com.kia.blagogramapp.utils.DevModeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,28 +77,37 @@ class ChatsActivity : AppCompatActivity() {
     }
 
     private fun setupSideMenu() {
-        val prefs = getSharedPreferences("app", MODE_PRIVATE)
-        sideMenu.updateHeader(
-            prefs.getString("display_name", "Вы") ?: "Вы",
-            prefs.getString("login", "username") ?: "username",
-            prefs.getString("status", "Статус") ?: "Нет статуса",
-            prefs.getString("avatar", "") ?: ""
-        )
+        if (DevModeManager.isEnabled(this)) {
+            val mockProfile = DevModeManager.getMockUserProfile()
+            sideMenu.updateHeader(
+                mockProfile.display_name ?: "Разработчик",
+                mockProfile.username,
+                mockProfile.status ?: "В локальном режиме",
+                ""
+            )
+        } else {
+            val prefs = getSharedPreferences("app", MODE_PRIVATE)
+            sideMenu.updateHeader(
+                prefs.getString("display_name", "Вы") ?: "Вы",
+                prefs.getString("login", "username") ?: "username",
+                prefs.getString("status", "Статус") ?: "Нет статуса",
+                prefs.getString("avatar", "") ?: ""
+            )
+        }
 
         sideMenu.addItem("Профиль", R.drawable.ic_user) {
             startActivity(Intent(this, ProfileActivity::class.java))
             toggleDrawer()
         }
 
-        sideMenu.addItem("AI Assistant", R.drawable.ic_launcher_foreground) {
+        sideMenu.addItem("AI Чат", R.drawable.ic_launcher_foreground) {
             startActivity(Intent(this, AiChatActivity::class.java))
             toggleDrawer()
         }
 
         sideMenu.addItem("Избранное", R.drawable.ic_saved_messages) {
-            val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+            val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
-            // Пытаемся найти чат "Избранное" в текущем списке
             val savedChat = (layout.recycler.adapter as? ChatsAdapter)?.items?.find {
                 it is ChatItem && it.user_id == myId
             } as? ChatItem
@@ -110,8 +120,6 @@ class ChatsActivity : AppCompatActivity() {
                 i.putExtra("target_user_id", myId)
                 startActivity(i)
             } else {
-                // Если чата еще нет в списке, можно либо вызвать API
-                // создания чата с самим собой, либо просто показать тост
                 Toast.makeText(this, "Напишите самому себе, чтобы активировать Избранное", Toast.LENGTH_SHORT).show()
             }
             toggleDrawer()
@@ -125,16 +133,6 @@ class ChatsActivity : AppCompatActivity() {
         sideMenu.addItem("Настройки", R.drawable.ic_settings) {
             startActivity(Intent(this, SettingsActivity::class.java))
             toggleDrawer()
-        }
-
-        sideMenu.addItem("Выход", R.drawable.ic_logout) {
-            val p = getSharedPreferences("app", MODE_PRIVATE)
-            p.edit().clear().apply()
-            getSharedPreferences("app_cache", MODE_PRIVATE).edit().clear().apply()
-            val intent = Intent(this, StartActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
         }
 
         sideMenu.addSpacer()
@@ -188,18 +186,16 @@ class ChatsActivity : AppCompatActivity() {
     }
 
     private fun updateAdapter(chats: List<Chat>) {
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val items = chats.map { c ->
-            val isSavedMessages = c.user_id == myId // Чат с самим собой
+            val isSavedMessages = c.user_id == myId 
 
             val prefix = if (c.last_sender_id == myId && !isSavedMessages) "Вы: " else ""
 
             ChatItem(
                 chat_id = c.id,
                 user_id = c.user_id ?: 0,
-                // Если это избранное, меняем имя
                 name = if (isSavedMessages) "Избранное" else (c.name ?: "").ifBlank { "Неизвестно" },
-                // Можно передать флаг или специальную строку для аватара
                 avatar = if (isSavedMessages) "action_saved" else c.avatar,
                 last_message = prefix + (c.last_msg ?: ""),
                 last_time = c.last_time,
@@ -229,7 +225,6 @@ class ChatsActivity : AppCompatActivity() {
             context = this,
             pinned = chat.pinned,
             onPinToggle = {
-                // Проверка лимита закреплений (максимум 5)
                 if (!chat.pinned) {
                     val adapter = layout.recycler.adapter as? ChatsAdapter
                     val pinnedCount = adapter?.items?.filterIsInstance<ChatItem>()?.count { it.pinned } ?: 0
@@ -270,7 +265,7 @@ class ChatsActivity : AppCompatActivity() {
                             if (success) {
                                 runOnUiThread {
                                     Toast.makeText(this@ChatsActivity, "Чат удален", Toast.LENGTH_SHORT).show()
-                                    loadChats() // Обновляем список
+                                    loadChats() 
                                 }
                             }
                         } catch (e: Exception) {
@@ -299,7 +294,6 @@ class ChatsActivity : AppCompatActivity() {
             recreate()
             return
         }
-        // Показываем анимацию загрузки сразу при входе
         layout.swipeRefresh.post {
             layout.swipeRefresh.isRefreshing = true
             loadChats()

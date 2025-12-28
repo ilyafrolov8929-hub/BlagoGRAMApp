@@ -14,10 +14,12 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import com.kia.blagogramapp.utils.DevModeManager
 
 /**
- * Тест графического движка a-la Telegram.
- * Воссоздаем дизайн из activity_settings.xml с помощью кода.
+ * Исправленная версия: карточка накрывает профиль, профиль затемняется.
+ * Навигационная панель сделана прозрачной.
  */
 class SettingsActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
@@ -26,7 +28,6 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализация тем
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
@@ -34,251 +35,203 @@ class SettingsActivity : AppCompatActivity() {
 
         isCurrentThemeDark = isDarkTheme
         isCurrentUseMonet = useMonet
-
         DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
-        // --- 2. Настройка окна ---
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        if (!isDarkTheme) {
-            window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
+        // Настройка прозрачности системных панелей (статус-бар и док-бар)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.isAppearanceLightStatusBars = !isDarkTheme
+        controller.isAppearanceLightNavigationBars = !isDarkTheme
 
         val statusBarHeight = getStatusBarHeight()
+        val navBarHeight = getNavigationBarHeight()
 
-        // Корневой FrameLayout
+        // Корневой контейнер
         val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
         setContentView(rootLayout)
 
-        // 3. Скролл-контейнер
-        val scrollView = ScrollView(this)
-        scrollView.isFillViewport = true
-        scrollView.clipToPadding = false
-        scrollView.overScrollMode = View.OVER_SCROLL_NEVER
-
-        val contentLayout = LinearLayout(this)
-        contentLayout.orientation = LinearLayout.VERTICAL
-        contentLayout.setPadding(0, 0, 0, 0)
-
-        scrollView.addView(contentLayout)
-
-        // 4. Шапка профиля
-        // Отступ сверху = высота статус бара + примерная высота тулбара (56dp) + запас
-        // В оригинале marginTop="100dp", здесь рассчитываем динамически
-        val topMarginContent = LayoutHelper.dp(20)
-
+        // 1. ДАННЫЕ ПРОФИЛЯ
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
         val displayName = prefs.getString("display_name", "Пользователь") ?: "Пользователь"
         val status = prefs.getString("status", "") ?: "Нет статуса"
         val avatar = prefs.getString("avatar", "") ?: ""
 
+        // 2. ШАПКА ПРОФИЛЯ (На заднем плане)
         val profileHeader = ProfileHeaderCell(this)
         profileHeader.setData(displayName, status, "https://blagogram.ru/avatars/$avatar")
+        rootLayout.addView(profileHeader, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
-        contentLayout.addView(profileHeader, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = topMarginContent
-        })
+        // 3. СЛОЙ ЗАТЕМНЕНИЯ (Dim View)
+        val dimView = View(this).apply {
+            setBackgroundColor(Color.BLACK)
+            alpha = 0f
+        }
+        rootLayout.addView(dimView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(220)))
 
-        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(10)))
+        // 4. СКРОЛЛ С НАСТРОЙКАМИ
+        val scrollView = ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
 
-        // 5. Белая подложка (sheet)
-        val sheetContainer = LinearLayout(this)
-        sheetContainer.orientation = LinearLayout.VERTICAL
-        sheetContainer.background = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_sheet_top_rounded)
-        sheetContainer.backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorSheetBackground)
-        sheetContainer.minimumHeight = LayoutHelper.dp(800)
-        sheetContainer.setPadding(LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(50))
+        val contentLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        // --- Секция АККАУНТ ---
+        // ПУСТОЕ МЕСТО (чтобы профиль был виден под скроллом)
+        val headerVisibleHeight = LayoutHelper.dp(63)
+        contentLayout.addView(SpacerCell(this, headerVisibleHeight))
+
+        // БЕЛАЯ КАРТОЧКА С НАСТРОЙКАМИ
+        val sheetContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.bg_sheet_top_rounded)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorSheetBackground)
+            // Добавляем отступ снизу на высоту навигационной панели + запас
+            setPadding(LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(20), navBarHeight + LayoutHelper.dp(40))
+        }
+
+        // Наполняем настройки (АККАУНТ)
         sheetContainer.addView(HeaderCell(this).apply { text = "АККАУНТ" })
-
         val accountCard = ContainerCell(this)
         accountCard.addCell(TextCell(this).apply {
-            setData("Редактировать профиль", R.drawable.ic_edit)
+            setData("Профиль", R.drawable.ic_edit)
             setOnClickListener { startActivity(android.content.Intent(context, ProfileEditActivity::class.java)) }
         })
         accountCard.addCell(TextCell(this).apply {
             setData("Приватность", R.drawable.ic_user)
-            setOnClickListener { Toast.makeText(context, "Приватность", Toast.LENGTH_SHORT).show() }
         }, isLast = true)
-
         sheetContainer.addView(accountCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
 
-        // --- Секция НАСТРОЙКИ ---
+        // НАСТРОЙКИ
         sheetContainer.addView(HeaderCell(this).apply { text = "НАСТРОЙКИ" })
-
         val settingsCard = ContainerCell(this)
+        settingsCard.addCell(TextCell(this).apply { setData("Настройки чатов", R.drawable.ic_chat) })
+        settingsCard.addCell(TextCell(this).apply { setData("Уведомления и звуки", R.drawable.ic_music) })
         settingsCard.addCell(TextCell(this).apply {
-            setData("Настройки чатов", R.drawable.ic_chat)
-        })
-        settingsCard.addCell(TextCell(this).apply {
-            setData("Уведомления и звуки", R.drawable.ic_music)
-        })
-        settingsCard.addCell(TextCell(this).apply {
-            setData("Темы и кастомизация", R.drawable.ic_brush)
+            setData("Кастомизация", R.drawable.ic_brush)
             setOnClickListener { startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java)) }
         })
         settingsCard.addCell(TextCell(this).apply {
-            setData("Настройки нейросети", R.drawable.ic_launcher_foreground)
+            setData("AI Настройки", R.drawable.ic_launcher_foreground)
             setOnClickListener { startActivity(android.content.Intent(context, AiSettingsActivity::class.java)) }
         }, isLast = true)
-
         sheetContainer.addView(settingsCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
 
-        // --- Секция ИНФОРМАЦИЯ ---
+        // ИНФОРМАЦИЯ И ВЫХОД
         sheetContainer.addView(HeaderCell(this).apply { text = "ИНФОРМАЦИЯ" })
-
         val infoCard = ContainerCell(this)
         infoCard.addCell(TextCell(this).apply {
             setData("О приложении", R.drawable.ic_more)
             setOnClickListener { startActivity(android.content.Intent(context, AboutActivity::class.java)) }
+        })
+        infoCard.addCell(TextCell(this).apply {
+            val isDev = DevModeManager.isEnabled(this@SettingsActivity)
+            setData("Разработчик: ${if (isDev) "ВКЛ" else "ВЫКЛ"}", R.drawable.ic_settings)
+            if (isDev) setTextColor(DesignEngine.Theme.colorBlue)
+            setOnClickListener {
+                DevModeManager.setEnabled(this@SettingsActivity, !isDev)
+                recreate()
+            }
         }, isLast = true)
-
         sheetContainer.addView(infoCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
 
-        // --- Кнопка ВЫЙТИ ---
         val logoutCard = ContainerCell(this)
         logoutCard.addCell(TextCell(this).apply {
             setData("Выйти", R.drawable.ic_logout)
             setTextColor(DesignEngine.Theme.colorLogout)
             setIconColor(DesignEngine.Theme.colorLogout)
             setOnClickListener {
-                val p = getSharedPreferences("app", MODE_PRIVATE)
-                p.edit().clear().apply()
-                getSharedPreferences("app_cache", MODE_PRIVATE).edit().clear().apply()
+                getSharedPreferences("app", MODE_PRIVATE).edit().clear().apply()
                 val intent = android.content.Intent(this@SettingsActivity, StartActivity::class.java)
                 intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
                 finish()
             }
         }, isLast = true)
-
         sheetContainer.addView(logoutCard)
 
-        val versionText = TextView(this)
-        versionText.text = "BlagoGRAM v1.0 for Kia"
-        versionText.textSize = 12f
-        versionText.setTextColor(Color.parseColor("#909090"))
-        versionText.gravity = Gravity.CENTER
-        versionText.setPadding(0, LayoutHelper.dp(20), 0, LayoutHelper.dp(20))
-        sheetContainer.addView(versionText)
-
         contentLayout.addView(sheetContainer)
+        scrollView.addView(contentLayout)
         rootLayout.addView(scrollView)
 
-        // 6. Тулбар (Прозрачный)
-        val toolbarLayout = RelativeLayout(this)
-        toolbarLayout.setBackgroundColor(Color.TRANSPARENT)
+        // 5. ТУЛБАР (поверх всего)
+        val toolbarLayout = RelativeLayout(this).apply {
+            setPadding(LayoutHelper.dp(16), statusBarHeight + LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
+        }
 
-        // Отступы внутри тулбара
-        toolbarLayout.setPadding(
-            LayoutHelper.dp(16),
-            statusBarHeight + LayoutHelper.dp(10),
-            LayoutHelper.dp(16),
-            LayoutHelper.dp(10) // Вернули 10dp
-        )
-
-        // Кнопка BACK
         val backBtn = LinearLayout(this).apply {
-            id = View.generateViewId()
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
             setBackgroundResource(R.drawable.bg_stat_pill)
-            val btnColor = if (isDarkTheme) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
-            backgroundTintList = android.content.res.ColorStateList.valueOf(btnColor)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDarkTheme) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
             setOnClickListener { finish() }
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_back)
+                setColorFilter(if (isDarkTheme) Color.WHITE else Color.BLACK)
+                layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
+            })
         }
-        val backIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            val iconColor = if (isDarkTheme) Color.WHITE else Color.BLACK
-            setColorFilter(iconColor)
-            layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
-        }
-        backBtn.addView(backIcon)
 
-        // Заголовок
         val titleView = TextView(this).apply {
             text = "Настройки"
             textSize = 20f
-            setTextColor(Color.WHITE)
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
             typeface = Typeface.DEFAULT_BOLD
+            alpha = 1f
         }
 
-        // Кнопка ТЕМА
         val themeBtn = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
             setBackgroundResource(R.drawable.bg_stat_pill)
-            val btnColor = if (isDarkTheme) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
-            backgroundTintList = android.content.res.ColorStateList.valueOf(btnColor)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDarkTheme) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
             setOnClickListener {
                 themePrefs.edit().putBoolean("is_dark_theme", !isDarkTheme).apply()
-                finish()
-                overridePendingTransition(0, 0)
-                startActivity(intent)
-                overridePendingTransition(0, 0)
+                recreate()
             }
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_moments)
+                setColorFilter(if (isDarkTheme) Color.WHITE else Color.BLACK)
+                layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
+            })
         }
-        val themeIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_moments)
-            val iconColor = if (isDarkTheme) Color.WHITE else Color.BLACK
-            setColorFilter(iconColor)
-            layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
-        }
-        themeBtn.addView(themeIcon)
 
-        // Контейнер контента
         val toolbarContent = RelativeLayout(this)
-        toolbarContent.layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT)
-
-        toolbarContent.addView(backBtn, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_START)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-        })
-
-        toolbarContent.addView(titleView, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        })
-
-        toolbarContent.addView(themeBtn, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_END)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-        })
-
+        toolbarContent.addView(backBtn, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.ALIGN_PARENT_START); addRule(RelativeLayout.CENTER_VERTICAL) })
+        toolbarContent.addView(titleView, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
+        toolbarContent.addView(themeBtn, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.ALIGN_PARENT_END); addRule(RelativeLayout.CENTER_VERTICAL) })
         toolbarLayout.addView(toolbarContent)
+        rootLayout.addView(toolbarLayout, FrameLayout.LayoutParams(-1, -2))
 
-        // Тулбар фиксирован сверху
-        rootLayout.addView(toolbarLayout, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-            gravity = Gravity.TOP
-        })
+        // 6. ЛОГИКА СКРОЛЛА
+        scrollView.viewTreeObserver.addOnScrollChangedListener {
+            val scrollY = scrollView.scrollY
+            val progress = (scrollY.toFloat() / headerVisibleHeight).coerceIn(0f, 1f)
+            dimView.alpha = progress * 0.6f
+            dimView.translationY = profileHeader.translationY
+        }
     }
 
     private fun getStatusBarHeight(): Int {
-        var result = 0
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        if (resourceId > 0) {
-            result = resources.getDimensionPixelSize(resourceId)
-        }
-        return result
+        val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else 0
+    }
+
+    private fun getNavigationBarHeight(): Int {
+        val id = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else 0
     }
 
     override fun onResume() {
         super.onResume()
-
-        // Проверяем смену темы
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
-        val isNowMonet = themePrefs.getBoolean("use_monet", false)
-
-        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
-            recreate()
-            return
-        }
+        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark) recreate()
     }
 }

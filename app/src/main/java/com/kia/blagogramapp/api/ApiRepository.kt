@@ -2,10 +2,12 @@ package com.kia.blagogramapp.api
 
 import android.util.Log
 import com.kia.blagogramapp.BlagoApi
+import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.models.SearchUserItem
+import com.kia.blagogramapp.utils.DevModeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -17,10 +19,26 @@ class ApiRepository(private val api: BlagoApi) {
 
     private val TAG = "ApiRepository"
 
+    private fun isDevMode(): Boolean {
+        return DesignEngine.context?.let { DevModeManager.isEnabled(it) } ?: false
+    }
+
     // -------------------------------------------------
     // LOGIN
     // -------------------------------------------------
     suspend fun login(login: String, password: String): Map<String, Any> {
+        if (isDevMode()) {
+            @Suppress("UNCHECKED_CAST")
+            return mapOf(
+                "token" to "mock_token",
+                "user_id" to 1,
+                "username" to "dev_user",
+                "display_name" to "Разработчик (Local)",
+                "status" to "Режим разработки активен",
+                "avatar" to ""
+            ) as Map<String, Any>
+        }
+
         val resp = api.call(
             ApiRequest(
                 action = "auth.login",
@@ -45,6 +63,7 @@ class ApiRepository(private val api: BlagoApi) {
     // CHATS LIST
     // -------------------------------------------------
     suspend fun getChats(token: String): List<Chat> {
+        if (isDevMode()) return DevModeManager.getMockChats()
 
         val resp = api.call(
             ApiRequest(
@@ -65,7 +84,6 @@ class ApiRepository(private val api: BlagoApi) {
         val list = body["result"] as List<Map<String, Any>>
 
         return list.map {
-            // Safe parsing for user_id which might be absent or string
             val rawUserId = it["user_id"]
             val userId = when (rawUserId) {
                 is Number -> rawUserId.toInt()
@@ -95,6 +113,7 @@ class ApiRepository(private val api: BlagoApi) {
     // GET MESSAGES
     // -------------------------------------------------
     suspend fun getMessages(token: String, chatId: Int): List<Message> {
+        if (isDevMode()) return DevModeManager.getMockMessages(chatId)
 
         val resp = api.call(
             ApiRequest(
@@ -137,6 +156,10 @@ class ApiRepository(private val api: BlagoApi) {
     // SEND MESSAGE
     // -------------------------------------------------
     suspend fun sendMessage(token: String, chatId: Int, text: String, images: List<File>? = null): Boolean {
+        if (isDevMode()) {
+            DevModeManager.addMockMessage(chatId, text, images)
+            return true
+        }
 
         val svc = ApiClient.retrofit.create(ApiService::class.java)
 
@@ -164,6 +187,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun editMessage(token: String, messageId: Int, text: String): Boolean {
+        if (isDevMode()) return true
         val svc = ApiClient.retrofit.create(ApiService::class.java)
         val resp = svc.editMessage(token = token, messageId = messageId, text = text)
         if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
@@ -173,6 +197,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun deleteMessage(token: String, messageId: Int): Boolean {
+        if (isDevMode()) return true
         val svc = ApiClient.retrofit.create(ApiService::class.java)
         val resp = svc.deleteMessage(token = token, messageId = messageId)
         if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
@@ -182,6 +207,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun searchUsers(token: String, query: String): List<SearchUserItem> {
+        if (isDevMode()) return DevModeManager.getMockSearchUsers(query)
 
         val resp = api.call(
             ApiRequest(
@@ -218,6 +244,7 @@ class ApiRepository(private val api: BlagoApi) {
     // CREATE CHAT
     // -------------------------------------------------
     suspend fun createChat(token: String, userId: Int): Int {
+        if (isDevMode()) return 1
 
         val resp = api.call(
             ApiRequest(
@@ -242,6 +269,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun deleteChat(token: String, chatId: Int, mode: String): Boolean {
+        if (isDevMode()) return true
         val svc = ApiClient.retrofit.create(ApiService::class.java)
         val resp = svc.deleteChat(token = token, chatId = chatId, mode = mode)
         if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
@@ -251,6 +279,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun pinChat(token: String, chatId: Int): Boolean {
+        if (isDevMode()) return true
         val svc = ApiClient.retrofit.create(ApiService::class.java)
         val resp = svc.pinChat(token = token, chatId = chatId)
         if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
@@ -260,6 +289,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun unpinChat(token: String, chatId: Int): Boolean {
+        if (isDevMode()) return true
         val svc = ApiClient.retrofit.create(ApiService::class.java)
         val resp = svc.unpinChat(token = token, chatId = chatId)
         if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
@@ -269,13 +299,14 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     // -------------------------------------------------
-    // PROFILE EDIT — JSON (если нет файла)
+    // PROFILE EDIT
     // -------------------------------------------------
     suspend fun profileEdit(
         token: String,
         displayName: String?,
         status: String?
     ): Map<String, Any> {
+        if (isDevMode()) return mapOf("ok" to true)
 
         val resp = api.call(
             ApiRequest(
@@ -299,7 +330,7 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     // -------------------------------------------------
-    // PROFILE EDIT — MULTIPART (если есть файл)
+    // PROFILE EDIT — MULTIPART
     // -------------------------------------------------
     suspend fun profileEditMultipart(
         token: String,
@@ -307,6 +338,7 @@ class ApiRepository(private val api: BlagoApi) {
         status: String?,
         avatar: MultipartBody.Part?
     ): Map<String, Any> {
+        if (isDevMode()) return mapOf("ok" to true)
 
         val svc = ApiClient.retrofit.create(ApiService::class.java)
 
@@ -323,8 +355,6 @@ class ApiRepository(private val api: BlagoApi) {
             avatar
         )
 
-        Log.d(TAG, "multipart code=${resp.code()} ok=${resp.isSuccessful}")
-
         if (!resp.isSuccessful) {
             val errorBody = resp.errorBody()?.string()
             throw Exception("API Error: ${resp.code()} $errorBody")
@@ -340,6 +370,8 @@ class ApiRepository(private val api: BlagoApi) {
     // GET USER PROFILE
     // -------------------------------------------------
     suspend fun getUserProfile(token: String, userId: Int): UserProfile {
+        if (isDevMode()) return DevModeManager.getMockUserProfile()
+
         val resp = api.call(
             ApiRequest(
                 action = "get.profile",

@@ -8,6 +8,7 @@ import com.vanniktech.emoji.ios.IosEmojiProvider
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        DesignEngine.init(this) // Инициализируем DesignEngine для доступа к контексту
         EmojiManager.install(IosEmojiProvider())
         
         // Автоматическая смена иконки в зависимости от сезона

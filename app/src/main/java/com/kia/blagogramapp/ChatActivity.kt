@@ -71,6 +71,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var emptyText: TextView
     private lateinit var chatNameView: TextView
     private lateinit var chatAvatarView: ShapeableImageView
+    private lateinit var listContainer: FrameLayout
 
     private val selectedImages = mutableListOf<Uri>()
     private var isFirstLoad = true
@@ -301,22 +302,24 @@ class ChatActivity : AppCompatActivity() {
     private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
             val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            val imeVisible = windowInsets.isVisible(WindowInsetsCompat.Type.ime())
-            
             headerContainer.setPadding(0, systemBars.top, 0, 0)
-            val bottomInset = if (imeVisible) ime.bottom else systemBars.bottom
-            inputContainer.setPadding(0, 0, 0, bottomInset)
             
-            val headerHeight = systemBars.top + LayoutHelper.dp(30)
-            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(80) + bottomInset)
-            swipeRefresh.setProgressViewOffset(false, systemBars.top, headerHeight + LayoutHelper.dp(16))
+            // Базовый отступ под навигацию (когда клавы нет)
+            inputContainer.setPadding(0, 0, 0, systemBars.bottom)
             
+            inputContainer.post {
+                val h = headerContainer.height
+                val b = inputContainer.height + LayoutHelper.dp(8)
+                if (recycler.paddingTop != h || recycler.paddingBottom != b) {
+                    recycler.setPadding(0, h, 0, b)
+                    swipeRefresh.setProgressViewOffset(false, systemBars.top, h + LayoutHelper.dp(16))
+                }
+            }
             windowInsets
         }
 
         ViewCompat.setWindowInsetsAnimationCallback(
-            inputContainer,
+            rootLayout,
             object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_STOP) {
                 override fun onProgress(
                     insets: WindowInsetsCompat,
@@ -324,9 +327,14 @@ class ChatActivity : AppCompatActivity() {
                 ): WindowInsetsCompat {
                     val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                    val bottom = if (ime.bottom > systemBars.bottom) ime.bottom else systemBars.bottom
-                    inputContainer.setPadding(0, 0, 0, bottom)
-                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height + LayoutHelper.dp(16))
+                    
+                    // Вычисляем высоту клавиатуры за вычетом системного бара
+                    val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
+                    
+                    // Двигаем поле ввода и список плавно
+                    inputContainer.translationY = -imeHeight.toFloat()
+                    listContainer.translationY = -imeHeight.toFloat()
+                    
                     return insets
                 }
             }
@@ -467,7 +475,7 @@ class ChatActivity : AppCompatActivity() {
         infoContainer.addView(chatNameView)
 
         headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(30), Gravity.TOP)) 
+        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP)) 
 
         inputContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -495,7 +503,7 @@ class ChatActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
             background = getRippleDrawable()
         }
-        inputRow.addView(attachBtn, LayoutHelper.createLinear(48, 48, 0f, 0, 0, 0, 0, 2))
+        inputRow.addView(attachBtn, LayoutHelper.createLinear(48, 48, 0f, Gravity.BOTTOM, 0, 0, 0, 2))
 
         messageInput = EditText(this).apply {
             background = GradientDrawable().apply {
@@ -509,7 +517,7 @@ class ChatActivity : AppCompatActivity() {
             maxLines = 6
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
         }
-        inputRow.addView(messageInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 0, 4, 0, 4, 0))
+        inputRow.addView(messageInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.BOTTOM, 4, 0, 4, 0))
 
         sendBtn = ImageView(this).apply {
             setImageResource(R.drawable.ic_send)
@@ -517,12 +525,12 @@ class ChatActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
             background = getRippleDrawable()
         }
-        inputRow.addView(sendBtn, LayoutHelper.createLinear(48, 48, 0f, 0, 0, 0, 0, 2))
+        inputRow.addView(sendBtn, LayoutHelper.createLinear(48, 48, 0f, Gravity.BOTTOM, 0, 0, 0, 2))
 
         inputContainer.addView(inputRow)
         rootLayout.addView(inputContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
 
-        val listContainer = FrameLayout(this)
+        listContainer = FrameLayout(this)
         swipeRefresh = object : SwipeRefreshLayout(this) {
             override fun canChildScrollUp(): Boolean {
                 return if (forceRefresh) false else super.canChildScrollUp()

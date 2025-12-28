@@ -44,6 +44,7 @@ class AiChatActivity : AppCompatActivity() {
     private lateinit var headerContainer: LinearLayout
     private lateinit var inputContainer: LinearLayout
     private lateinit var chatNameView: TextView
+    private lateinit var listContainer: FrameLayout
 
     private val db by lazy { AppDatabase.getDatabase(this) }
     private val myId = -1 
@@ -224,7 +225,7 @@ class AiChatActivity : AppCompatActivity() {
             ellipsize = TextUtils.TruncateAt.END
         }
         headerContainer.addView(chatNameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(30), Gravity.TOP))
+        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP))
 
         inputContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -246,7 +247,7 @@ class AiChatActivity : AppCompatActivity() {
             maxLines = 6
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
         }
-        inputContainer.addView(messageInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 0, 8, 0, 8, 0))
+        inputContainer.addView(messageInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.BOTTOM, 8, 0, 8, 0))
 
         sendBtn = ImageView(this).apply {
             setImageResource(R.drawable.ic_send)
@@ -256,9 +257,10 @@ class AiChatActivity : AppCompatActivity() {
             theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             background = getDrawable(outValue.resourceId)
         }
-        inputContainer.addView(sendBtn, LayoutHelper.createLinear(48, 48, 0f, 0, 0, 0, 0, 2))
+        inputContainer.addView(sendBtn, LayoutHelper.createLinear(48, 48, 0f, Gravity.BOTTOM, 0, 0, 0, 2))
         rootLayout.addView(inputContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
 
+        listContainer = FrameLayout(this)
         recycler = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@AiChatActivity).apply {
                 stackFromEnd = true
@@ -266,27 +268,30 @@ class AiChatActivity : AppCompatActivity() {
             clipToPadding = false
             overScrollMode = View.OVER_SCROLL_NEVER
         }
-        rootLayout.addView(recycler, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        listContainer.addView(recycler, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        rootLayout.addView(listContainer, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
     }
 
     private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
             val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            val imeVisible = windowInsets.isVisible(WindowInsetsCompat.Type.ime())
-            
             headerContainer.setPadding(0, systemBars.top, 0, 0)
-            val bottomInset = if (imeVisible) ime.bottom else systemBars.bottom
-            inputContainer.setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), bottomInset + LayoutHelper.dp(8))
             
-            val headerHeight = systemBars.top + LayoutHelper.dp(30)
-            recycler.setPadding(0, headerHeight, 0, LayoutHelper.dp(80) + bottomInset)
+            // Базовый отступ под навигацию (когда клавы нет)
+            inputContainer.setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), systemBars.bottom + LayoutHelper.dp(8))
             
+            inputContainer.post {
+                val h = headerContainer.height
+                val b = inputContainer.height + LayoutHelper.dp(8)
+                if (recycler.paddingTop != h || recycler.paddingBottom != b) {
+                    recycler.setPadding(0, h, 0, b)
+                }
+            }
             windowInsets
         }
 
         ViewCompat.setWindowInsetsAnimationCallback(
-            inputContainer,
+            rootLayout,
             object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_STOP) {
                 override fun onProgress(
                     insets: WindowInsetsCompat,
@@ -294,9 +299,14 @@ class AiChatActivity : AppCompatActivity() {
                 ): WindowInsetsCompat {
                     val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                    val bottom = if (ime.bottom > systemBars.bottom) ime.bottom else systemBars.bottom
-                    inputContainer.setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), bottom + LayoutHelper.dp(8))
-                    recycler.setPadding(0, headerContainer.height, 0, inputContainer.height + LayoutHelper.dp(16))
+                    
+                    // Вычисляем высоту клавиатуры за вычетом системного бара
+                    val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
+                    
+                    // Двигаем поле ввода и список плавно
+                    inputContainer.translationY = -imeHeight.toFloat()
+                    listContainer.translationY = -imeHeight.toFloat()
+                    
                     return insets
                 }
             }
