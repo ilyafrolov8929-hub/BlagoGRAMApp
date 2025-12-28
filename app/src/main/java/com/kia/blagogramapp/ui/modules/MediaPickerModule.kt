@@ -1,5 +1,6 @@
 package com.kia.blagogramapp.ui.modules
 
+import android.app.Activity
 import android.content.ContentUris
 import android.content.Context
 import android.graphics.Color
@@ -27,6 +28,8 @@ import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.LayoutHelper
 import com.kia.blagogramapp.R
+import com.yalantis.ucrop.UCrop
+import java.io.File
 
 class MediaPickerSheet(context: Context) : FrameLayout(context) {
 
@@ -64,6 +67,7 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
     private var currentKeyboardHeight = 0
 
     init {
+        currentInstance = this
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
 
         // 1. Grid View Layer
@@ -140,18 +144,32 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
 
         // --- Caption Row ---
         captionLayout = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
             visibility = View.GONE
         }
         
         captionInput = EditText(context).apply {
-            hint = "Добавить подпись..."; setHintTextColor(0xFFFFFF); setTextColor(Color.WHITE); textSize = 16f
+            hint = "Добавить подпись..."; setHintTextColor(0x80FFFFFF.toInt()); setTextColor(Color.WHITE); textSize = 16f
             setPadding(LayoutHelper.dp(20), LayoutHelper.dp(10), LayoutHelper.dp(20), LayoutHelper.dp(10))
             background = GradientDrawable().apply { setColor(0x66000000); cornerRadius = LayoutHelper.dp(30).toFloat() }
             setOnFocusChangeListener { _, hasFocus -> if (hasFocus) behavior?.state = BottomSheetBehavior.STATE_EXPANDED }
         }
         captionLayout.addView(captionInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f))
+
+        sendBtn = FrameLayout(context).apply {
+            background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorBlue); cornerRadius = LayoutHelper.dp(22).toFloat() }
+            setOnClickListener { onSendClicked() }
+        }
+        sendBtn.addView(ImageView(context).apply { setImageResource(R.drawable.ic_send); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) }, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
+        sendBadge = TextView(context).apply {
+            textSize = 10f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorBlue); gravity = Gravity.CENTER
+            background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = LayoutHelper.dp(10).toFloat() }
+            visibility = View.GONE
+        }
+        sendBtn.addView(sendBadge, LayoutHelper.createFrame(18, 18, Gravity.BOTTOM or Gravity.END))
+        captionLayout.addView(sendBtn, LayoutHelper.createLinear(44, 44, 0f, 0, 8, 0, 0, 0))
+
         floatingBottomBar.addView(captionLayout)
 
         // --- Tools Row (Relative for positioning) ---
@@ -171,10 +189,39 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
         toolsIconsContainer = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         }
-        intArrayOf(R.drawable.ic_edit, R.drawable.ic_music, R.drawable.ic_more, R.drawable.ic_settings).forEach {
+        val icons = intArrayOf(R.drawable.ic_edit, R.drawable.ic_music, R.drawable.ic_more, R.drawable.ic_settings)
+        icons.forEachIndexed { index, iconRes ->
             val icon = ImageView(context).apply { 
-                setImageResource(it); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+                setImageResource(iconRes); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
                 setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+                if (index == 0) {
+                    setOnClickListener {
+                        val uri = currentPreviewUri ?: return@setOnClickListener
+                        val activity = context as? Activity ?: return@setOnClickListener
+                        val destinationUri = Uri.fromFile(File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg"))
+                        
+                        val options = UCrop.Options().apply {
+                            setFreeStyleCropEnabled(true)
+                            // Твои цвета из темы
+                            setToolbarColor(DesignEngine.Theme.colorBackground)
+                            setStatusBarColor(DesignEngine.Theme.colorBackground)
+                            setToolbarWidgetColor(DesignEngine.Theme.colorTextPrimary)
+                            setActiveControlsWidgetColor(DesignEngine.Theme.colorBlue)
+                            setRootViewBackgroundColor(DesignEngine.Theme.colorBackground)
+                            
+                            // Сетка и рамка (как на скриншоте)
+                            setCropFrameColor(Color.WHITE)
+                            setCropGridColor(Color.TRANSPARENT) // Чтобы не мешала
+                            
+                            // Кастомные тексты кнопок
+                            setToolbarTitle("Редактор")
+                        }
+
+                        UCrop.of(uri, destinationUri)
+                            .withOptions(options)
+                            .start(activity)
+                    }
+                }
             }
             toolIcons.add(icon)
             toolsIconsContainer.addView(icon, LayoutHelper.createLinear(40, 40, 0f, 0, 0, 4, 0, 0))
@@ -182,23 +229,6 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
         
         toolsLayout.addView(toolsIconsContainer, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
             addRule(RelativeLayout.ALIGN_PARENT_LEFT)
-            addRule(RelativeLayout.BELOW, toolsLabel.id)
-        })
-
-        sendBtn = FrameLayout(context).apply {
-            background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorBlue); cornerRadius = LayoutHelper.dp(22).toFloat() }
-            setOnClickListener { onSendClicked() }
-        }
-        sendBtn.addView(ImageView(context).apply { setImageResource(R.drawable.ic_send); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) }, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
-        sendBadge = TextView(context).apply {
-            textSize = 10f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorBlue); gravity = Gravity.CENTER
-            background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = LayoutHelper.dp(10).toFloat() }
-            visibility = View.GONE
-        }
-        sendBtn.addView(sendBadge, LayoutHelper.createFrame(18, 18, Gravity.BOTTOM or Gravity.END))
-        
-        toolsLayout.addView(sendBtn, LayoutHelper.createRelative(44, 44).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
             addRule(RelativeLayout.BELOW, toolsLabel.id)
         })
         
@@ -260,7 +290,7 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
             floatingBottomBar.setBackgroundColor(DesignEngine.Theme.colorSheetBackground)
             
             captionInput.setTextColor(DesignEngine.Theme.colorTextPrimary); captionInput.setHintTextColor(DesignEngine.Theme.colorTextSecondary)
-            captionInput.background = null
+            captionInput.background = GradientDrawable().apply { setColor(0x1A000000); cornerRadius = LayoutHelper.dp(30).toFloat() }
             sendBtn.background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorBlue); cornerRadius = LayoutHelper.dp(22).toFloat() }
             
             toolIcons.forEach { it.setColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN) }
@@ -321,6 +351,11 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
         previewContainer.visibility = View.VISIBLE
         behavior?.state = BottomSheetBehavior.STATE_EXPANDED
         updateUIState()
+    }
+
+    fun updatePreviewUri(uri: Uri) {
+        currentPreviewUri = uri
+        previewImage.load(uri)
     }
 
     private fun togglePreviewSelection() {
@@ -422,6 +457,8 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
     }
 
     companion object {
+        var currentInstance: MediaPickerSheet? = null
+
         fun show(context: Context, onResult: (List<Uri>, String?) -> Unit) {
             val dialog = BottomSheetDialog(context, R.style.BottomSheetDialogTheme)
             val sheet = MediaPickerSheet(context); sheet.onResult = onResult; sheet.dialog = dialog
@@ -460,7 +497,10 @@ class MediaPickerSheet(context: Context) : FrameLayout(context) {
                 
                 behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
                     override fun onStateChanged(bottomSheet: View, newState: Int) {
-                        if (newState == BottomSheetBehavior.STATE_HIDDEN) dialog.dismiss()
+                        if (newState == BottomSheetBehavior.STATE_HIDDEN) {
+                            dialog.dismiss()
+                            currentInstance = null
+                        }
                     }
                     override fun onSlide(bottomSheet: View, slideOffset: Float) { sheet.syncBarPosition(slideOffset) }
                 })

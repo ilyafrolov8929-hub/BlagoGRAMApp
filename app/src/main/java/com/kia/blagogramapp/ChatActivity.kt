@@ -1,6 +1,7 @@
 package com.kia.blagogramapp
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -35,7 +36,6 @@ import com.kia.blagogramapp.adapters.AttachmentsAdapter
 import com.kia.blagogramapp.adapters.MessagesAdapter
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
-import com.kia.blagogramapp.BlagoApi
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.ui.ChatViewModel
 import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
@@ -80,13 +80,6 @@ class ChatActivity : AppCompatActivity() {
     
     private var forceRefresh = false
 
-    private val pickImagesLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        if (uris.isNotEmpty()) {
-            selectedImages.addAll(uris)
-            updateAttachmentsPreview()
-        }
-    }
-
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -94,18 +87,6 @@ class ChatActivity : AppCompatActivity() {
             openMediaPicker()
         } else {
             Toast.makeText(this, "Нужно разрешение для доступа к галерее", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private val cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val resultUri = UCrop.getOutput(result.data!!)
-            resultUri?.let { uri ->
-                if (editingPosition >= 0 && editingPosition < selectedImages.size) {
-                    selectedImages[editingPosition] = uri
-                    updateAttachmentsPreview()
-                }
-            }
         }
     }
 
@@ -190,19 +171,6 @@ class ChatActivity : AppCompatActivity() {
         )
         recycler.adapter = adapter
 
-        attachmentsAdapter = AttachmentsAdapter(
-            items = selectedImages,
-            onRemove = { position ->
-                selectedImages.removeAt(position)
-                updateAttachmentsPreview()
-            },
-            onClick = { position ->
-                editingPosition = position
-                startCrop(selectedImages[position])
-            }
-        )
-        attachmentsRecycler.adapter = attachmentsAdapter
-
         attachBtn.setOnClickListener {
             if (editingMessageId != -1) return@setOnClickListener 
             checkPermissionAndOpenPicker()
@@ -253,7 +221,6 @@ class ChatActivity : AppCompatActivity() {
                 val text = caption ?: ""
                 sendMessage(text)
                 messageInput.text.clear()
-                updateAttachmentsPreview()
             }
         }
     }
@@ -292,11 +259,7 @@ class ChatActivity : AppCompatActivity() {
             swipeRefresh.isRefreshing = false
             Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show()
         }
-        
-        viewModel.isMessageSent.observe(this) {
-             selectedImages.clear()
-             updateAttachmentsPreview()
-        }
+
     }
 
     private fun setupInsets() {
@@ -562,15 +525,6 @@ class ChatActivity : AppCompatActivity() {
         rootLayout.addView(listContainer, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
     }
 
-    private fun startCrop(uri: Uri) {
-        val destinationFileName = "cropped_${System.currentTimeMillis()}.jpg"
-        val destinationUri = Uri.fromFile(File(cacheDir, destinationFileName))
-        val uCrop = UCrop.of(uri, destinationUri)
-            .withAspectRatio(1f, 1f)
-            .withMaxResultSize(1080, 1080)
-        cropLauncher.launch(uCrop.getIntent(this))
-    }
-
     private fun openViewer(url: String, senderName: String, sentTime: String, caption: String?) {
         val intent = Intent(this, PhotoViewerActivity::class.java)
         intent.putExtra("image_url", url)
@@ -578,11 +532,6 @@ class ChatActivity : AppCompatActivity() {
         intent.putExtra("sent_time", sentTime)
         intent.putExtra("caption", caption)
         startActivity(intent)
-    }
-
-    private fun updateAttachmentsPreview() {
-        attachmentsAdapter.notifyDataSetChanged()
-        attachmentsRecycler.visibility = if (selectedImages.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun getRippleDrawable(): android.graphics.drawable.Drawable {
@@ -664,6 +613,16 @@ class ChatActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
+            val resultUri = UCrop.getOutput(data!!)
+            if (resultUri != null) {
+                MediaPickerSheet.currentInstance?.updatePreviewUri(resultUri)
+            }
         }
     }
 }
