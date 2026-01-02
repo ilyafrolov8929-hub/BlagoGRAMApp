@@ -1,0 +1,30 @@
+name: Telegram Notifications
+
+on:
+  push:
+    branches: [ main, master ] # Уведомлять при пуше в основные ветки
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Message to Telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message_thread_id: ${{ secrets.TELEGRAM_THREAD_ID }} # Тот самый ID темы GitHub
+          format: html
+          message: |
+            <b>🚀 Новый пуш в репозиторий!</b>
+            
+            <b>Проект:</b> <code>${{ github.repository }}</code>
+            <b>Автор:</b> ${{ github.actor }}
+            <b>Ветка:</b> <code>${{ github.ref_name }}</code>
+            
+            <b>Сообщение коммита:</b>
+            <i>${{ github.event.commits[0].message }}</i>
+            
+            <a href="${{ github.event.compare }}">🔍 Посмотреть изменения на GitHub</a>
