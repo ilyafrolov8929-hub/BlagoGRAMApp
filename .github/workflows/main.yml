@@ -1,30 +1,45 @@
-name: Telegram Notifications
+name: Telegram Notifications with Diff
 
 on:
   push:
-    branches: [ main, master ] # Уведомлять при пуше в основные ветки
-  pull_request:
-    types: [opened, closed]
+    branches: [ main, master ]
 
 jobs:
-  build:
+  notify:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Нужно для сравнения коммитов
+
+      - name: Get Diff
+        id: get_diff
+        run: |
+          # Получаем список измененных файлов и сами изменения (ограничим 500 символами, чтобы влезло в ТГ)
+          DIFF=$(git diff HEAD^ HEAD | grep -E "^\+|^\-" | grep -v "+++" | grep -v "---" | head -c 500)
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Send Message to Telegram
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message_thread_id: ${{ secrets.TELEGRAM_THREAD_ID }} # Тот самый ID темы GitHub
+          message_thread_id: ${{ secrets.TELEGRAM_THREAD_ID }}
           format: html
           message: |
-            <b>🚀 Новый пуш в репозиторий!</b>
+            <b>🚀 Пуш в репозиторий!</b>
             
             <b>Проект:</b> <code>${{ github.repository }}</code>
             <b>Автор:</b> ${{ github.actor }}
             <b>Ветка:</b> <code>${{ github.ref_name }}</code>
             
-            <b>Сообщение коммита:</b>
+            <b>📝 Сообщение:</b>
             <i>${{ github.event.commits[0].message }}</i>
             
-            <a href="${{ github.event.compare }}">🔍 Посмотреть изменения на GitHub</a>
+            <b>🔍 Изменения (diff):</b>
+            <pre>${{ steps.get_diff.outputs.diff }}</pre>
+            
+            <a href="${{ github.event.compare }}">🔗 Полный лог на GitHub</a>
