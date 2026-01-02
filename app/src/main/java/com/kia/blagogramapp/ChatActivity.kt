@@ -89,7 +89,6 @@ class ChatActivity : AppCompatActivity() {
             Toast.makeText(this, "Нужно разрешение для доступа к галерее", Toast.LENGTH_SHORT).show()
         }
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -98,7 +97,6 @@ class ChatActivity : AppCompatActivity() {
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
         val useMonet = themePrefs.getBoolean("use_monet", false)
         DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -119,12 +117,9 @@ class ChatActivity : AppCompatActivity() {
         myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
         setupViewModel()
-
         val chatName = intent.getStringExtra("chat_name") ?: "Чат"
         val avatarUrl = intent.getStringExtra("chat_avatar")
-
         chatNameView.text = chatName
-        
         if (avatarUrl == "action_saved") {
             chatAvatarView.setPadding(0, 0, 0, 0)
             chatAvatarView.scaleType = ImageView.ScaleType.CENTER
