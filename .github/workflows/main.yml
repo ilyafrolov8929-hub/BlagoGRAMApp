@@ -16,8 +16,15 @@ jobs:
       - name: Get Diff
         id: get_diff
         run: |
-          # Получаем список измененных файлов и сами изменения (ограничим 500 символами, чтобы влезло в ТГ)
-          DIFF=$(git diff HEAD^ HEAD | grep -E "^\+|^\-" | grep -v "+++" | grep -v "---" | head -c 500)
+          # Используем встроенные переменные для сравнения до и после пуша
+          # grep убирает служебную инфу, оставляя только измененные строки
+          DIFF=$(git diff ${{ github.event.before }} ${{ github.event.after }} | grep -E "^\+|^\-" | grep -vE "^\+\+\+|^\-\-\-" | head -c 1000 || echo "Нет изменений в коде")
+          
+          # Экранируем спецсимволы для HTML
+          DIFF="${DIFF//&/&amp;}"
+          DIFF="${DIFF//</&lt;}"
+          DIFF="${DIFF//>/&gt;}"
+          
           echo "diff<<EOF" >> $GITHUB_OUTPUT
           echo "$DIFF" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -33,7 +40,6 @@ jobs:
             <b>🚀 Пуш в репозиторий!</b>
             
             <b>Проект:</b> <code>${{ github.repository }}</code>
-            <b>Автор:</b> ${{ github.actor }}
             <b>Ветка:</b> <code>${{ github.ref_name }}</code>
             
             <b>📝 Сообщение:</b>
