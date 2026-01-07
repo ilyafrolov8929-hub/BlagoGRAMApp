@@ -112,4 +112,19 @@ interface ApiService {
         @Part("status") status: RequestBody?,
         @Part avatar: MultipartBody.Part?
     ): Response<Map<String, Any>>
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun checkSubscription(
+        @Field("action") action: String = "subscription.check",
+        @Field("token") token: String
+    ): SubscriptionCheckResponse
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun buySubscription(
+        @Field("action") action: String = "subscription.buy",
+        @Field("token") token: String,
+        @Field("plan") plan: String // 'month', 'year', 'lifetime'
+    ): SubscriptionBuyResponse
 }

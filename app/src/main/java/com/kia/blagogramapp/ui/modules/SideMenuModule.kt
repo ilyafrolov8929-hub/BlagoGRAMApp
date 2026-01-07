@@ -2,6 +2,7 @@ package com.kia.blagogramapp.ui.modules
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
@@ -25,6 +26,7 @@ class SideMenuModule(val context: Context) {
     lateinit var itemsContainer: LinearLayout
     lateinit var avatarView: ShapeableImageView
     lateinit var nameTv: TextView
+    lateinit var premiumBadge: ImageView
     lateinit var loginTv: TextView
     lateinit var statusTv: TextView
 
@@ -89,13 +91,34 @@ class SideMenuModule(val context: Context) {
 
             headerLayout.addView(avatarView, LayoutHelper.createLinear(80, 80, 0f, 0, 0, 0, 0, 16))
 
+            val titleRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
             nameTv = TextView(context).apply {
                 textSize = 22f
                 typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
                 setTextColor(DesignEngine.Theme.colorTextPrimary)
                 letterSpacing = -0.01f
             }
-            headerLayout.addView(nameTv)
+
+            premiumBadge = ImageView(context).apply {
+                setImageResource(R.drawable.infinity)
+                setColorFilter(DesignEngine.COLOR_BLUE, PorterDuff.Mode.SRC_IN)
+                visibility = View.GONE
+                translationY = 2f // 🔥 идеальное выравнивание по тексту
+            }
+
+            titleRow.addView(nameTv)
+            titleRow.addView(
+                premiumBadge,
+                LayoutHelper.createLinear(24, 24, 0f, 0, 8, 0, 0, 0)
+            )
+
+            // добавляем строку в headerLayout
+            headerLayout.addView(titleRow)
+
 
             loginTv = TextView(context).apply {
                 textSize = 15f

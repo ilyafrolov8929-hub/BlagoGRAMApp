@@ -39,6 +39,9 @@ class ProfileActivity : AppCompatActivity() {
     private var miniPlayer: MiniPlayer? = null
     private var fullPlayer: FullPlayer? = null
 
+    private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
+
     private val musicPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             MusicManager.addTrack(this, it)
@@ -49,10 +52,12 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        DesignEngine.Theme.apply(
-            themePrefs.getBoolean("is_dark_theme", false),
-            themePrefs.getBoolean("use_monet", false)
-        )
+        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
+
+        isCurrentThemeDark = isDarkTheme
+        isCurrentUseMonet = useMonet
+        DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
@@ -248,6 +253,16 @@ class ProfileActivity : AppCompatActivity() {
         layout.status.text = statusText
         layout.friendsCount.text = friends.toString()
         layout.subsCount.text = followers.toString()
+        
+        // Проверка премиум статуса
+        val isMyProfile = getSharedPreferences("app", MODE_PRIVATE).getString("login", "") == login
+        if (isMyProfile) {
+            layout.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
+        } else {
+            // Для чужого профиля можно было бы брать статус из UserProfile, если бы он там был
+            layout.premiumBadge.visibility = View.GONE 
+        }
+
         val avatarUrl = "https://blagogram.ru/avatars/$avatar"
         layout.profileAvatar.load(avatarUrl) {
             crossfade(true)
@@ -283,6 +298,21 @@ class ProfileActivity : AppCompatActivity() {
         } else {
             layout.userID.setTextColor(Color.WHITE)
             layout.userID.setShadowLayer(2f, 1f, 1f, Color.BLACK)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark ||
+            themePrefs.getBoolean("use_monet", false) != isCurrentUseMonet) {
+            recreate()
+            return
+        }
+        // Обновляем бейдж при возвращении из PremiumActivity
+        val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
+        if (layout.userID.text == "@$myLogin") {
+            layout.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
         }
     }
 }

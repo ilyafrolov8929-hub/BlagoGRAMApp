@@ -183,6 +183,16 @@ object DesignEngine {
     }
 }
 
+/**
+ * Менеджер подписки
+ */
+object SubscriptionManager {
+    fun isPremium(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("app", Context.MODE_PRIVATE)
+        return prefs.getBoolean("is_premium", false)
+    }
+}
+
 // ==========================================
 //              CELLS (ЯЧЕЙКИ)
 // ==========================================

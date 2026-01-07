@@ -61,6 +61,7 @@ class ChatsActivity : AppCompatActivity() {
         // 4. Боковое меню
         sideMenu = SideMenuModule(this).create(layout, getStatusBarHeight())
         setupSideMenu()
+        sideMenu.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
 
         // 5. Обработчики
         layout.menuBtn.setOnClickListener { toggleDrawer() }
@@ -100,7 +101,7 @@ class ChatsActivity : AppCompatActivity() {
             toggleDrawer()
         }
 
-        sideMenu.addItem("AI Чат", R.drawable.ic_launcher_foreground) {
+        sideMenu.addItem("AI Помошник", R.drawable.ic_ai) {
             startActivity(Intent(this, AiChatActivity::class.java))
             toggleDrawer()
         }
@@ -298,5 +299,6 @@ class ChatsActivity : AppCompatActivity() {
             layout.swipeRefresh.isRefreshing = true
             loadChats()
         }
+        sideMenu.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
     }
 }

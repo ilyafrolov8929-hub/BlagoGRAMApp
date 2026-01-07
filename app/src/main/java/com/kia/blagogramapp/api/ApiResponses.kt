@@ -85,5 +85,26 @@ data class SearchUsersResponse(
     val error: String?
 )
 
+data class SubscriptionCheckResponse(
+    val ok: Boolean,
+    val result: SubscriptionCheckResult?,
+    val error: String?
+)
 
+data class SubscriptionCheckResult(
+    val active: Any?, // Изменили на Any, чтобы принять и Boolean, и Int
+    val plan: String?,
+    val expires_at: String?
+)
 
+data class SubscriptionBuyResponse(
+    val ok: Boolean,
+    val result: SubscriptionBuyResult?,
+    val error: String?
+)
+
+data class SubscriptionBuyResult(
+    val message: String,
+    val plan: String,
+    val expires_at: String?
+)

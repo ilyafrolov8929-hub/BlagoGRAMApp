@@ -395,4 +395,27 @@ class ApiRepository(private val api: BlagoApi) {
             followers_count = (r["followers_count"] as? Number)?.toInt() ?: 0
         )
     }
+
+    // -------------------------------------------------
+    // SUBSCRIPTIONS
+    // -------------------------------------------------
+    suspend fun checkSubscription(token: String): SubscriptionCheckResult? {
+        if (isDevMode()) return SubscriptionCheckResult(active = 1, plan = "lifetime", expires_at = null)
+
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.checkSubscription(token = token)
+
+        if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
+        return resp.result
+    }
+
+    suspend fun buySubscription(token: String, plan: String): SubscriptionBuyResult? {
+        if (isDevMode()) return SubscriptionBuyResult(message = "Success", plan = plan, expires_at = "2025-12-31")
+
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.buySubscription(token = token, plan = plan)
+
+        if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
+        return resp.result
+    }
 }

@@ -32,6 +32,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     val btnSettings: View
     val profileAvatar: ShapeableImageView
     val profileUsername: TextView
+    val premiumBadge: ImageView
     val status: TextView
     val subsCount: TextView
     val friendsCount: TextView
@@ -58,7 +59,6 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         addView(profileCover, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 300))
 
         topBar = RelativeLayout(context).apply {
-            // Уменьшаем падинг, будем задавать отступ элементам вручную для точности
             setPadding(LayoutHelper.dp(16), 0, LayoutHelper.dp(16), LayoutHelper.dp(10))
             elevation = LayoutHelper.dp(10).toFloat()
         }
@@ -82,7 +82,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         backContainer.addView(backIcon, LayoutHelper.createLinear(20, 20))
         
         val backParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
-        backParams.topMargin = LayoutHelper.dp(45) // Фиксированный отступ от верха (зона статус-бара)
+        backParams.topMargin = LayoutHelper.dp(45)
         topBar.addView(backContainer, backParams)
 
         userID = TextView(context).apply {
@@ -94,7 +94,6 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         }
         val userParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
         userParams.addRule(RelativeLayout.CENTER_HORIZONTAL)
-        // Центрируем текст по вертикали относительно кнопки "Назад"
         userParams.addRule(RelativeLayout.ALIGN_TOP, backContainer.id)
         userParams.addRule(RelativeLayout.ALIGN_BOTTOM, backContainer.id)
         topBar.addView(userID, userParams)
@@ -159,13 +158,13 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             setTextColor(DesignEngine.Theme.colorTextPrimary)
             gravity = Gravity.CENTER
         }
-        val emojiTv = TextView(context).apply {
-            text = " 😎"
-            textSize = 24f
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        premiumBadge = ImageView(context).apply {
+            setImageResource(R.drawable.infinity)
+            setColorFilter(DesignEngine.COLOR_BLUE, PorterDuff.Mode.SRC_IN)
+            visibility = View.GONE
         }
         nameContainer.addView(profileUsername)
-        nameContainer.addView(emojiTv)
+        nameContainer.addView(premiumBadge, LayoutHelper.createLinear(24, 24, 0f, Gravity.CENTER_VERTICAL, 8, 0, 0, 0))
         profileCardContent.addView(nameContainer)
 
         status = TextView(context).apply {
@@ -205,7 +204,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
                 text = title
                 textSize = 11f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(DesignEngine.Theme.colorTextPrimary)
+                setTextColor(DesignEngine.COLOR_TEXT_PRIMARY)
                 gravity = Gravity.CENTER
             }
             pill.addView(countTv)
@@ -335,7 +334,6 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             tv.typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         }
 
-        // Animation for selector
         val currentTab = tabViews[index]
         if (currentTab.width > 0) {
             val lp = tabSelector.layoutParams

@@ -126,7 +126,7 @@ class SettingsActivity : AppCompatActivity() {
             setOnClickListener { startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java)) }
         })
         settingsCard.addCell(TextCell(this).apply {
-            setData("AI Настройки", R.drawable.ic_launcher_foreground)
+            setData("AI Настройки", R.drawable.ic_ai)
             setOnClickListener { startActivity(android.content.Intent(context, AiSettingsActivity::class.java)) }
         }, isLast = true)
         sheetContainer.addView(settingsCard)

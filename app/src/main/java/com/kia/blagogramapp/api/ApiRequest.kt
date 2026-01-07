@@ -22,5 +22,5 @@ data class ApiRequest(
     val avatar: String? = null,
     val avatar_data: String? = null,
     val offset: Int? = null,
-    val query: String? = null
+    val query: String? = null,
 )
