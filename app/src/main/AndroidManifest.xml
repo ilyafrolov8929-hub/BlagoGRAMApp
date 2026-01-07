@@ -29,6 +29,7 @@
         <activity android:name=".DesignEngineActivity" />
         <activity android:name=".ThemeSelectionActivity"/>
         <activity android:name=".MusicActivity" />
+        <activity android:name=".PremiumActivity" />
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustNothing"
