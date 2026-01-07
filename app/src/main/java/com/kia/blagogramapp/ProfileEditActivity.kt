@@ -1,13 +1,13 @@
 package com.kia.blagogramapp
 
 import android.app.Activity
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -20,6 +20,7 @@ import coil.load
 import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.network.RetrofitClient
+import com.kia.blagogramapp.ui.modules.MediaPickerSheet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,8 +31,6 @@ import java.io.File
 import java.io.FileOutputStream
 
 class ProfileEditActivity : AppCompatActivity() {
-
-    private val PICK_AVATAR = 2001
 
     private lateinit var inputName: EditText
     private lateinit var inputStatus: EditText
@@ -47,7 +46,6 @@ class ProfileEditActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализация тем
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
@@ -55,10 +53,8 @@ class ProfileEditActivity : AppCompatActivity() {
 
         isCurrentThemeDark = isDarkTheme
         isCurrentUseMonet = useMonet
-
         DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
-        // 2. Окно
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -67,14 +63,12 @@ class ProfileEditActivity : AppCompatActivity() {
         controller.isAppearanceLightStatusBars = !isDarkTheme
         controller.isAppearanceLightNavigationBars = !isDarkTheme
 
-        // 3. UI
         val rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(DesignEngine.Theme.colorBackground)
         }
         setContentView(rootLayout)
 
-        // --- HEADER ---
         val headerContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(DesignEngine.Theme.colorCardBackground)
@@ -85,7 +79,6 @@ class ProfileEditActivity : AppCompatActivity() {
             setPadding(0, LayoutHelper.dp(10), 0, LayoutHelper.dp(10))
         }
 
-        // Кнопка BACK
         val btnBack = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -110,7 +103,6 @@ class ProfileEditActivity : AppCompatActivity() {
         }
         toolbar.addView(btnBack, paramsBack)
 
-        // Заголовок
         val title = TextView(this).apply {
             text = "Редактирование"
             textSize = 18f
@@ -122,7 +114,6 @@ class ProfileEditActivity : AppCompatActivity() {
         }
         toolbar.addView(title, paramsTitle)
 
-        // Кнопка Save (используем ic_edit как замену отсутствующего ic_check)
         val btnSave = ImageView(this).apply {
             setImageResource(R.drawable.ic_edit) 
             setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
@@ -141,7 +132,6 @@ class ProfileEditActivity : AppCompatActivity() {
         rootLayout.addView(headerContent, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
 
-        // --- SCROLL CONTENT ---
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
             clipToPadding = false
@@ -153,18 +143,15 @@ class ProfileEditActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24))
         }
 
-        // Avatar Section
-        // Создаем контейнер ровно под размер аватара (120x120), чтобы кнопка прижалась к его углу
         val avatarContainer = FrameLayout(this)
         
         avatarView = ShapeableImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             setBackgroundColor(Color.LTGRAY)
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setAllCornerSizes(LayoutHelper.dp(60).toFloat()) // 120dp / 2
+                .setAllCornerSizes(LayoutHelper.dp(60).toFloat())
                 .build()
         }
-        // Аватар во весь контейнер (120x120)
         avatarContainer.addView(avatarView, LayoutHelper.createFrame(120, 120, Gravity.CENTER))
 
         val editAvatarBtn = ImageView(this).apply {
@@ -176,19 +163,17 @@ class ProfileEditActivity : AppCompatActivity() {
                 shape = GradientDrawable.OVAL
             }
             setOnClickListener {
-                val pick = Intent(Intent.ACTION_PICK)
-                pick.type = "image/*"
-                startActivityForResult(pick, PICK_AVATAR)
+                MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.AVATAR) { uris, _ ->
+                    if (uris.isNotEmpty()) {
+                        handleSelectedAvatar(uris[0])
+                    }
+                }
             }
         }
         
-        // Кнопка в правом нижнем углу контейнера аватара
         avatarContainer.addView(editAvatarBtn, LayoutHelper.createFrame(40, 40, Gravity.BOTTOM or Gravity.END))
-        
-        // Добавляем контейнер с явным центрированием (Gravity.CENTER_HORIZONTAL)
         scrollContainer.addView(avatarContainer, LayoutHelper.createLinear(120, 120, 0f, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 32))
 
-        // Fields Card
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -199,7 +184,6 @@ class ProfileEditActivity : AppCompatActivity() {
             elevation = 0f 
         }
 
-        // Name
         card.addView(TextView(this).apply {
             text = "ИМЯ"
             textSize = 12f
@@ -220,7 +204,6 @@ class ProfileEditActivity : AppCompatActivity() {
         }
         card.addView(inputName, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
-        // Status
         card.addView(TextView(this).apply {
             text = "СТАТУС"
             textSize = 12f
@@ -243,7 +226,6 @@ class ProfileEditActivity : AppCompatActivity() {
 
         scrollContainer.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
-        // Info Text
         val infoText = TextView(this).apply {
             text = "Имя и статус будут видны другим пользователям."
             gravity = Gravity.CENTER
@@ -255,7 +237,6 @@ class ProfileEditActivity : AppCompatActivity() {
         scrollView.addView(scrollContainer)
         rootLayout.addView(scrollView)
 
-        // --- Logic ---
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
         inputName.setText(prefs.getString("display_name", ""))
         inputStatus.setText(prefs.getString("status", ""))
@@ -264,60 +245,50 @@ class ProfileEditActivity : AppCompatActivity() {
             error(R.drawable.ic_user_placeholder)
         }
 
-        // --- Insets ---
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            
-            headerContent.setPadding(
-                0,
-                insets.top, // Padding for status bar
-                0,
-                0
-            )
-            
-            // Adjust toolbar top padding inside header
+            headerContent.setPadding(0, insets.top, 0, 0)
             toolbar.setPadding(0, LayoutHelper.dp(10), 0, LayoutHelper.dp(10))
-
-            view.setPadding(
-                view.paddingLeft,
-                view.paddingTop,
-                view.paddingRight,
-                insets.bottom // Padding for nav bar
-            )
-            
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, insets.bottom)
             WindowInsetsCompat.CONSUMED
         }
     }
 
+    private fun handleSelectedAvatar(uri: Uri) {
+        avatarView.load(uri)
+        val path = uri.path ?: return
+        val originalFile = File(path)
+        
+        // Since MediaPickerSheet already returned a cropped and somewhat compressed file,
+        // we just need to ensure it's optimized for upload.
+        val compressed = compressImage(originalFile)
+        avatarFile = compressed
+        avatarFileName = compressed.name
+    }
+
     private fun compressImage(originalFile: File): File {
-        // читаем EXIF
         val exif = androidx.exifinterface.media.ExifInterface(originalFile.absolutePath)
         val orientation = exif.getAttributeInt(
             androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
             androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
         )
 
-        // загружаем bitmap
         var bmp = BitmapFactory.decodeFile(originalFile.absolutePath)
+        if (bmp == null) return originalFile
 
-        // поворот если нужно
         val matrix = android.graphics.Matrix()
-
         when (orientation) {
             androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
             androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
             androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
         }
 
-        bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
-
-        // уменьшаем разрешение
-        val maxSize = 800
-        val ratio = bmp.width.toFloat() / bmp.height.toFloat()
-
+        val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
+        
+        val maxSize = 1080
+        val ratio = rotated.width.toFloat() / rotated.height.toFloat()
         val newWidth: Int
         val newHeight: Int
-
         if (ratio > 1) {
             newWidth = maxSize
             newHeight = (maxSize / ratio).toInt()
@@ -325,23 +296,17 @@ class ProfileEditActivity : AppCompatActivity() {
             newHeight = maxSize
             newWidth = (maxSize * ratio).toInt()
         }
-
-        val resized = Bitmap.createScaledBitmap(bmp, newWidth, newHeight, true)
-
-        // создаём сжатый файл
-        val compressedFile = File(originalFile.parent, "compressed_${originalFile.name}")
-        val out = FileOutputStream(compressedFile)
-        resized.compress(Bitmap.CompressFormat.JPEG, 70, out)
-        out.flush()
-        out.close()
-
+        
+        val resized = Bitmap.createScaledBitmap(rotated, newWidth, newHeight, true)
+        val compressedFile = File(cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+        FileOutputStream(compressedFile).use { out ->
+            resized.compress(Bitmap.CompressFormat.JPEG, 85, out)
+        }
         return compressedFile
     }
 
-    // ---- Сохранение профиля ----
     private fun saveProfile() {
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
-
         val token = prefs.getString("token", "") ?: ""
         val name = inputName.text.toString().trim()
         val status = inputStatus.text.toString().trim()
@@ -349,43 +314,24 @@ class ProfileEditActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val avatarLocal = avatarFile
-
                 val response = if (avatarLocal != null) {
                     val req = avatarLocal.asRequestBody("image/jpeg".toMediaType())
-                    val part = MultipartBody.Part.createFormData(
-                        "avatar",
-                        avatarLocal.name,
-                        req
-                    )
-
-                    repo.profileEditMultipart(
-                        token, name, status, part
-                    )
+                    val part = MultipartBody.Part.createFormData("avatar", avatarLocal.name, req)
+                    repo.profileEditMultipart(token, name, status, part)
                 } else {
-                    repo.profileEdit(
-                        token, name, status
-                    )
+                    repo.profileEdit(token, name, status)
                 }
 
                 if (response["ok"] == true) {
-
                     val result = response["result"] as Map<*, *>
-
-                    prefs.edit()
-                        .putString("display_name", name)
-                        .putString("status", status)
-                        .apply()
-
+                    prefs.edit().putString("display_name", name).putString("status", status).apply()
                     val avatarFromServer = result["avatar"]?.toString()
-                    if (avatarFromServer != null)
-                        prefs.edit().putString("avatar", avatarFromServer).apply()
-
+                    if (avatarFromServer != null) prefs.edit().putString("avatar", avatarFromServer).apply()
                     runOnUiThread {
                         Toast.makeText(this@ProfileEditActivity, "Сохранено!", Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }
-
             } catch (e: Exception) {
                 runOnUiThread {
                     Toast.makeText(this@ProfileEditActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -394,44 +340,11 @@ class ProfileEditActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Выбор аватара ----
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == PICK_AVATAR && resultCode == Activity.RESULT_OK) {
-            val uri = data?.data ?: return
-
-            avatarView.load(uri)
-
-            val prefs = getSharedPreferences("app", MODE_PRIVATE)
-            val userId = prefs.getInt("user_id", 0)
-
-            val fileName = "${userId}_${System.currentTimeMillis()}.jpg"
-            val tmpFile = File(filesDir, fileName)
-
-            // оригинал копируем
-            contentResolver.openInputStream(uri)?.copyTo(FileOutputStream(tmpFile))
-
-            // делаем сжатую копию
-            val compressed = compressImage(tmpFile)
-
-            // используем только сжатую версию
-            avatarFile = compressed
-            avatarFileName = compressed.name
-
-            // чтобы оригинал не занимал место
-            tmpFile.delete()
-        }
-    }
-
     override fun onResume() {
         super.onResume()
-
-        // Проверяем смену темы
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
         val isNowMonet = themePrefs.getBoolean("use_monet", false)
-
         if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
             recreate()
             return

@@ -13,6 +13,7 @@ import android.os.StatFs
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.kia.blagogramapp.utils.IconManager
 import java.io.File
@@ -27,6 +28,7 @@ class AboutActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

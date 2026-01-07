@@ -1,6 +1,7 @@
 package com.kia.blagogramapp
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -24,6 +25,7 @@ import com.kia.blagogramapp.utils.DevModeManager
 class SettingsActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
+    private var animImageView: ImageView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +104,11 @@ class SettingsActivity : AppCompatActivity() {
         accountCard.addCell(TextCell(this).apply {
             setData("Профиль", R.drawable.ic_edit)
             setOnClickListener { startActivity(android.content.Intent(context, ProfileEditActivity::class.java)) }
+        })
+        accountCard.addCell(TextCell(this).apply {
+            setData("Lume Infinity", R.drawable.ic_premium_diamond)
+            setIconColor(DesignEngine.COLOR_BLUE)
+            setOnClickListener { startActivity(android.content.Intent(context, PremiumActivity::class.java)) }
         })
         accountCard.addCell(TextCell(this).apply {
             setData("Приватность", R.drawable.ic_user)
@@ -194,7 +201,7 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
             setOnClickListener {
                 themePrefs.edit().putBoolean("is_dark_theme", !isDarkTheme).apply()
-                recreate()
+                restartWithFade()
             }
             addView(ImageView(context).apply {
                 setImageResource(R.drawable.ic_moments)
@@ -232,6 +239,48 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark) recreate()
+        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark) restartWithFade()
     }
+
+    private fun restartWithFade() {
+        val intent = intent
+        finish() // Закрываем текущую активити
+        startActivity(intent) // Запускаем её же заново
+        // Применяем стандартные анимации Android: fade_in (появление) и fade_out (затухание)
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
+    private fun animateThemeChange(startX: Int, startY: Int) {
+        // 1. Делаем скриншот текущего состояния экрана
+        val rootView = window.decorView
+        rootView.isDrawingCacheEnabled = true
+        val bitmap = Bitmap.createBitmap(rootView.drawingCache)
+        rootView.isDrawingCacheEnabled = false
+
+        // 2. Создаем временный ImageView и накладываем его поверх всего
+        if (animImageView == null) {
+            animImageView = ImageView(this).apply {
+                layoutParams = FrameLayout.LayoutParams(-1, -1)
+            }
+        }
+        val root = findViewById<FrameLayout>(android.R.id.content)
+        animImageView?.setImageBitmap(bitmap)
+        root.addView(animImageView)
+
+        // 3. Мгновенно обновляем тему всех элементов "под" скриншотом
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val isDark = themePrefs.getBoolean("is_dark_theme", false)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
+
+        // Применяем новые цвета в движок
+        DesignEngine.Theme.apply(isDark, useMonet)
+
+        // Пересоздаем UI или обновляем цвета вручную.
+        // В вашем случае проще вызвать recreate() БЕЗ анимации перехода,
+        // но чтобы сохранить скриншот, мы просто вызовем перерисовку текущего Layout
+        recreate()
+
+        // Важно: чтобы круг сработал красиво, нужно передать координаты кнопки.
+    }
+
 }

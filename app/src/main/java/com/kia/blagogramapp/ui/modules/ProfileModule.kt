@@ -239,7 +239,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         val tabsWrapper = FrameLayout(context).apply {
             setPadding(LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4))
             background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorCardBackground)
+                setColor(DesignEngine.Theme.colorSheetBackground)
                 cornerRadius = LayoutHelper.dp(20).toFloat()
             }
         }
@@ -365,7 +365,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
 
     private fun createGridContent(): View {
         val gridCard = CardView(context).apply {
-            setCardBackgroundColor(DesignEngine.Theme.colorCardBackground)
+            setCardBackgroundColor(DesignEngine.Theme.colorSheetBackground)
             radius = LayoutHelper.dp(24).toFloat()
         }
         val grid = GridLayout(context).apply {
@@ -464,7 +464,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         }
         
         val card = CardView(context).apply {
-            setCardBackgroundColor(DesignEngine.Theme.colorCardBackground)
+            setCardBackgroundColor(DesignEngine.Theme.colorSheetBackground)
             radius = LayoutHelper.dp(24).toFloat()
             val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
             layoutParams = p
