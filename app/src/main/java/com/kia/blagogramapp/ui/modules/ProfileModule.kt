@@ -8,6 +8,8 @@ import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -40,6 +42,11 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     val btnCreatePost: Button
     val postsContainer: LinearLayout
     val topBar: RelativeLayout
+    
+    // Music Badge Views
+    lateinit var musicBadge: LinearLayout
+    lateinit var musicTrackTv: TextView
+    var onMusicBadgeClick: (() -> Unit)? = null
 
     private val tabViews = mutableListOf<TextView>()
     private val contentContainer: FrameLayout
@@ -166,7 +173,7 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         nameContainer.addView(profileUsername)
         nameContainer.addView(premiumBadge, LayoutHelper.createLinear(24, 24, 0f, Gravity.CENTER_VERTICAL, 8, 0, 0, 0))
         profileCardContent.addView(nameContainer)
-
+        
         status = TextView(context).apply {
             textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
@@ -177,6 +184,44 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             layoutParams = p
         }
         profileCardContent.addView(status)
+
+        // Music Badge (как в боковом меню) - опускаем ниже статуса
+        musicBadge = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+            visibility = View.GONE
+            
+            background = GradientDrawable().apply {
+                cornerRadius = LayoutHelper.dp(12).toFloat()
+                setColor(DesignEngine.Theme.colorBlue and 0x15FFFFFF)
+            }
+            
+            val outValue = TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+            foreground = context.getDrawable(outValue.resourceId)
+            
+            setOnClickListener { onMusicBadgeClick?.invoke() }
+        }
+        
+        val mIcon = ImageView(context).apply {
+            setImageResource(R.drawable.ic_music)
+            setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
+        }
+        musicBadge.addView(mIcon, LayoutHelper.createLinear(14, 14))
+        
+        musicTrackTv = TextView(context).apply {
+            textSize = 12f
+            setTextColor(DesignEngine.Theme.colorBlue)
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setPadding(LayoutHelper.dp(6), 0, 0, 0)
+            setSingleLine(true)
+            ellipsize = TextUtils.TruncateAt.MARQUEE
+            marqueeRepeatLimit = -1
+        }
+        musicBadge.addView(musicTrackTv, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        
+        profileCardContent.addView(musicBadge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 8, 0, 0))
 
         val statsRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -390,6 +435,16 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     fun updateMusicList() {
         if (tabViews[1].currentTextColor == DesignEngine.Theme.colorBlue) {
             switchTab(1, animate = false)
+        }
+    }
+    
+    fun updateMusicBadge(track: Track?, isPlaying: Boolean) {
+        if (track != null && isPlaying) {
+            musicBadge.visibility = View.VISIBLE
+            musicTrackTv.text = "Слушает: ${track.artist} - ${track.title}"
+            musicTrackTv.isSelected = true
+        } else {
+            musicBadge.visibility = View.GONE
         }
     }
 

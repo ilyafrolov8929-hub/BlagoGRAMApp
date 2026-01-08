@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -18,6 +19,7 @@ import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.LayoutHelper
 import com.kia.blagogramapp.R
+import com.kia.blagogramapp.models.Track
 
 class SideMenuModule(val context: Context) {
 
@@ -29,6 +31,11 @@ class SideMenuModule(val context: Context) {
     lateinit var premiumBadge: ImageView
     lateinit var loginTv: TextView
     lateinit var statusTv: TextView
+    
+    // Mini player views
+    lateinit var miniPlayerContainer: LinearLayout
+    lateinit var miniPlayerTrackTv: TextView
+    var onMusicClick: (() -> Unit)? = null
 
     fun create(root: FrameLayout, statusBarHeight: Int): SideMenuModule {
         // 1. Overlay - более мягкое затемнение фона
@@ -78,15 +85,10 @@ class SideMenuModule(val context: Context) {
                     .setAllCornerSizes(LayoutHelper.dp(28).toFloat())
                     .build()
 
-                // 1. Устанавливаем strokeWidth
                 val sw = LayoutHelper.dp(3)
                 strokeWidth = sw.toFloat()
                 strokeColor = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
-
-                // 2. Добавляем Padding, чтобы обводка не обрезалась краями вью
-                // Попробуйте значение равное толщине обводки
-                val p = sw
-                setPadding(p, p, p, p)
+                setPadding(sw, sw, sw, sw)
             }
 
             headerLayout.addView(avatarView, LayoutHelper.createLinear(80, 80, 0f, 0, 0, 0, 0, 16))
@@ -107,7 +109,7 @@ class SideMenuModule(val context: Context) {
                 setImageResource(R.drawable.infinity)
                 setColorFilter(DesignEngine.COLOR_BLUE, PorterDuff.Mode.SRC_IN)
                 visibility = View.GONE
-                translationY = 2f // 🔥 идеальное выравнивание по тексту
+                translationY = 2f
             }
 
             titleRow.addView(nameTv)
@@ -116,7 +118,6 @@ class SideMenuModule(val context: Context) {
                 LayoutHelper.createLinear(24, 24, 0f, 0, 8, 0, 0, 0)
             )
 
-            // добавляем строку в headerLayout
             headerLayout.addView(titleRow)
 
 
@@ -130,11 +131,51 @@ class SideMenuModule(val context: Context) {
             statusTv = TextView(context).apply {
                 textSize = 14f
                 maxLines = 2
-                ellipsize = android.text.TextUtils.TruncateAt.END
+                ellipsize = TextUtils.TruncateAt.END
                 setTextColor(DesignEngine.Theme.colorTextSecondary)
                 setLineSpacing(LayoutHelper.dp(2).toFloat(), 1f)
             }
             headerLayout.addView(statusTv)
+            
+            // Музыкальный плеер в хедере
+            miniPlayerContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
+                visibility = View.GONE
+                
+                background = GradientDrawable().apply {
+                    cornerRadius = LayoutHelper.dp(12).toFloat()
+                    setColor(DesignEngine.Theme.colorBlue and 0x15FFFFFF)
+                }
+                
+                val outValue = TypedValue()
+                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+                foreground = context.getDrawable(outValue.resourceId)
+                
+                setOnClickListener { onMusicClick?.invoke() }
+            }
+            
+            val musicIcon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_music)
+                setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
+            }
+            miniPlayerContainer.addView(musicIcon, LayoutHelper.createLinear(16, 16))
+            
+            miniPlayerTrackTv = TextView(context).apply {
+                textSize = 13f
+                setTextColor(DesignEngine.Theme.colorBlue)
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                setPadding(LayoutHelper.dp(8), 0, 0, 0)
+                setSingleLine(true)
+                ellipsize = TextUtils.TruncateAt.MARQUEE
+                marqueeRepeatLimit = -1
+                isSelected = true // Заставляем бегущую строку работать
+            }
+            miniPlayerContainer.addView(miniPlayerTrackTv, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f))
+            
+            // Опускаем плеер ниже (Margin Top = 16)
+            headerLayout.addView(miniPlayerContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 16, 0, 0))
 
             headerWrapper.addView(headerLayout)
             addView(headerWrapper, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
@@ -172,7 +213,6 @@ class SideMenuModule(val context: Context) {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(14), LayoutHelper.dp(16), LayoutHelper.dp(14))
 
-            // Форма пилюли и эффект нажатия
             background = GradientDrawable().apply {
                 cornerRadius = LayoutHelper.dp(24).toFloat()
             }
@@ -236,6 +276,16 @@ class SideMenuModule(val context: Context) {
         avatarView.load("https://blagogram.ru/avatars/$avatar") {
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
+        }
+    }
+    
+    fun updateMusic(track: Track?, isPlaying: Boolean) {
+        if (track != null && isPlaying) {
+            miniPlayerContainer.visibility = View.VISIBLE
+            miniPlayerTrackTv.text = "Слушает: ${track.artist} - ${track.title}"
+            miniPlayerTrackTv.isSelected = true 
+        } else {
+            miniPlayerContainer.visibility = View.GONE
         }
     }
 }

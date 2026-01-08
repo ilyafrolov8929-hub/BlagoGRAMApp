@@ -22,13 +22,13 @@ import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.models.Track
 import com.kia.blagogramapp.ui.modules.FullPlayer
-import com.kia.blagogramapp.ui.modules.MiniPlayer
 import com.kia.blagogramapp.ui.modules.PostCell
 import com.kia.blagogramapp.ui.modules.ProfileLayout
 import com.kia.blagogramapp.utils.MusicManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class ProfileActivity : AppCompatActivity() {
@@ -36,7 +36,6 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var layout: ProfileLayout
     private lateinit var repo: ApiRepository
     
-    private var miniPlayer: MiniPlayer? = null
     private var fullPlayer: FullPlayer? = null
 
     private var isCurrentThemeDark: Boolean = false
@@ -103,6 +102,10 @@ class ProfileActivity : AppCompatActivity() {
             musicPickerLauncher.launch("audio/*")
         }
 
+        layout.onMusicBadgeClick = {
+            showFullPlayer()
+        }
+
         observeMusic()
     }
 
@@ -126,53 +129,26 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun observeMusic() {
         lifecycleScope.launchWhenStarted {
-            MusicManager.currentTrack.collectLatest { track ->
+            combine(MusicManager.currentTrack, MusicManager.isPlaying) { track, playing ->
+                track to playing
+            }.collect { (track, playing) ->
+                layout.updateMusicBadge(track, playing)
                 if (track != null) {
-                    updateMiniPlayer(track, MusicManager.isPlaying.value)
-                    fullPlayer?.bind(track, MusicManager.isPlaying.value)
-                }
-            }
-        }
-
-        lifecycleScope.launchWhenStarted {
-            MusicManager.isPlaying.collectLatest { playing ->
-                val track = MusicManager.currentTrack.value
-                if (track != null) {
-                    updateMiniPlayer(track, playing)
                     fullPlayer?.bind(track, playing)
                 }
             }
         }
     }
 
-    private fun updateMiniPlayer(track: Track, playing: Boolean) {
-        if (miniPlayer == null) {
-            miniPlayer = MiniPlayer(this).apply {
-                val p = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, android.view.Gravity.BOTTOM, 16, 0, 16, 32)
-                layoutParams = p
-                setOnClickListener { showFullPlayer() }
-            }
-            layout.addView(miniPlayer)
-        }
-        miniPlayer?.bind(track, playing)
-        if (fullPlayer == null || fullPlayer?.parent == null) {
-            miniPlayer?.visibility = View.VISIBLE
-        }
-    }
-
     fun closeFullPlayer() {
-        val mp = miniPlayer ?: return
-        fullPlayer?.animateClose(mp) {
+        fullPlayer?.animateClose(layout.musicBadge) {
             layout.removeView(fullPlayer)
-            mp.visibility = View.VISIBLE
-            mp.animate().alpha(1f).setDuration(200).start()
             layout.topBar.visibility = View.VISIBLE
         }
     }
 
     private fun showFullPlayer() {
         val track = MusicManager.currentTrack.value ?: return
-        val mp = miniPlayer ?: return
         if (fullPlayer == null) {
             fullPlayer = FullPlayer(this).apply {
                 layoutParams = FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT)
@@ -181,8 +157,7 @@ class ProfileActivity : AppCompatActivity() {
         }
         if (fullPlayer?.parent == null) {
             layout.addView(fullPlayer)
-            fullPlayer?.animateOpen(mp)
-            mp.animate().alpha(0f).setDuration(200).start()
+            fullPlayer?.animateOpen(layout.musicBadge)
             layout.topBar.visibility = View.GONE
         }
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
@@ -317,5 +292,13 @@ class ProfileActivity : AppCompatActivity() {
                 layout.premiumBadge.visibility = View.GONE
             }
         }
+    }
+
+    override fun onBackPressed() {
+        if (fullPlayer?.parent != null) {
+            closeFullPlayer()
+            return
+        }
+        super.onBackPressed()
     }
 }

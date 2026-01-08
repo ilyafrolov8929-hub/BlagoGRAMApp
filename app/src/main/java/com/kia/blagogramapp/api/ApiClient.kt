@@ -20,6 +20,14 @@ object ApiClient {
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    // Клиент для Long Polling (длительное ожидание ответа)
+    val longPollingClient = OkHttpClient.Builder()
+        .addInterceptor(logging)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS) // Ждем ответа от сервера до 90 секунд
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .build()
+
     // Специальный клиент для скачивания: добавляем логи только для заголовков
     val downloadClient = OkHttpClient.Builder()
         .addInterceptor(logging) 
@@ -34,7 +42,14 @@ object ApiClient {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
+    val longPollingRetrofit = Retrofit.Builder()
+        .baseUrl("https://blagogram.ru/api/v1/")
+        .client(longPollingClient)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
     val api: ApiService = retrofit.create(ApiService::class.java)
+    val longPollingApi: ApiService = longPollingRetrofit.create(ApiService::class.java)
 
     val jamendoRetrofit = Retrofit.Builder()
         .baseUrl("https://api.jamendo.com/v3.0/")

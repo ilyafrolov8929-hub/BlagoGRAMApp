@@ -151,6 +151,39 @@ class ApiRepository(private val api: BlagoApi) {
         }
     }
 
+    suspend fun getMessagesLong(token: String, chatId: Int, lastId: Int?): List<Message> {
+        if (isDevMode()) return emptyList()
+
+        val resp = ApiClient.longPollingApi.getMessagesLong(
+            token = token,
+            chatId = chatId,
+            lastId = lastId
+        )
+
+        if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
+
+        return resp.result?.map {
+            Message(
+                id = it.id,
+                chat_id = it.chat_id,
+                sender_id = it.sender_id,
+                content = it.content,
+                sent_at = it.sent_at,
+                edited_at = it.edited_at,
+                is_read = it.is_read,
+                avatar = it.avatar,
+                display_name = it.display_name,
+                images = it.images ?: emptyList()
+            )
+        } ?: emptyList()
+    }
+
+    suspend fun markAsRead(token: String, chatId: Int): Boolean {
+        if (isDevMode()) return true
+        val resp = ApiClient.api.markAsRead(token = token, chatId = chatId)
+        return resp.isSuccessful
+    }
+
 
     // -------------------------------------------------
     // SEND MESSAGE

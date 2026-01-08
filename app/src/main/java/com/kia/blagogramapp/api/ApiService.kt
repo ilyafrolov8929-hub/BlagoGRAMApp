@@ -35,6 +35,23 @@ interface ApiService {
         @Field("chat_id") chatId: Int
     ): MessageListResponse
 
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun getMessagesLong(
+        @Field("action") action: String = "messages.get",
+        @Field("token") token: String,
+        @Field("chat_id") chatId: Int,
+        @Field("last_id") lastId: Int? = null
+    ): MessageListResponse
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun markAsRead(
+        @Field("action") action: String = "messages.read",
+        @Field("token") token: String,
+        @Field("chat_id") chatId: Int
+    ): Response<Map<String, Any>>
+
 
     @Multipart
     @POST("index.php")

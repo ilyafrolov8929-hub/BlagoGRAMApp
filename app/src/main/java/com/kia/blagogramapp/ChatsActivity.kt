@@ -5,9 +5,11 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.gson.Gson
 import com.kia.blagogramapp.adapters.ChatsAdapter
 import com.kia.blagogramapp.api.ApiRepository
@@ -15,12 +17,13 @@ import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.models.ChatItem
 import com.kia.blagogramapp.network.RetrofitClient
 import com.kia.blagogramapp.ui.modules.ChatListLayout
+import com.kia.blagogramapp.ui.modules.FullPlayer
 import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
 import com.kia.blagogramapp.ui.modules.SideMenuModule
 import com.kia.blagogramapp.utils.DevModeManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.kia.blagogramapp.utils.MusicManager
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.combine
 
 class ChatsActivity : AppCompatActivity() {
 
@@ -31,11 +34,13 @@ class ChatsActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
     private var isDrawerOpen = false
+    
+    private var pollingJob: Job? = null
+    private var fullPlayer: FullPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализация тем
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
@@ -45,7 +50,6 @@ class ChatsActivity : AppCompatActivity() {
         isCurrentUseMonet = useMonet
         DesignEngine.Theme.apply(isDarkTheme, useMonet)
 
-        // 2. Настройка окна
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -54,28 +58,19 @@ class ChatsActivity : AppCompatActivity() {
         controller.isAppearanceLightStatusBars = !isDarkTheme
         controller.isAppearanceLightNavigationBars = !isDarkTheme
 
-        // 3. UI
         layout = ChatListLayout(this)
         setContentView(layout)
 
-        // 4. Боковое меню
         sideMenu = SideMenuModule(this).create(layout, getStatusBarHeight())
         setupSideMenu()
+        observeMusic()
 
-        if (SubscriptionManager.isPremium(this)){
-            sideMenu.premiumBadge.visibility = View.VISIBLE
-        } else {
-            sideMenu.premiumBadge.visibility = View.GONE
-        }
-
-        // 5. Обработчики
         layout.menuBtn.setOnClickListener { toggleDrawer() }
         layout.editBtn.setOnClickListener {
             startActivity(Intent(this, SearchUserActivity::class.java))
         }
         layout.swipeRefresh.setOnRefreshListener { loadChats() }
 
-        // Показываем анимацию загрузки сразу при входе
         layout.swipeRefresh.post {
             layout.swipeRefresh.isRefreshing = true
             loadChats()
@@ -99,6 +94,11 @@ class ChatsActivity : AppCompatActivity() {
                 prefs.getString("status", "Статус") ?: "Нет статуса",
                 prefs.getString("avatar", "") ?: ""
             )
+        }
+
+        sideMenu.onMusicClick = {
+            showFullPlayer()
+            toggleDrawer()
         }
 
         sideMenu.addItem("Профиль", R.drawable.ic_user) {
@@ -154,6 +154,41 @@ class ChatsActivity : AppCompatActivity() {
         sideMenu.drawerOverlay.setOnClickListener { if (isDrawerOpen) toggleDrawer() }
     }
 
+    private fun observeMusic() {
+        lifecycleScope.launchWhenStarted {
+            combine(MusicManager.currentTrack, MusicManager.isPlaying) { track, playing ->
+                track to playing
+            }.collect { (track, playing) ->
+                sideMenu.updateMusic(track, playing)
+                if (track != null) {
+                    fullPlayer?.bind(track, playing)
+                }
+            }
+        }
+    }
+
+    private fun showFullPlayer() {
+        val track = MusicManager.currentTrack.value ?: return
+        if (fullPlayer == null) {
+            fullPlayer = FullPlayer(this).apply {
+                layoutParams = FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT)
+                onCloseListener = { closeFullPlayer() }
+            }
+        }
+        if (fullPlayer?.parent == null) {
+            layout.addView(fullPlayer)
+            // Анимация открытия из мини-плеера в боковом меню
+            fullPlayer?.animateOpen(sideMenu.miniPlayerContainer)
+        }
+        fullPlayer?.bind(track, MusicManager.isPlaying.value)
+    }
+
+    private fun closeFullPlayer() {
+        fullPlayer?.animateClose(sideMenu.miniPlayerContainer) {
+            layout.removeView(fullPlayer)
+        }
+    }
+
     private fun toggleDrawer() {
         if (isDrawerOpen) {
             sideMenu.drawerPanel.animate().translationX(-sideMenu.drawerPanel.width.toFloat())
@@ -191,6 +226,28 @@ class ChatsActivity : AppCompatActivity() {
         }
     }
 
+    private fun startPolling() {
+        pollingJob?.cancel()
+        pollingJob = CoroutineScope(Dispatchers.IO).launch {
+            val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+            while (isActive) {
+                try {
+                    val chats: List<Chat> = repo.getChats(token)
+                    runOnUiThread {
+                        updateAdapter(chats)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                delay(5000) // Обновляем список чатов каждые 5 секунд
+            }
+        }
+    }
+
+    private fun stopPolling() {
+        pollingJob?.cancel()
+    }
+
     private fun updateAdapter(chats: List<Chat>) {
         val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val items = chats.map { c ->
@@ -209,6 +266,7 @@ class ChatsActivity : AppCompatActivity() {
                 pinned = c.pinned
             )
         }
+        
         layout.recycler.adapter = ChatsAdapter(
             items = items,
             onClick = { chat ->
@@ -300,14 +358,30 @@ class ChatsActivity : AppCompatActivity() {
             recreate()
             return
         }
-        layout.swipeRefresh.post {
-            layout.swipeRefresh.isRefreshing = true
-            loadChats()
-        }
+        
+        startPolling()
+        
         if (SubscriptionManager.isPremium(this)){
             sideMenu.premiumBadge.visibility = View.VISIBLE
         } else {
             sideMenu.premiumBadge.visibility = View.GONE
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopPolling()
+    }
+
+    override fun onBackPressed() {
+        if (fullPlayer?.parent != null) {
+            closeFullPlayer()
+            return
+        }
+        if (isDrawerOpen) {
+            toggleDrawer()
+            return
+        }
+        super.onBackPressed()
     }
 }

@@ -18,6 +18,8 @@ import com.kia.blagogramapp.models.ChatListItem
 import com.kia.blagogramapp.utils.TimeUtils
 import com.kia.blagogramapp.LayoutHelper
 import io.noties.markwon.Markwon
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MessagesAdapter(
     private val myId: Int,
@@ -29,12 +31,14 @@ class MessagesAdapter(
     private val typeLeft = 1
     private val typeRight = 2
     private val typeUnreadSeparator = 3
+    private val typeSpace = 4
     
     private var markwon: Markwon? = null
 
     override fun getItemViewType(position: Int): Int {
         return when (val item = getItem(position)) {
             is ChatListItem.Header -> typeHeader
+            is ChatListItem.Space -> typeSpace
             is ChatListItem.UnreadSeparator -> typeUnreadSeparator
             is ChatListItem.Msg ->
                 if (item.message.sender_id == myId) typeRight else typeLeft
@@ -43,9 +47,11 @@ class MessagesAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         if (markwon == null) markwon = Markwon.create(parent.context)
-        
         return when (viewType) {
             typeHeader -> HeaderHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_day_header, parent, false))
+            typeSpace -> SpaceHolder(View(parent.context).apply { 
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, LayoutHelper.dp(12)) 
+            })
             typeUnreadSeparator -> UnreadSeparatorHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_unread_separator, parent, false))
             typeRight -> MsgHolder(LayoutInflater.from(parent.context).inflate(R.layout.message_right, parent, false), true, markwon!!)
             else -> MsgHolder(LayoutInflater.from(parent.context).inflate(R.layout.message_left, parent, false), false, markwon!!)
@@ -55,15 +61,8 @@ class MessagesAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
             is ChatListItem.Header -> (holder as HeaderHolder).bind(item.title)
-            is ChatListItem.UnreadSeparator -> (holder as UnreadSeparatorHolder).bind()
-            is ChatListItem.Msg -> {
-                val prev = if (position > 0) getItem(position - 1) else null
-                val next = if (position < itemCount - 1) getItem(position + 1) else null
-                val isPrevSame = prev is ChatListItem.Msg && prev.message.sender_id == item.message.sender_id
-                val isNextSame = next is ChatListItem.Msg && next.message.sender_id == item.message.sender_id
-
-                (holder as MsgHolder).bind(item.message, onImageClick, onLongClick, isPrevSame, isNextSame)
-            }
+            is ChatListItem.Msg -> (holder as MsgHolder).bind(item, onImageClick, onLongClick)
+            else -> {}
         }
     }
 
@@ -71,40 +70,44 @@ class MessagesAdapter(
         submitList(buildList(messages), onUpdated)
     }
 
-    fun addMessage(message: Message, onAdded: (() -> Unit)? = null) {
-        val currentItems = currentList.toMutableList()
-        val header = TimeUtils.headerFor(message.sent_at)
-        val lastItem = currentItems.lastOrNull()
-        
-        var needsHeader = true
-        if (lastItem is ChatListItem.Msg) {
-            if (TimeUtils.headerFor(lastItem.message.sent_at) == header) needsHeader = false
-        } else if (lastItem is ChatListItem.Header) {
-            if (lastItem.title == header) needsHeader = false
-        }
-
-        if (needsHeader) {
-            currentItems.add(ChatListItem.Header(header))
-        }
-        currentItems.add(ChatListItem.Msg(message))
-        submitList(currentItems, onAdded)
-    }
-
     private fun buildList(messages: List<Message>): List<ChatListItem> {
         val list = mutableListOf<ChatListItem>()
-        var lastHeader = ""
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        
+        var lastDate = ""
+        var lastTime: Long = 0
         var unreadSeparatorAdded = false
-        for (m in messages) {
-            val header = TimeUtils.headerFor(m.sent_at)
-            if (header != lastHeader) {
-                list.add(ChatListItem.Header(header))
-                lastHeader = header
+
+        for (i in messages.indices) {
+            val m = messages[i]
+            val date = TimeUtils.headerFor(m.sent_at)
+            val currentTime = try { sdf.parse(m.sent_at)?.time ?: 0L } catch (e: Exception) { 0L }
+
+            if (date != lastDate) {
+                list.add(ChatListItem.Header(date))
+                lastDate = date
+                lastTime = currentTime
+            } 
+            else if (lastTime != 0L && currentTime - lastTime > 5 * 60 * 1000) {
+                list.add(ChatListItem.Space)
+                lastTime = currentTime
             }
+
             if (!unreadSeparatorAdded && m.sender_id != myId && m.is_read == 0) {
                 list.add(ChatListItem.UnreadSeparator)
                 unreadSeparatorAdded = true
             }
-            list.add(ChatListItem.Msg(m))
+
+            val prevMsg = if (i > 0) messages[i-1] else null
+            val nextMsg = if (i < messages.size - 1) messages[i+1] else null
+            val nextTime = if (nextMsg != null) try { sdf.parse(nextMsg.sent_at)?.time ?: 0L } catch (e: Exception) { 0L } else 0L
+
+            // Группировка углов сбрасывается, если между сообщениями есть Space (разница > 5 мин)
+            val isPrevSame = prevMsg?.sender_id == m.sender_id && (currentTime - (try { sdf.parse(prevMsg!!.sent_at)?.time ?: 0L } catch (e: Exception) { 0L }) <= 5 * 60 * 1000)
+            val isNextSame = nextMsg?.sender_id == m.sender_id && (nextTime - currentTime <= 5 * 60 * 1000)
+
+            list.add(ChatListItem.Msg(m, isPrevSame, isNextSame))
+            lastTime = currentTime
         }
         return list
     }
@@ -117,14 +120,12 @@ class MessagesAdapter(
         val statusIcon: ImageView? = v.findViewById(R.id.msgStatusIcon)
         val bubble: View = if (isOutgoing) v.findViewById(R.id.bubbleRight) else v.findViewById(R.id.bubbleLeft)
 
-        fun bind(msg: Message, onImageClick: (String, Message) -> Unit, onLongClick: (Message) -> Unit, isPrevSame: Boolean, isNextSame: Boolean) {
-            if (msg.content.isEmpty()) {
-                text.visibility = View.GONE
-            } else {
+        fun bind(item: ChatListItem.Msg, onImageClick: (String, Message) -> Unit, onLongClick: (Message) -> Unit) {
+            val msg = item.message
+            if (msg.content.isEmpty()) text.visibility = View.GONE else {
                 text.visibility = View.VISIBLE
                 markwon.setMarkdown(text, msg.content)
             }
-            
             time.text = TimeUtils.formatTime(msg.sent_at)
             editedIcon.visibility = if (msg.edited_at != null) View.VISIBLE else View.GONE
             
@@ -136,9 +137,12 @@ class MessagesAdapter(
                 bubbleDrawable.setColor(DesignEngine.Theme.colorBlue)
                 text.setTextColor(0xFFFFFFFF.toInt())
                 time.setTextColor(0xCCFFFFFF.toInt())
-                val tr = if (isPrevSame) smallRadius else radius
-                val br = if (isNextSame) smallRadius else radius
+                editedIcon.setColorFilter(0xCCFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
+                
+                val tr = if (item.isPrevSame) smallRadius else radius
+                val br = if (item.isNextSame) smallRadius else radius
                 bubbleDrawable.cornerRadii = floatArrayOf(radius, radius, tr, tr, br, br, radius, radius)
+                
                 statusIcon?.apply {
                     visibility = View.VISIBLE
                     setImageResource(if (msg.is_read == 1) R.drawable.ic_double_check else R.drawable.ic_check)
@@ -148,8 +152,10 @@ class MessagesAdapter(
                 bubbleDrawable.setColor(DesignEngine.Theme.colorCardBackground)
                 text.setTextColor(DesignEngine.Theme.colorTextPrimary)
                 time.setTextColor(DesignEngine.Theme.colorTextSecondary)
-                val tl = if (isPrevSame) smallRadius else radius
-                val bl = if (isNextSame) smallRadius else radius
+                editedIcon.setColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN)
+                
+                val tl = if (item.isPrevSame) smallRadius else radius
+                val bl = if (item.isNextSame) smallRadius else radius
                 bubbleDrawable.cornerRadii = floatArrayOf(tl, tl, radius, radius, radius, radius, bl, bl)
                 statusIcon?.visibility = View.GONE
             }
@@ -163,9 +169,7 @@ class MessagesAdapter(
                 imagesRecycler.layoutParams = params
                 val urls = msg.images.map { if (it.startsWith("content:") || it.startsWith("file:")) it else "https://blagogram.ru/uploads/${msg.sender_id}/$it" }
                 imagesRecycler.adapter = MessageImagesAdapter(urls, msg.images.size > 1) { onImageClick(it, msg) }
-            } else {
-                imagesRecycler.visibility = View.GONE
-            }
+            } else imagesRecycler.visibility = View.GONE
 
             bubble.setOnLongClickListener { onLongClick(msg); true }
         }
@@ -179,6 +183,8 @@ class MessagesAdapter(
             title.setTextColor(DesignEngine.Theme.colorTextSecondary)
         }
     }
+
+    class SpaceHolder(v: View) : RecyclerView.ViewHolder(v)
 
     class UnreadSeparatorHolder(v: View) : RecyclerView.ViewHolder(v) {
         fun bind() {

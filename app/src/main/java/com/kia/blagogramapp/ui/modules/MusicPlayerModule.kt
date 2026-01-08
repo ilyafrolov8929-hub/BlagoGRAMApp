@@ -143,7 +143,7 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
             shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(24).toFloat()).build()
             elevation = LayoutHelper.dp(10).toFloat()
         }
-        scrollContent.addView(coverView, LayoutHelper.createLinear(280, 280))
+        scrollContent.addView(coverView, LayoutHelper.createLinear(280, 280, gravity = Gravity.CENTER_HORIZONTAL))
 
         titleView = TextView(context).apply {
             textSize = 22f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary)

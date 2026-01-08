@@ -552,10 +552,6 @@ class ChatActivity : AppCompatActivity() {
             avatar = "",
             images = localImageUris
         )
-        
-        adapter.addMessage(tempMessage) {
-            recycler.scrollToPosition(adapter.itemCount - 1)
-        }
 
         lifecycleScope.launch {
             val filesToUpload = withContext(Dispatchers.IO) {
