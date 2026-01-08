@@ -217,7 +217,7 @@ class ProfileActivity : AppCompatActivity() {
         
         loadUserProfileFromCache(myId)
         if (layout.userID.text.isNullOrEmpty() || layout.userID.text == "@") {
-             updateUI(login, displayName, statusText, avatar, 0, 0)
+             updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(this))
         }
         if (myId != 0) loadUserProfile(myId)
     }
@@ -228,7 +228,7 @@ class ProfileActivity : AppCompatActivity() {
         if (!json.isNullOrEmpty()) {
             try {
                 val profile = Gson().fromJson(json, UserProfile::class.java)
-                updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count)
+                updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium)
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
@@ -241,13 +241,13 @@ class ProfileActivity : AppCompatActivity() {
                 val json = Gson().toJson(profile)
                 getSharedPreferences("app_cache", MODE_PRIVATE).edit().putString("profile_$userId", json).apply()
                 runOnUiThread {
-                    updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count)
+                    updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium)
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int) {
+    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int, isPremium: Boolean) {
         layout.userID.text = "@$login"
         layout.profileUsername.text = displayName
         layout.status.text = statusText
@@ -255,12 +255,11 @@ class ProfileActivity : AppCompatActivity() {
         layout.subsCount.text = followers.toString()
         
         // Проверка премиум статуса
-        val isMyProfile = getSharedPreferences("app", MODE_PRIVATE).getString("login", "") == login
-        if (isMyProfile) {
+        val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
+        if (myLogin == login) {
             layout.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
         } else {
-            // Для чужого профиля можно было бы брать статус из UserProfile, если бы он там был
-            layout.premiumBadge.visibility = View.GONE 
+            layout.premiumBadge.visibility = if (isPremium) View.VISIBLE else View.GONE 
         }
 
         val avatarUrl = "https://blagogram.ru/avatars/$avatar"
@@ -312,7 +311,11 @@ class ProfileActivity : AppCompatActivity() {
         // Обновляем бейдж при возвращении из PremiumActivity
         val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
         if (layout.userID.text == "@$myLogin") {
-            layout.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
+            if (SubscriptionManager.isPremium(this)) {
+                layout.premiumBadge.visibility = View.VISIBLE
+            } else {
+                layout.premiumBadge.visibility = View.GONE
+            }
         }
     }
 }

@@ -37,59 +37,11 @@
 
         <activity android:name=".StartActivity"
             android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
         </activity>
-
-        <activity-alias
-            android:name=".LauncherDefault"
-            android:enabled="true"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:targetActivity=".StartActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".LauncherWinter"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_winter"
-            android:roundIcon="@mipmap/ic_launcher_winter_round"
-            android:targetActivity=".StartActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".LauncherSummer"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_sumer"
-            android:roundIcon="@mipmap/ic_launcher_sumer_round"
-            android:targetActivity=".StartActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".Launcher8Mart"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_8mart"
-            android:roundIcon="@mipmap/ic_launcher_8mart_round"
-            android:targetActivity=".StartActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
 
         <activity
             android:name=".LoginActivity"

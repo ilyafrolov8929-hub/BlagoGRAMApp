@@ -61,7 +61,12 @@ class ChatsActivity : AppCompatActivity() {
         // 4. Боковое меню
         sideMenu = SideMenuModule(this).create(layout, getStatusBarHeight())
         setupSideMenu()
-        sideMenu.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
+
+        if (SubscriptionManager.isPremium(this)){
+            sideMenu.premiumBadge.visibility = View.VISIBLE
+        } else {
+            sideMenu.premiumBadge.visibility = View.GONE
+        }
 
         // 5. Обработчики
         layout.menuBtn.setOnClickListener { toggleDrawer() }
@@ -299,6 +304,10 @@ class ChatsActivity : AppCompatActivity() {
             layout.swipeRefresh.isRefreshing = true
             loadChats()
         }
-        sideMenu.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
+        if (SubscriptionManager.isPremium(this)){
+            sideMenu.premiumBadge.visibility = View.VISIBLE
+        } else {
+            sideMenu.premiumBadge.visibility = View.GONE
+        }
     }
 }

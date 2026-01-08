@@ -392,7 +392,13 @@ class ApiRepository(private val api: BlagoApi) {
             avatar = r["avatar"]?.toString(),
             status = r["status"]?.toString(),
             friends_count = (r["friends_count"] as? Number)?.toInt() ?: 0,
-            followers_count = (r["followers_count"] as? Number)?.toInt() ?: 0
+            followers_count = (r["followers_count"] as? Number)?.toInt() ?: 0,
+            is_premium = when(val p = r["is_premium"]) {
+                is Boolean -> p
+                is Number -> p.toInt() == 1
+                is String -> p == "1" || p == "true"
+                else -> false
+            }
         )
     }
 

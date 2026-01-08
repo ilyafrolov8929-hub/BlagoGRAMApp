@@ -15,7 +15,6 @@ import android.view.View
 import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import com.kia.blagogramapp.utils.IconManager
 import java.io.File
 import java.util.*
 import kotlin.math.log10
@@ -65,7 +64,7 @@ class AboutActivity : AppCompatActivity() {
 
         // --- Логотип (Центрируем) ---
         val logoView = ImageView(this).apply {
-            setImageResource(IconManager.getSeasonalIconRes())
+            setImageResource(R.mipmap.ic_launcher)
         }
         val logoParams = LinearLayout.LayoutParams(LayoutHelper.dp(90), LayoutHelper.dp(90)).apply {
             gravity = Gravity.CENTER_HORIZONTAL
@@ -75,10 +74,11 @@ class AboutActivity : AppCompatActivity() {
 
         // --- Название (Центрируем) ---
         val appNameView = TextView(this).apply {
-            text = "BlagoGRAM"
-            textSize = 28f
+            text = "Lume" // Убираем старое название, оставляем новое
+            textSize = 32f // Мультяшные шрифты лучше смотрятся крупнее
             setTextColor(DesignEngine.Theme.colorTextPrimary)
-            typeface = Typeface.DEFAULT_BOLD
+            // Используем системный закругленный шрифт
+            typeface = Typeface.create("sans-serif-rounded", Typeface.BOLD)
             gravity = Gravity.CENTER_HORIZONTAL
         }
         contentLayout.addView(appNameView, LinearLayout.LayoutParams(-1, -2))

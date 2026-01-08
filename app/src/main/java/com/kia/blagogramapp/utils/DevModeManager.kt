@@ -49,8 +49,12 @@ object DevModeManager {
         return SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
     }
 
-    fun getMockUserProfile(): UserProfile {
-        return UserProfile(1, "dev_user", "Разработчик (Local)", null, "Режим разработки", 7, 77)
+    fun getMockUserProfile(userId: Int = 1): UserProfile {
+        return if (userId == 2) {
+            UserProfile(2, "test_user", "Тестовый Юзер", null, "Я тоже премиум!", 5, 10, true)
+        } else {
+            UserProfile(1, "dev_user", "Разработчик (Local)", null, "Режим разработки", 7, 77, true)
+        }
     }
 
     fun getMockChats(): List<Chat> {
@@ -78,8 +82,8 @@ object DevModeManager {
 
     fun getMockSearchUsers(query: String): List<SearchUserItem> {
         return listOf(
-            SearchUserItem(1, "dev_user", "Разработчик (Я)", null),
-            SearchUserItem(2, "test_user", "Тестовый Юзер", null)
+            SearchUserItem(1, "dev_user", "Разработчик (Я)", null, true),
+            SearchUserItem(2, "test_user", "Тестовый Юзер", null, true)
         ).filter { it.display_name.contains(query, ignoreCase = true) }
     }
 }

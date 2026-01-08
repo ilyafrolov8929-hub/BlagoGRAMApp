@@ -7,5 +7,6 @@ data class UserProfile(
     val avatar: String?,
     val status: String?,
     val friends_count: Int = 0,
-    val followers_count: Int = 0
+    val followers_count: Int = 0,
+    val is_premium: Boolean = false
 )

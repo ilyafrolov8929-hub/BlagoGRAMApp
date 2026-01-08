@@ -108,6 +108,8 @@ class ChatActivity : AppCompatActivity() {
         createUI()
 
         chatId = intent.getIntExtra("chat_id", 0)
+        targetUserId = intent.getIntExtra("user_id", 0) // Получаем ID пользователя из Intent
+        
         if (chatId == 0) {
             finish()
             return
@@ -299,7 +301,7 @@ class ChatActivity : AppCompatActivity() {
         )
     }
 
-    private fun setupHeaderSwipe(clickListener: View.OnClickListener) {
+    private fun setupHeaderSwipe(headerClickListener: View.OnClickListener) {
         var startY = 0f
         var isProxying = false
 
@@ -333,7 +335,7 @@ class ChatActivity : AppCompatActivity() {
                     swipeRefresh.dispatchTouchEvent(offsetEvent)
                     forceRefresh = false
                     if (!isProxying && event.action == MotionEvent.ACTION_UP) {
-                        clickListener.onClick(v)
+                        headerClickListener.onClick(v)
                     }
                     isProxying = false
                     true
