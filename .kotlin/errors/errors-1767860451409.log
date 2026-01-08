@@ -1,0 +1,827 @@
+kotlin version: 2.0.21
+error message: org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering
+File being compiled: C:/Users/ilyaf/AndroidStudioProjects/BlagoGRAMApp/app/src/main/java/com/kia/blagogramapp/PremiumActivity.kt
+The root cause java.lang.RuntimeException was thrown at: org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException(CodegenUtil.kt:253)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException$default(CodegenUtil.kt:236)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:65)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:52)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:38)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:27)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:14)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:62)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:371)
+	at org.jetbrains.kotlin.codegen.CodegenFactory.generateModule(CodegenFactory.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateModuleInFrontendIRMode(JvmIrCodegenFactory.kt:433)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.generateCodeFromIr(jvmCompilerPipeline.kt:246)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.compileModulesUsingFrontendIrAndLightTree(jvmCompilerPipeline.kt:142)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:148)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:43)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:103)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:49)
+	at org.jetbrains.kotlin.cli.common.CLITool.exec(CLITool.kt:101)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:464)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:73)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:506)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:423)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.tryCompileIncrementally$lambda$9$compile(IncrementalCompilerRunner.kt:249)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.tryCompileIncrementally(IncrementalCompilerRunner.kt:267)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:120)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:675)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1660)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN name:onCreate visibility:protected modality:OPEN <> ($this:com.kia.blagogramapp.PremiumActivity, savedInstanceState:android.os.Bundle?) returnType:kotlin.Unit
+  overridden:
+    protected/*protected and package*/ open fun onCreate (p0: @[EnhancedNullability] android.os.Bundle?): kotlin.Unit [fake_override] declared in androidx.appcompat.app.AppCompatActivity
+  $this: VALUE_PARAMETER name:<this> type:com.kia.blagogramapp.PremiumActivity
+  VALUE_PARAMETER name:savedInstanceState index:0 type:android.os.Bundle?
+  BLOCK_BODY
+    CALL 'protected/*protected and package*/ open fun onCreate (p0: @[EnhancedNullability] android.os.Bundle?): kotlin.Unit [fake_override] declared in androidx.appcompat.app.AppCompatActivity' superQualifier='CLASS IR_EXTERNAL_JAVA_DECLARATION_STUB CLASS name:AppCompatActivity modality:OPEN visibility:public superTypes:[androidx.fragment.app.FragmentActivity; androidx.appcompat.app.AppCompatCallback; androidx.core.app.TaskStackBuilder.SupportParentable; androidx.appcompat.app.ActionBarDrawerToggle.DelegateProvider]' type=kotlin.Unit origin=null
+      $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      p0: GET_VAR 'savedInstanceState: android.os.Bundle? declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.os.Bundle? origin=null
+    CALL 'public final fun init (ctx: android.content.Context): kotlin.Unit declared in com.kia.blagogramapp.DesignEngine' type=kotlin.Unit origin=null
+      $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.DesignEngine visibility:public [final,static] declared in com.kia.blagogramapp.DesignEngine' type=com.kia.blagogramapp.DesignEngine origin=null
+      ctx: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+    VAR name:themePrefs type:@[FlexibleNullability] android.content.SharedPreferences? [val]
+      CALL 'public open fun getSharedPreferences (p0: @[FlexibleNullability] kotlin.String?, p1: kotlin.Int): @[FlexibleNullability] android.content.SharedPreferences? [fake_override] declared in com.kia.blagogramapp.PremiumActivity' type=@[FlexibleNullability] android.content.SharedPreferences? origin=null
+        $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        p0: CONST String type=kotlin.String value="app_theme"
+        p1: CONST Int type=kotlin.Int value=0
+    CALL 'public final fun apply (isDark: kotlin.Boolean, isMonet: kotlin.Boolean): kotlin.Unit declared in com.kia.blagogramapp.DesignEngine.Theme' type=kotlin.Unit origin=null
+      $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.DesignEngine.Theme visibility:public [final,static] declared in com.kia.blagogramapp.DesignEngine.Theme' type=com.kia.blagogramapp.DesignEngine.Theme origin=null
+      isDark: CALL 'public abstract fun getBoolean (p0: @[FlexibleNullability] kotlin.String?, p1: kotlin.Boolean): kotlin.Boolean declared in android.content.SharedPreferences' type=kotlin.Boolean origin=null
+        $this: GET_VAR 'val themePrefs: @[FlexibleNullability] android.content.SharedPreferences? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[FlexibleNullability] android.content.SharedPreferences? origin=null
+        p0: CONST String type=kotlin.String value="is_dark_theme"
+        p1: CONST Boolean type=kotlin.Boolean value=false
+      isMonet: CALL 'public abstract fun getBoolean (p0: @[FlexibleNullability] kotlin.String?, p1: kotlin.Boolean): kotlin.Boolean declared in android.content.SharedPreferences' type=kotlin.Boolean origin=null
+        $this: GET_VAR 'val themePrefs: @[FlexibleNullability] android.content.SharedPreferences? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[FlexibleNullability] android.content.SharedPreferences? origin=null
+        p0: CONST String type=kotlin.String value="use_monet"
+        p1: CONST Boolean type=kotlin.Boolean value=false
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:token type:kotlin.String visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: BLOCK type=kotlin.String origin=FOLDED_ELVIS
+        WHEN type=kotlin.String origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0_elvis_lhs type:@[EnhancedNullability] kotlin.String? [val]
+                CALL 'public abstract fun getString (p0: @[FlexibleNullability] kotlin.String?, p1: @[EnhancedNullability] kotlin.String?): @[EnhancedNullability] kotlin.String? declared in android.content.SharedPreferences' type=@[EnhancedNullability] kotlin.String? origin=null
+                  $this: CALL 'public open fun getSharedPreferences (p0: @[FlexibleNullability] kotlin.String?, p1: kotlin.Int): @[FlexibleNullability] android.content.SharedPreferences? [fake_override] declared in com.kia.blagogramapp.PremiumActivity' type=@[FlexibleNullability] android.content.SharedPreferences? origin=null
+                    $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+                    p0: CONST String type=kotlin.String value="app"
+                    p1: CONST Int type=kotlin.Int value=0
+                  p0: CONST String type=kotlin.String value="token"
+                  p1: CONST String type=kotlin.String value=""
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0_elvis_lhs: @[EnhancedNullability] kotlin.String? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[EnhancedNullability] kotlin.String? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0_elvis_lhs: @[EnhancedNullability] kotlin.String? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[EnhancedNullability] kotlin.String? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: CONST String type=kotlin.String value=""
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:apiRepository type:com.kia.blagogramapp.api.ApiRepository? visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: CONSTRUCTOR_CALL 'public constructor <init> (api: com.kia.blagogramapp.BlagoApi) [primary] declared in com.kia.blagogramapp.api.ApiRepository' type=com.kia.blagogramapp.api.ApiRepository origin=null
+        api: BLOCK type=com.kia.blagogramapp.BlagoApi origin=null
+          VAR IR_TEMPORARY_VARIABLE name:tmp0 type:kotlin.Any? [val]
+            CALL 'public open fun create <T> (p0: @[FlexibleNullability] java.lang.Class<@[FlexibleNullability] T of retrofit2.Retrofit.create?>?): @[FlexibleNullability] T of retrofit2.Retrofit.create? declared in retrofit2.Retrofit' type=@[FlexibleNullability] com.kia.blagogramapp.BlagoApi? origin=null
+              <T>: @[FlexibleNullability] com.kia.blagogramapp.BlagoApi?
+              $this: CALL 'public final fun <get-retrofit> (): @[FlexibleNullability] retrofit2.Retrofit? declared in com.kia.blagogramapp.api.ApiClient' type=@[FlexibleNullability] retrofit2.Retrofit? origin=GET_PROPERTY
+                $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.api.ApiClient visibility:public [final,static] declared in com.kia.blagogramapp.api.ApiClient' type=com.kia.blagogramapp.api.ApiClient origin=null
+              p0: CALL 'public final fun <get-java> <T> (): java.lang.Class<T of kotlin.jvm.JvmClassMappingKt.<get-java>> declared in kotlin.jvm.JvmClassMappingKt' type=java.lang.Class<com.kia.blagogramapp.BlagoApi> origin=GET_PROPERTY
+                <T>: com.kia.blagogramapp.BlagoApi
+                $receiver: CLASS_REFERENCE 'CLASS IR_EXTERNAL_DECLARATION_STUB INTERFACE name:BlagoApi modality:ABSTRACT visibility:public superTypes:[kotlin.Any]' type=kotlin.reflect.KClass<com.kia.blagogramapp.BlagoApi>
+          CALL 'public final fun checkNotNullExpressionValue (value: kotlin.Any?, expression: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+            value: GET_VAR 'val tmp0: kotlin.Any? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Any? origin=null
+            expression: CONST String type=kotlin.String value="create(...)"
+          GET_VAR 'val tmp0: kotlin.Any? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Any? origin=null
+    CALL 'public open fun setFlags (p0: kotlin.Int, p1: kotlin.Int): kotlin.Unit declared in android.view.Window' type=kotlin.Unit origin=null
+      $this: CALL 'public open fun getWindow (): @[FlexibleNullability] android.view.Window? [fake_override] declared in com.kia.blagogramapp.PremiumActivity' type=@[FlexibleNullability] android.view.Window? origin=GET_PROPERTY
+        $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      p0: CONST Int type=kotlin.Int value=512
+      p1: CONST Int type=kotlin.Int value=512
+    VAR name:root type:android.widget.FrameLayout [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.FrameLayout origin=null
+        <T>: android.widget.FrameLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[EnhancedNullability] android.content.Context) declared in android.widget.FrameLayout' type=android.widget.FrameLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.FrameLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$0 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.FrameLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    VAR name:bgGlow type:android.view.View [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.view.View origin=null
+        <T>: android.view.View
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.view.View' type=android.view.View origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.view.View, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$2 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.view.View, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.FrameLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val root: android.widget.FrameLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.FrameLayout origin=null
+      p0: GET_VAR 'val bgGlow: android.view.View [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.view.View origin=null
+      p1: CALL 'public final fun createFrame (width: kotlin.Int, height: kotlin.Int, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.FrameLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.FrameLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=800
+        height: CONST Int type=kotlin.Int value=800
+        gravity: CONST Int type=kotlin.Int value=49
+        left: CONST Int type=kotlin.Int value=0
+        top: CONST Int type=kotlin.Int value=-200
+        right: CONST Int type=kotlin.Int value=0
+        bottom: CONST Int type=kotlin.Int value=0
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=@[FlexibleNullability] android.animation.ValueAnimator? origin=null
+        <T>: @[FlexibleNullability] android.animation.ValueAnimator?
+        $receiver: CALL 'public open fun ofFloat (vararg p0: kotlin.Float): @[FlexibleNullability] android.animation.ValueAnimator? declared in android.animation.ValueAnimator' type=@[FlexibleNullability] android.animation.ValueAnimator? origin=null
+          p0: BLOCK type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+            VAR IR_TEMPORARY_VARIABLE name:tmp0 type:@[FlexibleNullability] kotlin.FloatArray? [val]
+              CONSTRUCTOR_CALL 'public constructor <init> (size: kotlin.Int) [primary] declared in kotlin.FloatArray' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+                size: CONST Int type=kotlin.Int value=2
+            CALL 'public final fun set (index: kotlin.Int, value: kotlin.Float): kotlin.Unit [operator] declared in kotlin.FloatArray' type=kotlin.Unit origin=null
+              $this: GET_VAR 'val tmp0: @[FlexibleNullability] kotlin.FloatArray? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+              index: CONST Int type=kotlin.Int value=0
+              value: CONST Float type=kotlin.Float value=0.9
+            CALL 'public final fun set (index: kotlin.Int, value: kotlin.Float): kotlin.Unit [operator] declared in kotlin.FloatArray' type=kotlin.Unit origin=null
+              $this: GET_VAR 'val tmp0: @[FlexibleNullability] kotlin.FloatArray? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+              index: CONST Int type=kotlin.Int value=1
+              value: CONST Float type=kotlin.Float value=1.1
+            GET_VAR 'val tmp0: @[FlexibleNullability] kotlin.FloatArray? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<@[FlexibleNullability] android.animation.ValueAnimator?, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$4 ($bgGlow: android.view.View): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<@[FlexibleNullability] android.animation.ValueAnimator?, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $bgGlow: GET_VAR 'val bgGlow: android.view.View [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.view.View origin=null
+      COMPOSITE type=kotlin.Unit origin=null
+    VAR name:scrollView type:android.widget.ScrollView [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.ScrollView origin=null
+        <T>: android.widget.ScrollView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.ScrollView' type=android.widget.ScrollView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.ScrollView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$5 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.ScrollView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    VAR name:content type:android.widget.LinearLayout [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.LinearLayout origin=null
+        <T>: android.widget.LinearLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.LinearLayout' type=android.widget.LinearLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$6 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    VAR name:premiumicon type:android.widget.ImageView [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.ImageView origin=null
+        <T>: android.widget.ImageView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.ImageView' type=android.widget.ImageView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.ImageView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$7 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.ImageView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: GET_VAR 'val premiumicon: android.widget.ImageView [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.ImageView origin=null
+      p1: CALL 'public final fun createLinear$default ($this: com.kia.blagogramapp.LayoutHelper, width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int, $mask0: kotlin.Int, $handler: kotlin.Any?): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=DEFAULT_DISPATCH_CALL
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=100
+        height: CONST Int type=kotlin.Int value=100
+        weight: COMPOSITE type=kotlin.Float origin=DEFAULT_VALUE
+          CONST Float type=kotlin.Float value=0.0
+        gravity: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        left: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        top: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        right: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        bottom: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        $mask0: CONST Int type=kotlin.Int value=252
+        $handler: CONST Null type=kotlin.Any? value=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.TextView origin=null
+        <T>: android.widget.TextView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.TextView' type=android.widget.TextView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$8 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+      p1: CALL 'public final fun createLinear$default ($this: com.kia.blagogramapp.LayoutHelper, width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int, $mask0: kotlin.Int, $handler: kotlin.Any?): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=DEFAULT_DISPATCH_CALL
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=-2
+        weight: COMPOSITE type=kotlin.Float origin=DEFAULT_VALUE
+          CONST Float type=kotlin.Float value=0.0
+        gravity: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        left: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        top: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        right: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        bottom: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        $mask0: CONST Int type=kotlin.Int value=252
+        $handler: CONST Null type=kotlin.Any? value=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.TextView origin=null
+        <T>: android.widget.TextView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.TextView' type=android.widget.TextView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$9 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=1
+        left: CONST Int type=kotlin.Int value=0
+        top: CONST Int type=kotlin.Int value=4
+        right: CONST Int type=kotlin.Int value=0
+        bottom: CONST Int type=kotlin.Int value=30
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:viewPager type:androidx.viewpager2.widget.ViewPager2? visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=androidx.viewpager2.widget.ViewPager2 origin=null
+        <T>: androidx.viewpager2.widget.ViewPager2
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[EnhancedNullability] android.content.Context) declared in androidx.viewpager2.widget.ViewPager2' type=androidx.viewpager2.widget.ViewPager2 origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<androidx.viewpager2.widget.ViewPager2, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$11 (this$0: com.kia.blagogramapp.PremiumActivity): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<androidx.viewpager2.widget.ViewPager2, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            this$0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: BLOCK type=androidx.viewpager2.widget.ViewPager2 origin=FOLDED_ELVIS
+        WHEN type=androidx.viewpager2.widget.ViewPager2 origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:androidx.viewpager2.widget.ViewPager2? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:viewPager type:androidx.viewpager2.widget.ViewPager2? visibility:private' type=androidx.viewpager2.widget.ViewPager2? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: androidx.viewpager2.widget.ViewPager2? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=androidx.viewpager2.widget.ViewPager2? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: androidx.viewpager2.widget.ViewPager2? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=androidx.viewpager2.widget.ViewPager2? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="viewPager"
+      p1: CALL 'public final fun createLinear$default ($this: com.kia.blagogramapp.LayoutHelper, width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int, $mask0: kotlin.Int, $handler: kotlin.Any?): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=DEFAULT_DISPATCH_CALL
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=200
+        weight: COMPOSITE type=kotlin.Float origin=DEFAULT_VALUE
+          CONST Float type=kotlin.Float value=0.0
+        gravity: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        left: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        top: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        right: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        bottom: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        $mask0: CONST Int type=kotlin.Int value=252
+        $handler: CONST Null type=kotlin.Any? value=null
+    VAR name:dotsContainer type:android.widget.LinearLayout [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.LinearLayout origin=null
+        <T>: android.widget.LinearLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.LinearLayout' type=android.widget.LinearLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$12 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    BLOCK type=kotlin.Unit origin=FOR_LOOP
+      COMPOSITE type=kotlin.Unit origin=null
+        VAR FOR_LOOP_VARIABLE name:i type:kotlin.Int [var]
+          CONST Int type=kotlin.Int value=0
+        VAR IR_TEMPORARY_VARIABLE name:last type:kotlin.Int [val]
+          CALL 'public abstract fun <get-size> (): kotlin.Int declared in kotlin.collections.List' type=kotlin.Int origin=GET_PROPERTY
+            $this: CALL 'private final fun getFeatures (): kotlin.collections.List<com.kia.blagogramapp.PremiumActivity.Feature> declared in com.kia.blagogramapp.PremiumActivity' type=kotlin.collections.List<com.kia.blagogramapp.PremiumActivity.Feature> origin=null
+              $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      DO_WHILE label=PremiumActivity$onCreate1 origin=DO_WHILE_COUNTER_LOOP
+        body: COMPOSITE type=kotlin.Unit origin=FOR_LOOP_INNER_WHILE
+          COMPOSITE type=kotlin.Unit origin=FOR_LOOP_NEXT
+            WHEN type=kotlin.Unit origin=null
+              BRANCH
+                if: CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                  $this: CALL 'public final fun less (arg0: kotlin.Int, arg1: kotlin.Int): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                    arg0: GET_VAR 'var i: kotlin.Int [var] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Int origin=null
+                    arg1: GET_VAR 'val last: kotlin.Int [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Int origin=null
+                then: BREAK label=null loop.label=PremiumActivity$onCreate1
+          BLOCK type=kotlin.Unit origin=null
+            CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+              $this: GET_VAR 'val dotsContainer: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+              p0: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.view.View origin=null
+                <T>: android.view.View
+                $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.view.View' type=android.view.View origin=null
+                  p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+                block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.view.View, kotlin.Unit> origin=LAMBDA
+                  COMPOSITE type=kotlin.Unit origin=null
+                  FUNCTION_REFERENCE 'private final fun onCreate$lambda$14 ($i: kotlin.Int): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.view.View, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+                    $i: GET_VAR 'var i: kotlin.Int [var] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Int origin=null
+              p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+                $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+                width: WHEN type=kotlin.Int origin=IF
+                  BRANCH
+                    if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=EQEQ
+                      arg0: GET_VAR 'var i: kotlin.Int [var] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Int origin=null
+                      arg1: CONST Int type=kotlin.Int value=0
+                    then: CONST Int type=kotlin.Int value=14
+                  BRANCH
+                    if: CONST Boolean type=kotlin.Boolean value=true
+                    then: CONST Int type=kotlin.Int value=5
+                height: CONST Int type=kotlin.Int value=5
+                weight: CONST Float type=kotlin.Float value=0.0
+                gravity: CONST Int type=kotlin.Int value=16
+                left: CONST Int type=kotlin.Int value=3
+                top: CONST Int type=kotlin.Int value=0
+                right: CONST Int type=kotlin.Int value=3
+                bottom: CONST Int type=kotlin.Int value=0
+        condition: COMPOSITE type=kotlin.Boolean origin=null
+          CALL 'public final fun <int-prefix-incr-decr> (value: kotlin.Int, delta: kotlin.Int): kotlin.Int declared in kotlin.jvm.internal' type=kotlin.Int origin=null
+            value: GET_VAR 'var i: kotlin.Int [var] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Int origin=null
+            delta: CONST Int type=kotlin.Int value=1
+          CONST Boolean type=kotlin.Boolean value=true
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: GET_VAR 'val dotsContainer: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-2
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=1
+        left: CONST Int type=kotlin.Int value=0
+        top: CONST Int type=kotlin.Int value=15
+        right: CONST Int type=kotlin.Int value=0
+        bottom: CONST Int type=kotlin.Int value=30
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:progressBar type:android.widget.ProgressBar? visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.ProgressBar origin=null
+        <T>: android.widget.ProgressBar
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.ProgressBar' type=android.widget.ProgressBar origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.ProgressBar, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$15 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.ProgressBar, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: BLOCK type=android.widget.ProgressBar origin=FOLDED_ELVIS
+        WHEN type=android.widget.ProgressBar origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.ProgressBar? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:progressBar type:android.widget.ProgressBar? visibility:private' type=android.widget.ProgressBar? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.ProgressBar? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.ProgressBar? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.ProgressBar? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.ProgressBar? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="progressBar"
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-2
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=1
+        left: CONST Int type=kotlin.Int value=0
+        top: CONST Int type=kotlin.Int value=20
+        right: CONST Int type=kotlin.Int value=0
+        bottom: CONST Int type=kotlin.Int value=20
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:pricingContainer type:android.widget.LinearLayout? visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.LinearLayout origin=null
+        <T>: android.widget.LinearLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.LinearLayout' type=android.widget.LinearLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$16 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: BLOCK type=android.widget.LinearLayout origin=FOLDED_ELVIS
+        WHEN type=android.widget.LinearLayout origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.LinearLayout? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:pricingContainer type:android.widget.LinearLayout? visibility:private' type=android.widget.LinearLayout? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="pricingContainer"
+      p0: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=com.kia.blagogramapp.HeaderCell origin=null
+        <T>: com.kia.blagogramapp.HeaderCell
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (context: android.content.Context) [primary] declared in com.kia.blagogramapp.HeaderCell' type=com.kia.blagogramapp.HeaderCell origin=null
+          context: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<com.kia.blagogramapp.HeaderCell, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$17 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<com.kia.blagogramapp.HeaderCell, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=0
+        left: CONST Int type=kotlin.Int value=24
+        top: CONST Int type=kotlin.Int value=0
+        right: CONST Int type=kotlin.Int value=24
+        bottom: CONST Int type=kotlin.Int value=8
+    VAR name:priceOptions type:kotlin.collections.List<com.kia.blagogramapp.PremiumActivity.PriceOption> [val]
+      CALL 'public final fun listOf <T> (vararg elements: T of kotlin.collections.CollectionsKt.listOf): kotlin.collections.List<T of kotlin.collections.CollectionsKt.listOf> declared in kotlin.collections.CollectionsKt' type=kotlin.collections.List<com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+        <T>: com.kia.blagogramapp.PremiumActivity.PriceOption
+        elements: BLOCK type=kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+          VAR IR_TEMPORARY_VARIABLE name:tmp0 type:kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> [val]
+            CALL 'public final fun arrayOfNulls <T> (size: kotlin.Int): kotlin.Array<T of kotlin.arrayOfNulls?> declared in kotlin' type=kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+              <T>: com.kia.blagogramapp.PremiumActivity.PriceOption
+              size: CONST Int type=kotlin.Int value=3
+          CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+            $this: GET_VAR 'val tmp0: kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+            index: CONST Int type=kotlin.Int value=0
+            value: CONSTRUCTOR_CALL 'public constructor <init> (title: kotlin.String, price: kotlin.String, sub: kotlin.String, badge: kotlin.String?, $mask0: kotlin.Int, $marker: kotlin.jvm.internal.DefaultConstructorMarker?) declared in com.kia.blagogramapp.PremiumActivity.PriceOption' type=com.kia.blagogramapp.PremiumActivity.PriceOption origin=DEFAULT_DISPATCH_CALL
+              title: CONST String type=kotlin.String value="Ежемесячно"
+              price: CONST String type=kotlin.String value="150 ₽"
+              sub: CONST String type=kotlin.String value="в месяц"
+              badge: COMPOSITE type=kotlin.String? origin=DEFAULT_VALUE
+                CONST Null type=kotlin.String? value=null
+              $mask0: CONST Int type=kotlin.Int value=8
+              $marker: CONST Null type=kotlin.jvm.internal.DefaultConstructorMarker? value=null
+          CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+            $this: GET_VAR 'val tmp0: kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+            index: CONST Int type=kotlin.Int value=1
+            value: CONSTRUCTOR_CALL 'public constructor <init> (title: kotlin.String, price: kotlin.String, sub: kotlin.String, badge: kotlin.String?) [primary] declared in com.kia.blagogramapp.PremiumActivity.PriceOption' type=com.kia.blagogramapp.PremiumActivity.PriceOption origin=null
+              title: CONST String type=kotlin.String value="Ежегодно"
+              price: CONST String type=kotlin.String value="1 080 ₽"
+              sub: CONST String type=kotlin.String value="90 ₽ / мес"
+              badge: CONST String type=kotlin.String value="ЭКОНОМИЯ 40%"
+          CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+            $this: GET_VAR 'val tmp0: kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+            index: CONST Int type=kotlin.Int value=2
+            value: CONSTRUCTOR_CALL 'public constructor <init> (title: kotlin.String, price: kotlin.String, sub: kotlin.String, badge: kotlin.String?) [primary] declared in com.kia.blagogramapp.PremiumActivity.PriceOption' type=com.kia.blagogramapp.PremiumActivity.PriceOption origin=null
+              title: CONST String type=kotlin.String value="Навсегда"
+              price: CONST String type=kotlin.String value="1 800 ₽"
+              sub: CONST String type=kotlin.String value="Разово"
+              badge: CONST String type=kotlin.String value="ЛУЧШАЯ ЦЕНА"
+          GET_VAR 'val tmp0: kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Array<out com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+    VAR name:priceViews type:kotlin.collections.MutableList<com.kia.blagogramapp.PremiumActivity.PriceCardView> [val]
+      CALL 'public final fun mutableListOf <T> (): kotlin.collections.MutableList<T of kotlin.collections.CollectionsKt.mutableListOf> [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.collections.MutableList<com.kia.blagogramapp.PremiumActivity.PriceCardView> origin=null
+        <T>: com.kia.blagogramapp.PremiumActivity.PriceCardView
+    CALL 'public final fun forEachIndexed <T> (action: kotlin.Function2<@[ParameterName(name = "index")] kotlin.Int, T of kotlin.collections.CollectionsKt.forEachIndexed, kotlin.Unit>): kotlin.Unit [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.Unit origin=null
+      <T>: com.kia.blagogramapp.PremiumActivity.PriceOption
+      $receiver: GET_VAR 'val priceOptions: kotlin.collections.List<com.kia.blagogramapp.PremiumActivity.PriceOption> [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.collections.List<com.kia.blagogramapp.PremiumActivity.PriceOption> origin=null
+      action: BLOCK type=kotlin.Function2<kotlin.Int, com.kia.blagogramapp.PremiumActivity.PriceOption, kotlin.Unit> origin=LAMBDA
+        COMPOSITE type=kotlin.Unit origin=null
+        FUNCTION_REFERENCE 'private final fun onCreate$lambda$21 (this$0: com.kia.blagogramapp.PremiumActivity, $priceViews: kotlin.collections.MutableList<com.kia.blagogramapp.PremiumActivity.PriceCardView>, index: kotlin.Int, option: com.kia.blagogramapp.PremiumActivity.PriceOption): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=kotlin.Function2<kotlin.Int, com.kia.blagogramapp.PremiumActivity.PriceOption, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+          this$0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+          $priceViews: GET_VAR 'val priceViews: kotlin.collections.MutableList<com.kia.blagogramapp.PremiumActivity.PriceCardView> [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.collections.MutableList<com.kia.blagogramapp.PremiumActivity.PriceCardView> origin=null
+    VAR name:subscribeBtn type:android.widget.FrameLayout [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.FrameLayout origin=null
+        <T>: android.widget.FrameLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[EnhancedNullability] android.content.Context) declared in android.widget.FrameLayout' type=android.widget.FrameLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.FrameLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$25 (this$0: com.kia.blagogramapp.PremiumActivity): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.FrameLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            this$0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: BLOCK type=android.widget.LinearLayout origin=FOLDED_ELVIS
+        WHEN type=android.widget.LinearLayout origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.LinearLayout? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:pricingContainer type:android.widget.LinearLayout? visibility:private' type=android.widget.LinearLayout? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="pricingContainer"
+      p0: GET_VAR 'val subscribeBtn: android.widget.FrameLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.FrameLayout origin=null
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=56
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=1
+        left: CONST Int type=kotlin.Int value=16
+        top: CONST Int type=kotlin.Int value=25
+        right: CONST Int type=kotlin.Int value=16
+        bottom: CONST Int type=kotlin.Int value=10
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: BLOCK type=android.widget.LinearLayout origin=FOLDED_ELVIS
+        WHEN type=android.widget.LinearLayout origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.LinearLayout? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:pricingContainer type:android.widget.LinearLayout? visibility:private' type=android.widget.LinearLayout? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="pricingContainer"
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:statusContainer type:android.widget.LinearLayout? visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.LinearLayout origin=null
+        <T>: android.widget.LinearLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.LinearLayout' type=android.widget.LinearLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$27 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: BLOCK type=android.widget.LinearLayout origin=FOLDED_ELVIS
+        WHEN type=android.widget.LinearLayout origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.LinearLayout? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:statusContainer type:android.widget.LinearLayout? visibility:private' type=android.widget.LinearLayout? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="statusContainer"
+      p0: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.TextView origin=null
+        <T>: android.widget.TextView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.TextView' type=android.widget.TextView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$28 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+      p1: CALL 'public final fun createLinear$default ($this: com.kia.blagogramapp.LayoutHelper, width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int, $mask0: kotlin.Int, $handler: kotlin.Any?): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=DEFAULT_DISPATCH_CALL
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-2
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=1
+        left: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        top: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        right: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        bottom: COMPOSITE type=kotlin.Int origin=DEFAULT_VALUE
+          CONST Int type=kotlin.Int value=0
+        $mask0: CONST Int type=kotlin.Int value=240
+        $handler: CONST Null type=kotlin.Any? value=null
+    SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:statusText type:android.widget.TextView? visibility:private' type=kotlin.Unit origin=null
+      receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      value: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.TextView origin=null
+        <T>: android.widget.TextView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.TextView' type=android.widget.TextView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$29 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: BLOCK type=android.widget.LinearLayout origin=FOLDED_ELVIS
+        WHEN type=android.widget.LinearLayout origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.LinearLayout? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:statusContainer type:android.widget.LinearLayout? visibility:private' type=android.widget.LinearLayout? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="statusContainer"
+      p0: BLOCK type=android.widget.TextView origin=FOLDED_ELVIS
+        WHEN type=android.widget.TextView origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.TextView? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:statusText type:android.widget.TextView? visibility:private' type=android.widget.TextView? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.TextView? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.TextView? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.TextView? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.TextView? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="statusText"
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=0
+        left: CONST Int type=kotlin.Int value=0
+        top: CONST Int type=kotlin.Int value=20
+        right: CONST Int type=kotlin.Int value=0
+        bottom: CONST Int type=kotlin.Int value=0
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: BLOCK type=android.widget.LinearLayout origin=FOLDED_ELVIS
+        WHEN type=android.widget.LinearLayout origin=FOLDED_ELVIS
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp0 type:android.widget.LinearLayout? [val]
+                GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:statusContainer type:android.widget.LinearLayout? visibility:private' type=android.widget.LinearLayout? origin=null
+                  receiver: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  arg0: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+                  arg1: CONST Null type=kotlin.Nothing? value=null
+            then: GET_VAR 'val tmp0: android.widget.LinearLayout? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout? origin=null
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: BLOCK type=kotlin.Unit origin=null
+              CALL 'public final fun throwUninitializedPropertyAccessException (propertyName: kotlin.String): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+                propertyName: CONST String type=kotlin.String value="statusContainer"
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=0
+        left: CONST Int type=kotlin.Int value=20
+        top: CONST Int type=kotlin.Int value=20
+        right: CONST Int type=kotlin.Int value=20
+        bottom: CONST Int type=kotlin.Int value=20
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.LinearLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p0: CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.TextView origin=null
+        <T>: android.widget.TextView
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.TextView' type=android.widget.TextView origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$30 (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.TextView, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+      p1: CALL 'public final fun createLinear (width: kotlin.Int, height: kotlin.Int, weight: kotlin.Float, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.LinearLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.LinearLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-1
+        height: CONST Int type=kotlin.Int value=-2
+        weight: CONST Float type=kotlin.Float value=0.0
+        gravity: CONST Int type=kotlin.Int value=1
+        left: CONST Int type=kotlin.Int value=40
+        top: CONST Int type=kotlin.Int value=0
+        right: CONST Int type=kotlin.Int value=40
+        bottom: CONST Int type=kotlin.Int value=40
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?): kotlin.Unit declared in android.widget.ScrollView' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val scrollView: android.widget.ScrollView [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.ScrollView origin=null
+      p0: GET_VAR 'val content: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?): kotlin.Unit [fake_override] declared in android.widget.FrameLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val root: android.widget.FrameLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.FrameLayout origin=null
+      p0: GET_VAR 'val scrollView: android.widget.ScrollView [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.ScrollView origin=null
+    VAR name:isDarkThemeNow type:kotlin.Boolean [val]
+      CALL 'public abstract fun getBoolean (p0: @[FlexibleNullability] kotlin.String?, p1: kotlin.Boolean): kotlin.Boolean declared in android.content.SharedPreferences' type=kotlin.Boolean origin=null
+        $this: GET_VAR 'val themePrefs: @[FlexibleNullability] android.content.SharedPreferences? [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=@[FlexibleNullability] android.content.SharedPreferences? origin=null
+        p0: CONST String type=kotlin.String value="is_dark_theme"
+        p1: CONST Boolean type=kotlin.Boolean value=false
+    VAR name:backBtn type:android.widget.LinearLayout [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.widget.LinearLayout origin=null
+        <T>: android.widget.LinearLayout
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] android.content.Context?) declared in android.widget.LinearLayout' type=android.widget.LinearLayout origin=null
+          p0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun onCreate$lambda$33 ($isDarkThemeNow: kotlin.Boolean, this$0: com.kia.blagogramapp.PremiumActivity): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.widget.LinearLayout, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $isDarkThemeNow: GET_VAR 'val isDarkThemeNow: kotlin.Boolean [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=kotlin.Boolean origin=null
+            this$0: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+    CALL 'public open fun addView (p0: @[FlexibleNullability] android.view.View?, p1: @[FlexibleNullability] android.view.ViewGroup.LayoutParams?): kotlin.Unit [fake_override] declared in android.widget.FrameLayout' type=kotlin.Unit origin=null
+      $this: GET_VAR 'val root: android.widget.FrameLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.FrameLayout origin=null
+      p0: GET_VAR 'val backBtn: android.widget.LinearLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.LinearLayout origin=null
+      p1: CALL 'public final fun createFrame (width: kotlin.Int, height: kotlin.Int, gravity: kotlin.Int, left: kotlin.Int, top: kotlin.Int, right: kotlin.Int, bottom: kotlin.Int): android.widget.FrameLayout.LayoutParams declared in com.kia.blagogramapp.LayoutHelper' type=android.widget.FrameLayout.LayoutParams origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.LayoutHelper visibility:public [final,static] declared in com.kia.blagogramapp.LayoutHelper' type=com.kia.blagogramapp.LayoutHelper origin=null
+        width: CONST Int type=kotlin.Int value=-2
+        height: CONST Int type=kotlin.Int value=-2
+        gravity: CONST Int type=kotlin.Int value=8388659
+        left: CONST Int type=kotlin.Int value=16
+        top: CONST Int type=kotlin.Int value=45
+        right: CONST Int type=kotlin.Int value=0
+        bottom: CONST Int type=kotlin.Int value=0
+    CALL 'public open fun setContentView (p0: @[FlexibleNullability] android.view.View?): kotlin.Unit [fake_override] declared in com.kia.blagogramapp.PremiumActivity' type=kotlin.Unit origin=null
+      $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+      p0: GET_VAR 'val root: android.widget.FrameLayout [val] declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=android.widget.FrameLayout origin=null
+    CALL 'private final fun checkSubscription (): kotlin.Unit declared in com.kia.blagogramapp.PremiumActivity' type=kotlin.Unit origin=null
+      $this: GET_VAR '<this>: com.kia.blagogramapp.PremiumActivity declared in com.kia.blagogramapp.PremiumActivity.onCreate' type=com.kia.blagogramapp.PremiumActivity origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:40)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:406)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:423)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:168)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:62)
+	... 44 more
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN INLINE_LAMBDA name:onCreate$lambda$7 visibility:private modality:FINAL <> ($receiver:android.widget.ImageView) returnType:kotlin.Unit
+  $receiver: VALUE_PARAMETER name:$this$apply type:android.widget.ImageView
+  BLOCK_BODY
+    VAR name:$i$a$-apply-PremiumActivity$onCreate$premiumicon$1 type:kotlin.Int [val]
+      CONST Int type=kotlin.Int value=0
+    CALL 'public open fun setImageResource (p0: kotlin.Int): kotlin.Unit declared in android.widget.ImageView' type=kotlin.Unit origin=null
+      $this: GET_VAR '$this$apply: android.widget.ImageView declared in com.kia.blagogramapp.PremiumActivity.onCreate$lambda$7' type=android.widget.ImageView origin=null
+      p0: GET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:infinity type:kotlin.Int visibility:public [static] declared in com.kia.blagogramapp.R.drawable' type=kotlin.Int superQualifierSymbol=com.kia.blagogramapp.R.drawable origin=null
+    CALL 'public final fun setColorFilter (p0: kotlin.Int, p1: @[FlexibleNullability] android.graphics.PorterDuff.Mode?): kotlin.Unit declared in android.widget.ImageView' type=kotlin.Unit origin=null
+      $this: GET_VAR '$this$apply: android.widget.ImageView declared in com.kia.blagogramapp.PremiumActivity.onCreate$lambda$7' type=android.widget.ImageView origin=null
+      p0: CALL 'public final fun <get-colorBlue> (): kotlin.Int declared in com.kia.blagogramapp.DesignEngine.Theme' type=kotlin.Int origin=GET_PROPERTY
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:com.kia.blagogramapp.DesignEngine.Theme visibility:public [final,static] declared in com.kia.blagogramapp.DesignEngine.Theme' type=com.kia.blagogramapp.DesignEngine.Theme origin=null
+      p1: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:SRC_IN type:android.graphics.PorterDuff.Mode visibility:public [final,static] declared in android.graphics.PorterDuff.Mode' type=android.graphics.PorterDuff.Mode origin=null
+    SET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:gravity type:kotlin.Int visibility:public [final,static] declared in android.R.attr' type=kotlin.Unit superQualifierSymbol=android.R.attr origin=EQ
+      value: CONST Int type=kotlin.Int value=17
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrSourceCompilerForInline.generateLambdaBody(IrSourceCompilerForInline.kt:67)
+	at org.jetbrains.kotlin.codegen.inline.ExpressionLambda.generateLambdaBody(LambdaInfo.kt:72)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrInlineCodegen.genValueAndPut(IrInlineCodegen.kt:100)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:616)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:644)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitVariable(ExpressionCodegen.kt:790)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitVariable(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.declarations.IrVariable.accept(IrVariable.kt:36)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 54 more
+Caused by: java.lang.AssertionError: access of const val: SET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:gravity type:kotlin.Int visibility:public [final,static] declared in android.R.attr' type=kotlin.Unit superQualifierSymbol=android.R.attr origin=EQ
+  value: CONST Int type=kotlin.Int value=17
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitFieldAccess(ExpressionCodegen.kt:861)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitFieldAccess(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitSetField(IrElementVisitor.kt:206)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitSetField(ExpressionCodegen.kt:908)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitSetField(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrSetField.accept(IrSetField.kt:21)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 71 more
+
+

@@ -361,11 +361,8 @@ class ChatsActivity : AppCompatActivity() {
         
         startPolling()
         
-        if (SubscriptionManager.isPremium(this)){
-            sideMenu.premiumBadge.visibility = View.VISIBLE
-        } else {
-            sideMenu.premiumBadge.visibility = View.GONE
-        }
+        // Используем DesignEngine для обновления премиум-статуса
+        DesignEngine.setPremiumStatus(sideMenu.premiumBadge, SubscriptionManager.isPremium(this))
     }
 
     override fun onPause() {

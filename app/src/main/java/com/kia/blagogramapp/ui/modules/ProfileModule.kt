@@ -165,11 +165,9 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             setTextColor(DesignEngine.Theme.colorTextPrimary)
             gravity = Gravity.CENTER
         }
-        premiumBadge = ImageView(context).apply {
-            setImageResource(R.drawable.infinity)
-            setColorFilter(DesignEngine.COLOR_BLUE, PorterDuff.Mode.SRC_IN)
-            visibility = View.GONE
-        }
+        
+        premiumBadge = DesignEngine.createPremiumBadge(context)
+        
         nameContainer.addView(profileUsername)
         nameContainer.addView(premiumBadge, LayoutHelper.createLinear(24, 24, 0f, Gravity.CENTER_VERTICAL, 8, 0, 0, 0))
         profileCardContent.addView(nameContainer)

@@ -162,14 +162,21 @@ class MessagesAdapter(
 
             if (msg.images.isNotEmpty()) {
                 imagesRecycler.visibility = View.VISIBLE
-                val spanCount = if (msg.images.size >= 3) 3 else if (msg.images.size == 2) 2 else 1
-                imagesRecycler.layoutManager = GridLayoutManager(itemView.context, spanCount)
+                val urls = msg.images.map { if (it.startsWith("content:") || it.startsWith("file:")) it else "https://blagogram.ru/uploads/${msg.sender_id}/$it" }
+                
+                val currentAdapter = imagesRecycler.adapter as? MessageImagesAdapter
+                if (currentAdapter == null || currentAdapter.imageUrls != urls) {
+                    val spanCount = if (msg.images.size >= 3) 3 else if (msg.images.size == 2) 2 else 1
+                    imagesRecycler.layoutManager = GridLayoutManager(itemView.context, spanCount)
+                    imagesRecycler.adapter = MessageImagesAdapter(urls, msg.images.size > 1) { onImageClick(it, msg) }
+                }
+
                 val params = imagesRecycler.layoutParams
                 params.width = LayoutHelper.dp(250)
                 imagesRecycler.layoutParams = params
-                val urls = msg.images.map { if (it.startsWith("content:") || it.startsWith("file:")) it else "https://blagogram.ru/uploads/${msg.sender_id}/$it" }
-                imagesRecycler.adapter = MessageImagesAdapter(urls, msg.images.size > 1) { onImageClick(it, msg) }
-            } else imagesRecycler.visibility = View.GONE
+            } else {
+                imagesRecycler.visibility = View.GONE
+            }
 
             bubble.setOnLongClickListener { onLongClick(msg); true }
         }

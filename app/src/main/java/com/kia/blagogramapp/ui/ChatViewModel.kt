@@ -90,7 +90,8 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
                     // Проверяем, изменились ли статусы is_read
                     val statusChanged = latest.size != current.size || latest.any { l -> 
                         current.find { it.id == l.id }?.is_read != l.is_read ||
-                        current.find { it.id == l.id }?.content != l.content
+                        current.find { it.id == l.id }?.content != l.content ||
+                        current.find { it.id == l.id }?.edited_at != l.edited_at
                     }
 
                     if (statusChanged) {
@@ -99,6 +100,12 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
                 } catch (e: Exception) { }
             }
         }
+    }
+
+    fun addTempMessage(message: Message) {
+        val current = _messages.value.orEmpty().toMutableList()
+        current.add(message)
+        _messages.postValue(current)
     }
 
     fun sendMessage(token: String, chatId: Int, text: String, files: List<File>?) {
@@ -117,8 +124,12 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
                 
                 val updated = repo.getMessages(token, chatId)
                 _messages.postValue(updated)
+                if (updated.isNotEmpty()) {
+                    lastMessageId = updated.maxOf { it.id }
+                }
             } catch (e: Exception) {
                 _error.postValue(e.message ?: "Failed to send message")
+                // В идеале тут надо удалить временное сообщение из списка
             }
         }
     }

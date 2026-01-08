@@ -13,7 +13,9 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
 import android.text.TextUtils
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -63,6 +65,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var adapter: MessagesAdapter
     private lateinit var sendBtn: ImageView
     private lateinit var attachBtn: ImageView
+    private lateinit var emojiBtn: ImageView
     private lateinit var messageInput: EditText
     private lateinit var attachmentsRecycler: RecyclerView
     private lateinit var attachmentsAdapter: AttachmentsAdapter
@@ -72,10 +75,10 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var chatNameView: TextView
     private lateinit var chatAvatarView: ShapeableImageView
     private lateinit var listContainer: FrameLayout
+    private lateinit var scrollToBottomBtn: FrameLayout
 
     private val selectedImages = mutableListOf<Uri>()
     private var isFirstLoad = true
-    private var editingPosition = -1
     private var editingMessageId: Int = -1
     
     private var forceRefresh = false
@@ -89,6 +92,7 @@ class ChatActivity : AppCompatActivity() {
             Toast.makeText(this, "Нужно разрешение для доступа к галерее", Toast.LENGTH_SHORT).show()
         }
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -108,7 +112,7 @@ class ChatActivity : AppCompatActivity() {
         createUI()
 
         chatId = intent.getIntExtra("chat_id", 0)
-        targetUserId = intent.getIntExtra("user_id", 0) // Получаем ID пользователя из Intent
+        targetUserId = intent.getIntExtra("user_id", 0)
         
         if (chatId == 0) {
             finish()
@@ -143,8 +147,6 @@ class ChatActivity : AppCompatActivity() {
                 val i = Intent(this, ProfileActivity::class.java)
                 i.putExtra("user_id", targetUserId)
                 startActivity(i)
-            } else if (avatarUrl != "action_saved") {
-                Toast.makeText(this, "Пользователь не найден", Toast.LENGTH_SHORT).show()
             }
         }
         
@@ -153,24 +155,16 @@ class ChatActivity : AppCompatActivity() {
         adapter = MessagesAdapter(
             myId = myId,
             onImageClick = { url, message ->
-                openViewer(
-                    url = url,
-                    senderName = message.display_name ?: "Неизвестный",
-                    sentTime = message.sent_at,
-                    caption = message.content
-                )
+                openViewer(url, message.display_name ?: "Неизвестный", message.sent_at, message.content)
             },
             onLongClick = { message ->
-                if (message.sender_id == myId) {
-                    showMessageOptions(message)
-                }
+                if (message.sender_id == myId) showMessageOptions(message)
             }
         )
         recycler.adapter = adapter
 
         attachBtn.setOnClickListener {
-            if (editingMessageId != -1) return@setOnClickListener 
-            checkPermissionAndOpenPicker()
+            if (editingMessageId != -1) cancelEditing() else checkPermissionAndOpenPicker()
         }
 
         sendBtn.setOnClickListener {
@@ -188,10 +182,25 @@ class ChatActivity : AppCompatActivity() {
             }
         }
 
-        swipeRefresh.setOnRefreshListener {
-            viewModel.loadMessages(token, chatId)
-        }
+        messageInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val hasText = !s.isNullOrBlank() || selectedImages.isNotEmpty()
+                if (editingMessageId == -1) {
+                    sendBtn.setImageResource(if (hasText) R.drawable.ic_send else R.drawable.ic_mic)
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
+        recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val canScrollDown = recyclerView.canScrollVertically(1)
+                scrollToBottomBtn.visibility = if (canScrollDown) View.VISIBLE else View.GONE
+            }
+        })
+
+        swipeRefresh.setOnRefreshListener { viewModel.loadMessages(token, chatId) }
         viewModel.loadMessages(token, chatId)
         setupInsets()
     }
@@ -202,7 +211,6 @@ class ChatActivity : AppCompatActivity() {
         } else {
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
-
         if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
             openMediaPicker()
         } else {
@@ -215,8 +223,7 @@ class ChatActivity : AppCompatActivity() {
             if (uris.isNotEmpty()) {
                 selectedImages.clear()
                 selectedImages.addAll(uris)
-                val text = caption ?: ""
-                sendMessage(text)
+                sendMessage(caption ?: "")
                 messageInput.text.clear()
             }
         }
@@ -234,39 +241,31 @@ class ChatActivity : AppCompatActivity() {
         viewModel.messages.observe(this) { messages ->
             swipeRefresh.isRefreshing = false
             if (targetUserId == 0) {
-                val otherMsg = messages.find { it.sender_id != myId }
-                if (otherMsg != null) {
-                    targetUserId = otherMsg.sender_id
-                }
+                messages.find { it.sender_id != myId }?.let { targetUserId = it.sender_id }
             }
             emptyText.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
             
-            val isAtBottom = !recycler.canScrollVertically(1)
+            val isAtBottom = !recycler.canScrollVertically(1) || (adapter.itemCount > 0 && recycler.computeVerticalScrollOffset() > 0)
             adapter.update(messages) {
                 if (isFirstLoad) {
                     recycler.scrollToPosition(adapter.itemCount - 1)
                     isFirstLoad = false
-                } else if (isAtBottom) {
-                    recycler.smoothScrollToPosition(adapter.itemCount - 1)
+                } else {
+                    val lastMsg = messages.lastOrNull()
+                    if (isAtBottom || (lastMsg != null && lastMsg.sender_id == myId)) {
+                        recycler.smoothScrollToPosition(adapter.itemCount - 1)
+                    }
                 }
             }
         }
-
-        viewModel.error.observe(this) { errorMsg ->
-            swipeRefresh.isRefreshing = false
-            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show()
-        }
-
+        viewModel.error.observe(this) { Toast.makeText(this, it, Toast.LENGTH_SHORT).show() }
     }
 
     private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
             val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             headerContainer.setPadding(0, systemBars.top, 0, 0)
-            
-            // Базовый отступ под навигацию (когда клавы нет)
             inputContainer.setPadding(0, 0, 0, systemBars.bottom)
-            
             inputContainer.post {
                 val h = headerContainer.height
                 val b = inputContainer.height + LayoutHelper.dp(8)
@@ -281,20 +280,13 @@ class ChatActivity : AppCompatActivity() {
         ViewCompat.setWindowInsetsAnimationCallback(
             rootLayout,
             object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_STOP) {
-                override fun onProgress(
-                    insets: WindowInsetsCompat,
-                    runningAnimations: MutableList<WindowInsetsAnimationCompat>
-                ): WindowInsetsCompat {
+                override fun onProgress(insets: WindowInsetsCompat, runningAnimations: MutableList<WindowInsetsAnimationCompat>): WindowInsetsCompat {
                     val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                    
-                    // Вычисляем высоту клавиатуры за вычетом системного бара
                     val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
-                    
-                    // Двигаем поле ввода и список плавно
                     inputContainer.translationY = -imeHeight.toFloat()
                     listContainer.translationY = -imeHeight.toFloat()
-                    
+                    scrollToBottomBtn.translationY = -imeHeight.toFloat()
                     return insets
                 }
             }
@@ -304,7 +296,6 @@ class ChatActivity : AppCompatActivity() {
     private fun setupHeaderSwipe(headerClickListener: View.OnClickListener) {
         var startY = 0f
         var isProxying = false
-
         val touchListener = View.OnTouchListener { v, event ->
             val offsetEvent = MotionEvent.obtain(event)
             val loc = IntArray(2)
@@ -312,7 +303,6 @@ class ChatActivity : AppCompatActivity() {
             val vLoc = IntArray(2)
             v.getLocationOnScreen(vLoc)
             offsetEvent.offsetLocation((vLoc[0] - loc[0]).toFloat(), (vLoc[1] - loc[1]).toFloat())
-
             val result = when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startY = event.rawY
@@ -322,21 +312,14 @@ class ChatActivity : AppCompatActivity() {
                     true 
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val diff = event.rawY - startY
-                    if (!isProxying && diff > 10) {
-                        isProxying = true
-                    }
-                    if (isProxying) {
-                        swipeRefresh.dispatchTouchEvent(offsetEvent)
-                    }
+                    if (!isProxying && event.rawY - startY > 10) isProxying = true
+                    if (isProxying) swipeRefresh.dispatchTouchEvent(offsetEvent)
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     swipeRefresh.dispatchTouchEvent(offsetEvent)
                     forceRefresh = false
-                    if (!isProxying && event.action == MotionEvent.ACTION_UP) {
-                        headerClickListener.onClick(v)
-                    }
+                    if (!isProxying && event.action == MotionEvent.ACTION_UP) headerClickListener.onClick(v)
                     isProxying = false
                     true
                 }
@@ -362,9 +345,6 @@ class ChatActivity : AppCompatActivity() {
         messageInput.requestFocus()
         sendBtn.setImageResource(R.drawable.ic_edit) 
         attachBtn.setImageResource(R.drawable.ic_close_small)
-        attachBtn.setOnClickListener {
-            cancelEditing()
-        }
         val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(messageInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
@@ -372,144 +352,40 @@ class ChatActivity : AppCompatActivity() {
     private fun cancelEditing() {
         editingMessageId = -1
         messageInput.text.clear()
-        sendBtn.setImageResource(R.drawable.ic_send)
-        attachBtn.setImageResource(R.drawable.ic_add)
-        attachBtn.setOnClickListener {
-            checkPermissionAndOpenPicker()
-        }
+        sendBtn.setImageResource(if (selectedImages.isNotEmpty()) R.drawable.ic_send else R.drawable.ic_mic)
+        attachBtn.setImageResource(R.drawable.ic_pin)
     }
 
     private fun confirmDeleteMessage(message: Message) {
         AlertDialog.Builder(this)
             .setTitle("Удалить сообщение?")
             .setMessage("Это действие нельзя отменить.")
-            .setPositiveButton("Удалить") { _, _ ->
-                viewModel.deleteMessage(token, message.id, chatId)
-            }
+            .setPositiveButton("Удалить") { _, _ -> viewModel.deleteMessage(token, message.id, chatId) }
             .setNegativeButton("Отмена", null)
             .show()
     }
 
     private fun createUI() {
+        val isDark = getSharedPreferences("app_theme", MODE_PRIVATE).getBoolean("is_dark_theme", false)
+        
         rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
         setContentView(rootLayout)
 
-        headerContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorCardBackground)
-            elevation = LayoutHelper.dp(4).toFloat()
-        }
-
-        val backBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
-            background = getRippleDrawable()
-            setOnClickListener { finish() }
-        }
-        headerContainer.addView(backBtn, LayoutHelper.createLinear(48, 48, 0f, 0, 4, 0, 4, 0))
-
-        chatAvatarView = ShapeableImageView(this).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            setBackgroundColor(Color.LTGRAY)
-            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setAllCornerSizes(LayoutHelper.dp(20).toFloat())
-                .build()
-        }
-        headerContainer.addView(chatAvatarView, LayoutHelper.createLinear(40, 40))
-
-        val infoContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        
-        chatNameView = TextView(this).apply {
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-        }
-        infoContainer.addView(chatNameView)
-
-        headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP)) 
-
-        inputContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorCardBackground)
-            elevation = LayoutHelper.dp(8).toFloat() 
-        }
-
-        attachmentsRecycler = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(this@ChatActivity, LinearLayoutManager.HORIZONTAL, false)
-            visibility = View.GONE
-            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
-            clipToPadding = false
-        }
-        inputContainer.addView(attachmentsRecycler, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
-
-        val inputRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.BOTTOM
-            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
-        }
-
-        attachBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_add)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
-            background = getRippleDrawable()
-        }
-        inputRow.addView(attachBtn, LayoutHelper.createLinear(48, 48, 0f, Gravity.BOTTOM, 0, 0, 0, 2))
-
-        messageInput = EditText(this).apply {
-            background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorDivider)
-                cornerRadius = LayoutHelper.dp(20).toFloat()
-            }
-            hint = "Сообщение"
-            setHintTextColor(DesignEngine.Theme.colorTextSecondary)
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-            textSize = 16f
-            maxLines = 6
-            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
-        }
-        inputRow.addView(messageInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.BOTTOM, 4, 0, 4, 0))
-
-        sendBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_send)
-            setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
-            background = getRippleDrawable()
-        }
-        inputRow.addView(sendBtn, LayoutHelper.createLinear(48, 48, 0f, Gravity.BOTTOM, 0, 0, 0, 2))
-
-        inputContainer.addView(inputRow)
-        rootLayout.addView(inputContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
-
         listContainer = FrameLayout(this)
         swipeRefresh = object : SwipeRefreshLayout(this) {
-            override fun canChildScrollUp(): Boolean {
-                return if (forceRefresh) false else super.canChildScrollUp()
-            }
+            override fun canChildScrollUp(): Boolean = if (forceRefresh) false else super.canChildScrollUp()
         }.apply {
             setProgressBackgroundColorSchemeColor(DesignEngine.Theme.colorCardBackground)
             setColorSchemeColors(DesignEngine.Theme.colorBlue)
         }
-
         recycler = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(this@ChatActivity).apply {
-                stackFromEnd = true
-            }
+            layoutManager = LinearLayoutManager(this@ChatActivity).apply { stackFromEnd = true }
             clipToPadding = false
             overScrollMode = View.OVER_SCROLL_NEVER
         }
         swipeRefresh.addView(recycler)
         listContainer.addView(swipeRefresh, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
-
         emptyText = TextView(this).apply {
             text = "Здесь пока пусто..."
             textSize = 14f
@@ -518,16 +394,159 @@ class ChatActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
         }
         listContainer.addView(emptyText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
+        rootLayout.addView(listContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
 
-        rootLayout.addView(listContainer, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        headerContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(DesignEngine.Theme.colorCardBackground)
+            elevation = LayoutHelper.dp(4).toFloat()
+        }
+        val backBtn = ImageView(this).apply {
+            setImageResource(R.drawable.ic_back)
+            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
+            background = getRippleDrawable()
+            setOnClickListener { finish() }
+        }
+        headerContainer.addView(backBtn, LayoutHelper.createLinear(48, 48, 0f, 0, 4, 0, 4, 0))
+        chatAvatarView = ShapeableImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(Color.LTGRAY)
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(20).toFloat()).build()
+        }
+        headerContainer.addView(chatAvatarView, LayoutHelper.createLinear(40, 40))
+        val infoContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        chatNameView = TextView(this).apply {
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        infoContainer.addView(chatNameView)
+        headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
+        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP)) 
+
+        // 2. Слой размытия (Blur Layer) — подложка под полем ввода
+        val bottomBlurView = View(this).apply {
+            val footerBg = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                if (isDark) 
+                    intArrayOf(Color.TRANSPARENT, Color.parseColor("#B31A1A1A"), Color.parseColor("#FF1A1A1A"))
+                else 
+                    intArrayOf(Color.TRANSPARENT, Color.parseColor("#B3F2F2F7"), Color.parseColor("#FFF2F2F7"))
+            )
+            background = footerBg
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                setRenderEffect(android.graphics.RenderEffect.createBlurEffect(25f, 25f, android.graphics.Shader.TileMode.CLAMP))
+            }
+        }
+        rootLayout.addView(bottomBlurView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 0, Gravity.BOTTOM))
+
+        scrollToBottomBtn = FrameLayout(this).apply {
+            visibility = View.GONE
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                val btnColor = if (isDark) Color.parseColor("#CC2C2C2E") else Color.parseColor("#CCFFFFFF")
+                setColor(btnColor)
+                if (!isDark) setStroke(LayoutHelper.dp(1), Color.parseColor("#1A000000"))
+            }
+            elevation = LayoutHelper.dp(4).toFloat()
+            val icon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_next)
+                rotation = 90f
+                setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+                setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+            }
+            addView(icon, LayoutHelper.createFrame(36, 36))
+            setOnClickListener { recycler.smoothScrollToPosition(adapter.itemCount - 1) }
+        }
+        rootLayout.addView(scrollToBottomBtn, LayoutHelper.createFrame(36, 36, Gravity.BOTTOM or Gravity.END, 0, 0, 16, 80))
+
+        inputContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, LayoutHelper.dp(8), 0, LayoutHelper.dp(12))
+        }
+
+        inputContainer.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val height = bottom - top
+            val params = bottomBlurView.layoutParams
+            if (params.height != height) {
+                params.height = height
+                bottomBlurView.layoutParams = params
+            }
+        }
+
+        attachmentsRecycler = RecyclerView(this).apply {
+            layoutManager = LinearLayoutManager(this@ChatActivity, LinearLayoutManager.HORIZONTAL, false)
+            visibility = View.GONE
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
+        }
+        inputContainer.addView(attachmentsRecycler, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+
+        val modernInputRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                val baseColor = if (isDark) Color.parseColor("#CC262626") else Color.parseColor("#CCFDFDFD")
+                setColor(baseColor)
+                cornerRadius = LayoutHelper.dp(28).toFloat()
+                setStroke(LayoutHelper.dp(1), if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#26000000"))
+            }
+            elevation = LayoutHelper.dp(6).toFloat()
+            setPadding(LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4))
+        }
+
+        emojiBtn = ImageView(this).apply {
+            setImageResource(R.drawable.ic_emoji)
+            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
+            background = getRippleDrawable()
+        }
+        modernInputRow.addView(emojiBtn, LayoutHelper.createLinear(44, 44))
+
+        messageInput = EditText(this).apply {
+            background = null
+            hint = "Сообщение"
+            setHintTextColor(DesignEngine.Theme.colorTextSecondary)
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+            textSize = 17f
+            maxLines = 5
+            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+        }
+        modernInputRow.addView(messageInput, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f))
+
+        attachBtn = ImageView(this).apply {
+            setImageResource(R.drawable.ic_pin)
+            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
+            background = getRippleDrawable()
+        }
+        modernInputRow.addView(attachBtn, LayoutHelper.createLinear(44, 44))
+
+        sendBtn = ImageView(this).apply {
+            setImageResource(R.drawable.ic_mic)
+            setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
+            background = getRippleDrawable()
+        }
+        modernInputRow.addView(sendBtn, LayoutHelper.createLinear(44, 44))
+
+        inputContainer.addView(modernInputRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 16, 0))
+        rootLayout.addView(inputContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
     }
 
     private fun openViewer(url: String, senderName: String, sentTime: String, caption: String?) {
-        val intent = Intent(this, PhotoViewerActivity::class.java)
-        intent.putExtra("image_url", url)
-        intent.putExtra("sender_name", senderName)
-        intent.putExtra("sent_time", sentTime)
-        intent.putExtra("caption", caption)
+        val intent = Intent(this, PhotoViewerActivity::class.java).apply {
+            putExtra("image_url", url)
+            putExtra("sender_name", senderName)
+            putExtra("sent_time", sentTime)
+            putExtra("caption", caption)
+        }
         startActivity(intent)
     }
 
@@ -540,9 +559,9 @@ class ChatActivity : AppCompatActivity() {
     private fun sendMessage(text: String) {
         val localImageUris = selectedImages.toList().map { it.toString() }
         val sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        
+        val tempId = -(System.currentTimeMillis() % 1000000).toInt()
         val tempMessage = Message(
-            id = 0,
+            id = tempId,
             chat_id = chatId,
             sender_id = myId,
             content = text,
@@ -552,13 +571,15 @@ class ChatActivity : AppCompatActivity() {
             avatar = "",
             images = localImageUris
         )
-
+        viewModel.addTempMessage(tempMessage)
         lifecycleScope.launch {
             val filesToUpload = withContext(Dispatchers.IO) {
-                selectedImages.mapNotNull { uri -> uriToCompressedFile(uri) }
+                localImageUris.map { Uri.parse(it) }.mapNotNull { uri -> uriToCompressedFile(uri) }
             }
             viewModel.sendMessage(token, chatId, text, filesToUpload)
         }
+        selectedImages.clear()
+        attachmentsRecycler.visibility = View.GONE
     }
 
     private fun uriToCompressedFile(uri: Uri): File? {
@@ -567,16 +588,9 @@ class ChatActivity : AppCompatActivity() {
             val mimeType = cr.getType(uri)
             val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
             val originalFile = File(cacheDir, "original_${System.currentTimeMillis()}.$extension")
-            cr.openInputStream(uri)?.use { input ->
-                FileOutputStream(originalFile).use { output ->
-                    input.copyTo(output)
-                }
-            }
+            cr.openInputStream(uri)?.use { input -> FileOutputStream(originalFile).use { output -> input.copyTo(output) } }
             val exif = androidx.exifinterface.media.ExifInterface(originalFile.absolutePath)
-            val orientation = exif.getAttributeInt(
-                androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
-                androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
-            )
+            val orientation = exif.getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL)
             val bitmap = BitmapFactory.decodeFile(originalFile.absolutePath)
             val matrix = android.graphics.Matrix()
             when (orientation) {
@@ -587,35 +601,18 @@ class ChatActivity : AppCompatActivity() {
             val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
             val maxSize = 1280
             val ratio = rotated.width.toFloat() / rotated.height.toFloat()
-            val newWidth: Int
-            val newHeight: Int
-            if (ratio > 1) {
-                newWidth = maxSize
-                newHeight = (maxSize / ratio).toInt()
-            } else {
-                newHeight = maxSize
-                newWidth = (maxSize * ratio).toInt()
-            }
+            val (newWidth, newHeight) = if (ratio > 1) maxSize to (maxSize / ratio).toInt() else (maxSize * ratio).toInt() to maxSize
             val resized = Bitmap.createScaledBitmap(rotated, newWidth, newHeight, true)
             val finalFile = File(cacheDir, "img_${System.currentTimeMillis()}.jpg")
-            val out = FileOutputStream(finalFile)
-            resized.compress(Bitmap.CompressFormat.JPEG, 80, out)
-            out.flush()
-            out.close()
+            FileOutputStream(finalFile).use { resized.compress(Bitmap.CompressFormat.JPEG, 80, it) }
             finalFile
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
-            val resultUri = UCrop.getOutput(data!!)
-            if (resultUri != null) {
-                MediaPickerSheet.currentInstance?.updatePreviewUri(resultUri)
-            }
+            UCrop.getOutput(data!!)?.let { MediaPickerSheet.currentInstance?.updatePreviewUri(it) }
         }
     }
 }

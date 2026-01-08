@@ -10,7 +10,7 @@ import com.kia.blagogramapp.R
 import com.kia.blagogramapp.LayoutHelper
 
 class MessageImagesAdapter(
-    private val imageUrls: List<String>,
+    val imageUrls: List<String>,
     private val isGrid: Boolean = false,
     private val onImageClick: (String) -> Unit
 ) : RecyclerView.Adapter<MessageImagesAdapter.Holder>() {
@@ -37,9 +37,9 @@ class MessageImagesAdapter(
             lp.height = LayoutHelper.dp(if (imageUrls.size == 2) 150 else 100)
             holder.img.scaleType = ImageView.ScaleType.CENTER_CROP
         } else {
-            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            // Одиночное фото: даем фиксированную высоту, чтобы не прыгало при загрузке/обновлении
+            lp.height = LayoutHelper.dp(250)
             holder.img.scaleType = ImageView.ScaleType.CENTER_CROP
-            holder.img.minimumHeight = LayoutHelper.dp(200) // Чтобы одна картинка не была слишком маленькой
         }
         holder.itemView.layoutParams = lp
 

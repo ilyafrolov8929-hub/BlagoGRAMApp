@@ -229,12 +229,12 @@ class ProfileActivity : AppCompatActivity() {
         layout.friendsCount.text = friends.toString()
         layout.subsCount.text = followers.toString()
         
-        // Проверка премиум статуса
+        // Проверка премиум статуса через DesignEngine
         val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
         if (myLogin == login) {
-            layout.premiumBadge.visibility = if (SubscriptionManager.isPremium(this)) View.VISIBLE else View.GONE
+            DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(this))
         } else {
-            layout.premiumBadge.visibility = if (isPremium) View.VISIBLE else View.GONE 
+            DesignEngine.setPremiumStatus(layout.premiumBadge, isPremium)
         }
 
         val avatarUrl = "https://blagogram.ru/avatars/$avatar"
@@ -286,11 +286,7 @@ class ProfileActivity : AppCompatActivity() {
         // Обновляем бейдж при возвращении из PremiumActivity
         val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
         if (layout.userID.text == "@$myLogin") {
-            if (SubscriptionManager.isPremium(this)) {
-                layout.premiumBadge.visibility = View.VISIBLE
-            } else {
-                layout.premiumBadge.visibility = View.GONE
-            }
+            DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(this))
         }
     }
 

@@ -105,12 +105,7 @@ class SideMenuModule(val context: Context) {
                 letterSpacing = -0.01f
             }
 
-            premiumBadge = ImageView(context).apply {
-                setImageResource(R.drawable.infinity)
-                setColorFilter(DesignEngine.COLOR_BLUE, PorterDuff.Mode.SRC_IN)
-                visibility = View.GONE
-                translationY = 2f
-            }
+            premiumBadge = DesignEngine.createPremiumBadge(context)
 
             titleRow.addView(nameTv)
             titleRow.addView(

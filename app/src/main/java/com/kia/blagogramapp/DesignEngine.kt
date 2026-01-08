@@ -68,6 +68,25 @@ object DesignEngine {
         context = ctx.applicationContext
     }
 
+    /**
+     * Создает настроенный ImageView для премиум-значка
+     */
+    fun createPremiumBadge(context: Context): ImageView {
+        return ImageView(context).apply {
+            setImageResource(R.drawable.infinity)
+            setColorFilter(COLOR_BLUE, PorterDuff.Mode.SRC_IN)
+            visibility = View.GONE
+            translationY = LayoutHelper.dp(2).toFloat() // Используем dp для смещения
+        }
+    }
+
+    /**
+     * Простое обновление видимости
+     */
+    fun setPremiumStatus(badge: ImageView, isPremium: Boolean) {
+        badge.visibility = if (isPremium) View.VISIBLE else View.GONE
+    }
+
     // Геттеры для цветов (ссылаются на текущие значения в Theme)
     val COLOR_BACKGROUND get() = Theme.colorBackground
     val COLOR_SHEET_BACKGROUND get() = Theme.colorSheetBackground
