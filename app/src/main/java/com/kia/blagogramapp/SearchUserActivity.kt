@@ -2,7 +2,6 @@ package com.kia.blagogramapp
 
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
@@ -11,7 +10,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
-import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
@@ -34,7 +33,6 @@ class SearchUserActivity : AppCompatActivity() {
     private lateinit var input: EditText
     private lateinit var recycler: RecyclerView
     private lateinit var progress: ProgressBar
-    private lateinit var backBtn: View
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
 
@@ -69,63 +67,48 @@ class SearchUserActivity : AppCompatActivity() {
         }
         setContentView(rootLayout)
 
-        // Header
-        val headerContent = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorCardBackground) // Theme color (Card/White)
-            elevation = LayoutHelper.dp(4).toFloat()
-            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
-        }
-        rootLayout.addView(headerContent, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+        // Toolbar from DesignEngine
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Поиск",
+            leftButtonIconRes = R.drawable.ic_back,
+            leftButtonClickListener = { finish() },
+            isDark = isCurrentThemeDark
+        )
+        rootLayout.addView(toolbar)
 
-        // Back Button
-        val backBtnContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorDivider) // Theme color (Light Grey)
-                cornerRadius = LayoutHelper.dp(20).toFloat()
-            }
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
-        }
-        backBtn = backBtnContainer
-
-        val backIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN) // Theme color
-        }
-        backBtnContainer.addView(backIcon, LayoutHelper.createLinear(20, 20))
-        headerContent.addView(backBtnContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
 
         // Search Input
+        val searchContainer = FrameLayout(this)
         input = EditText(this).apply {
             background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorDivider) // Theme color (Light Grey)
-                cornerRadius = LayoutHelper.dp(24).toFloat()
+                setColor(DesignEngine.Theme.colorCardBackground)
+                cornerRadius = LayoutHelper.dp(18).toFloat()
+                setStroke(LayoutHelper.dp(1), DesignEngine.Theme.colorDivider)
             }
             hint = "Поиск пользователей..."
-            setHintTextColor(DesignEngine.Theme.colorTextSecondary) // Theme color
-            setTextColor(DesignEngine.Theme.colorTextPrimary) // Theme color
+            setHintTextColor(DesignEngine.Theme.colorTextSecondary)
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
             textSize = 16f
             maxLines = 1
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
 
             // Search Icon
             val outValue = TypedValue()
             theme.resolveAttribute(android.R.attr.actionModeWebSearchDrawable, outValue, true)
             val searchDrawable = getDrawable(outValue.resourceId)?.mutate()
-            searchDrawable?.setTint(DesignEngine.Theme.colorTextSecondary) // Theme color
+            searchDrawable?.setTint(DesignEngine.Theme.colorTextSecondary)
             setCompoundDrawablesWithIntrinsicBounds(searchDrawable, null, null, null)
             compoundDrawablePadding = LayoutHelper.dp(12)
         }
-        headerContent.addView(input, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 0, 0))
+        searchContainer.addView(input, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 16, 8, 16, 8))
+        rootLayout.addView(searchContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
         // ProgressBar
         progress = ProgressBar(this).apply {
             visibility = View.GONE
         }
-        rootLayout.addView(progress, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 20, 0, 0))
+        rootLayout.addView(progress, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 8, 0, 0))
 
         // RecyclerView
         recycler = RecyclerView(this).apply {
@@ -136,8 +119,6 @@ class SearchUserActivity : AppCompatActivity() {
         rootLayout.addView(recycler, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
 
         // Listeners
-        backBtn.setOnClickListener { finish() }
-
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
 
@@ -145,25 +126,22 @@ class SearchUserActivity : AppCompatActivity() {
 
             override fun onTextChanged(t: CharSequence?, start: Int, before: Int, count: Int) {
                 val q = t.toString().trim()
-                progress.visibility = View.VISIBLE
 
-                if (q.isNotEmpty()) search(q)
-                else recycler.adapter = SearchUsersAdapter(emptyList()) {}
+                if (q.isNotEmpty()) {
+                    progress.visibility = View.VISIBLE
+                    search(q)
+                } else {
+                    searchJob?.cancel()
+                    progress.visibility = View.GONE
+                    recycler.adapter = SearchUsersAdapter(emptyList()) {}
+                }
             }
         })
 
         // Handle Window Insets
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-
-            // Apply top padding to header (status bar)
-            headerContent.setPadding(
-                headerContent.paddingLeft,
-                insets.top + LayoutHelper.dp(10),
-                headerContent.paddingRight,
-                headerContent.paddingBottom
-            )
-
+            
             // Apply bottom padding to root (navigation bar)
             view.setPadding(
                 view.paddingLeft,
@@ -183,6 +161,7 @@ class SearchUserActivity : AppCompatActivity() {
         searchJob?.cancel()
 
         searchJob = CoroutineScope(Dispatchers.IO).launch {
+            delay(300) // небольшая задержка для более плавного поиска
             try {
                 val users: List<SearchUserItem> = repo.searchUsers(token, query)
 

@@ -5,8 +5,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
+import coil.transform.CircleCropTransformation
+import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.R
 import com.kia.blagogramapp.models.SearchUserItem
 
@@ -36,11 +39,19 @@ class SearchUsersAdapter(
     override fun onBindViewHolder(h: Holder, pos: Int) {
         val u = items[pos]
 
+        // Apply theme colors
+        if (h.itemView is CardView) {
+            (h.itemView as CardView).setCardBackgroundColor(DesignEngine.Theme.colorCardBackground)
+        }
+        h.name.setTextColor(DesignEngine.Theme.colorTextPrimary)
+        h.username.setTextColor(DesignEngine.Theme.colorTextSecondary)
+
         h.name.text = if (u.display_name.isNullOrEmpty()) "Неизвестно" else u.display_name
         h.username.text = "@${u.username}"
 
         h.avatar.load("https://blagogram.ru/avatars/${u.avatar}") {
             placeholder(R.drawable.ic_user_placeholder)
+            transformations(CircleCropTransformation())
         }
     }
 }

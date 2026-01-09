@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -34,7 +35,7 @@ class ChatsActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
     private var isDrawerOpen = false
-    
+
     private var pollingJob: Job? = null
     private var fullPlayer: FullPlayer? = null
 
@@ -45,7 +46,7 @@ class ChatsActivity : AppCompatActivity() {
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
         val useMonet = themePrefs.getBoolean("use_monet", false)
-        
+
         isCurrentThemeDark = isDarkTheme
         isCurrentUseMonet = useMonet
         DesignEngine.Theme.apply(isDarkTheme, useMonet)
@@ -65,10 +66,17 @@ class ChatsActivity : AppCompatActivity() {
         setupSideMenu()
         observeMusic()
 
-        layout.menuBtn.setOnClickListener { toggleDrawer() }
-        layout.editBtn.setOnClickListener {
-            startActivity(Intent(this, SearchUserActivity::class.java))
-        }
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Lume",
+            leftButtonIconRes = R.drawable.ic_menu,
+            rightButtonIconRes = R.drawable.ic_search,
+            isDark = isDarkTheme,
+            leftButtonClickListener = { toggleDrawer() },
+            rightButtonClickListener = { startActivity(Intent(this, SearchUserActivity::class.java)) }
+        )
+        layout.addView(toolbar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+
         layout.swipeRefresh.setOnRefreshListener { loadChats() }
 
         layout.swipeRefresh.post {
@@ -148,9 +156,9 @@ class ChatsActivity : AppCompatActivity() {
             startActivity(Intent(this, AboutActivity::class.java))
             toggleDrawer()
         }
-        
+
         sideMenu.setPaddingBottom(20)
-        
+
         sideMenu.drawerOverlay.setOnClickListener { if (isDrawerOpen) toggleDrawer() }
     }
 
@@ -251,7 +259,7 @@ class ChatsActivity : AppCompatActivity() {
     private fun updateAdapter(chats: List<Chat>) {
         val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val items = chats.map { c ->
-            val isSavedMessages = c.user_id == myId 
+            val isSavedMessages = c.user_id == myId
 
             val prefix = if (c.last_sender_id == myId && !isSavedMessages) "Вы: " else ""
 
@@ -266,7 +274,7 @@ class ChatsActivity : AppCompatActivity() {
                 pinned = c.pinned
             )
         }
-        
+
         layout.recycler.adapter = ChatsAdapter(
             items = items,
             onClick = { chat ->
@@ -322,14 +330,14 @@ class ChatsActivity : AppCompatActivity() {
             onDelete = {
                 MessageOptionsSheet.showDeleteConfirm(this, chat.name, chat.avatar) { forBoth ->
                     val mode = if (forBoth) "for_everyone" else "for_me"
-                    
+
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val success = repo.deleteChat(token, chat.chat_id, mode)
                             if (success) {
                                 runOnUiThread {
                                     Toast.makeText(this@ChatsActivity, "Чат удален", Toast.LENGTH_SHORT).show()
-                                    loadChats() 
+                                    loadChats()
                                 }
                             }
                         } catch (e: Exception) {
@@ -353,14 +361,14 @@ class ChatsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark || 
+        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark ||
             themePrefs.getBoolean("use_monet", false) != isCurrentUseMonet) {
             recreate()
             return
         }
-        
+
         startPolling()
-        
+
         // Используем DesignEngine для обновления премиум-статуса
         DesignEngine.setPremiumStatus(sideMenu.premiumBadge, SubscriptionManager.isPremium(this))
     }
