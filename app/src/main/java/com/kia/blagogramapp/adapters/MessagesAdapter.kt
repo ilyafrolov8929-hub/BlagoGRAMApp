@@ -126,11 +126,17 @@ class MessagesAdapter(
                 text.visibility = View.VISIBLE
                 markwon.setMarkdown(text, msg.content)
             }
+            
+            // ПРИМЕНЯЕМ РАЗМЕР ТЕКСТА
+            text.textSize = DesignEngine.fontSize.toFloat()
+            
             time.text = TimeUtils.formatTime(msg.sent_at)
             editedIcon.visibility = if (msg.edited_at != null) View.VISIBLE else View.GONE
             
             val bubbleDrawable = (bubble.background as GradientDrawable).mutate() as GradientDrawable
-            val radius = LayoutHelper.dp(16).toFloat()
+            
+            // ПРИМЕНЯЕМ РАДИУС ИЗ НАСТРОЕК
+            val radius = LayoutHelper.dp(DesignEngine.bubbleRadius).toFloat()
             val smallRadius = LayoutHelper.dp(4).toFloat()
 
             if (isOutgoing) {

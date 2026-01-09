@@ -17,6 +17,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App.NoActionBar">
 
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
         <activity android:name=".ChatsActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ProfileEditActivity" />
@@ -24,12 +34,15 @@
         <activity android:name=".SearchUserActivity" />
         <activity android:name=".PhotoViewerActivity" />
         <activity android:name=".AboutActivity" />
+        <activity android:name=".StatisticsActivity" />
         <activity android:name=".AiChatActivity" />
         <activity android:name=".AiSettingsActivity" />
         <activity android:name=".DesignEngineActivity" />
         <activity android:name=".ThemeSelectionActivity"/>
         <activity android:name=".MusicActivity" />
         <activity android:name=".PremiumActivity" />
+        <activity android:name=".ChatSettingsActivity" />
+        <activity android:name=".WallpaperPreviewActivity" />
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustNothing"

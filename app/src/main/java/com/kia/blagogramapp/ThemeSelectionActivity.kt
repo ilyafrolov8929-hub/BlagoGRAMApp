@@ -13,6 +13,7 @@ import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -32,7 +33,7 @@ class ThemeSelectionActivity : AppCompatActivity() {
         val useMonet = prefs.getBoolean("use_monet", false)
 
         DesignEngine.Theme.apply(isDark, useMonet)
-
+        val statusBarHeight = getStatusBarHeight()
         // Настройка прозрачности системных панелей
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
@@ -49,30 +50,42 @@ class ThemeSelectionActivity : AppCompatActivity() {
         }
         setContentView(rootLayout)
 
-        // --- HEADER (Toolbar) ---
-        val header = FrameLayout(this).apply {
-            setBackgroundColor(DesignEngine.Theme.colorCardBackground)
-            elevation = LayoutHelper.dp(4).toFloat()
-        }
-        
-        val backBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16))
+        // Toolbar
+        val toolbarLayout = RelativeLayout(this)
+        // Мы убрали setPadding отсюда
+
+        val backBtn = LinearLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_stat_pill)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
             setOnClickListener { finish() }
-            background = getRippleDrawable()
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_back)
+                setColorFilter(if (isDark) Color.WHITE else Color.BLACK)
+                layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
+            })
         }
-        header.addView(backBtn, LayoutHelper.createFrame(56, 56, Gravity.START or Gravity.BOTTOM))
 
-        val title = TextView(this).apply {
-            text = "Оформление"
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        val titleView = LinearLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_stat_pill)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+            gravity = Gravity.CENTER // Центрируем текст внутри
+            addView(TextView(context).apply {
+                text = "Кастомизация" // Добавляем заголовок
+                textSize = 20f
+                setTextColor(DesignEngine.Theme.colorTextPrimary)
+                typeface = Typeface.DEFAULT_BOLD
+            })
         }
-        header.addView(title, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, 0, 0, 14))
+        val toolbarContent = RelativeLayout(this)
+        // Добавьте эту строку
+        toolbarContent.layoutParams = RelativeLayout.LayoutParams(-1, -2) // -1 это MATCH_PARENT, -2 это WRAP_CONTENT
+        toolbarContent.addView(backBtn, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.ALIGN_PARENT_START); addRule(RelativeLayout.CENTER_VERTICAL) })
+        toolbarContent.addView(titleView, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
+        toolbarLayout.addView(toolbarContent)
 
-        rootLayout.addView(header, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+        rootLayout.addView(toolbarLayout, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
 
         // --- ЗАГОЛОВОК СЕКЦИИ ---
         val sectionTitle = HeaderCell(this).apply {
@@ -186,15 +199,21 @@ class ThemeSelectionActivity : AppCompatActivity() {
         // Обработка системных отступов (Insets)
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Тулбару задаем верхний отступ (статус-бар)
-            header.setPadding(0, insets.top, 0, 0)
-            header.layoutParams.height = insets.top + LayoutHelper.dp(56)
-            
+
+            // Правильно задаем отступы для тулбара, как в ChatSettingsActivity
+            toolbarLayout.setPadding(
+                LayoutHelper.dp(16),
+                insets.top + LayoutHelper.dp(10),
+                LayoutHelper.dp(16),
+                LayoutHelper.dp(10)
+            )
+
             // Всему корневому слою задаем нижний отступ (док-бар)
             view.setPadding(0, 0, 0, insets.bottom)
-            
+
             windowInsets
         }
+
     }
 
     private fun recreateActivity() {
@@ -207,6 +226,11 @@ class ThemeSelectionActivity : AppCompatActivity() {
         val outValue = android.util.TypedValue()
         theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
         return getDrawable(outValue.resourceId)!!
+    }
+
+    private fun getStatusBarHeight(): Int {
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
     }
 }
 

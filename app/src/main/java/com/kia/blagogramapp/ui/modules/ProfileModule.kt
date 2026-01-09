@@ -92,18 +92,40 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         backParams.topMargin = LayoutHelper.dp(45)
         topBar.addView(backContainer, backParams)
 
-        userID = TextView(context).apply {
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-            setShadowLayer(2f, 1f, 1f, Color.BLACK)
-            gravity = Gravity.CENTER
+        // 1. Создаем контейнер-пузырь для userID
+        val userContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER// Используем те же стили, что и у кнопок "назад" и "настройки"
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
+            background = GradientDrawable().apply {
+                setColor(DesignEngine.Theme.colorDivider)
+                cornerRadius = LayoutHelper.dp(20).toFloat()
+            }
+            // Минимальная ширина для симметрии, если ID будет коротким
+            minimumWidth = LayoutHelper.dp(46)
         }
+
+        // 2. Настраиваем сам TextView для userID
+        userID = TextView(context).apply {
+            textSize = 14f // Слегка уменьшим шрифт для лучшей компоновки
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorTextPrimary) // Цвет текста для фона, а не для тени
+            gravity = Gravity.CENTER
+            // Тень (setShadowLayer) больше не нужна, так как есть фон
+        }
+
+        // 3. Добавляем userID внутрь его контейнера
+        userContainer.addView(userID)
+
+        // 4. Задаем параметры расположения для контейнера (а не для userID)
         val userParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
         userParams.addRule(RelativeLayout.CENTER_HORIZONTAL)
         userParams.addRule(RelativeLayout.ALIGN_TOP, backContainer.id)
         userParams.addRule(RelativeLayout.ALIGN_BOTTOM, backContainer.id)
-        topBar.addView(userID, userParams)
+
+        // 5. Добавляем в topBar уже готовый контейнер с userID внутри
+        topBar.addView(userContainer, userParams)
+
 
         val settingsContainer = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL

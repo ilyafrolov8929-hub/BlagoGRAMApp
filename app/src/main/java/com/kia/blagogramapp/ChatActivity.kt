@@ -1,15 +1,23 @@
 package com.kia.blagogramapp
 
 import android.Manifest
+import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PorterDuff
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -19,6 +27,7 @@ import android.text.TextWatcher
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.webkit.MimeTypeMap
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,11 +60,11 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ChatActivity : AppCompatActivity() {
+class ChatActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var viewModel: ChatViewModel
     private var chatId: Int = 0
-    private var targetUserId: Int = 0 
+    private var targetUserId: Int = 0
     private var token: String = ""
     private var myId: Int = 0
 
@@ -76,12 +85,21 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var chatAvatarView: ShapeableImageView
     private lateinit var listContainer: FrameLayout
     private lateinit var scrollToBottomBtn: FrameLayout
+    private lateinit var wallpaperView: ImageView
+    private lateinit var wallpaperBlurView: ImageView
 
     private val selectedImages = mutableListOf<Uri>()
     private var isFirstLoad = true
     private var editingMessageId: Int = -1
-    
+
     private var forceRefresh = false
+
+    private lateinit var sensorManager: SensorManager
+    private var gyroscope: Sensor? = null
+    private var ts: Long = 0
+    private var targetTranslationX = 0f
+    private var targetTranslationY = 0f
+    private var parallaxAnimator: ValueAnimator? = null
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -113,7 +131,7 @@ class ChatActivity : AppCompatActivity() {
 
         chatId = intent.getIntExtra("chat_id", 0)
         targetUserId = intent.getIntExtra("user_id", 0)
-        
+
         if (chatId == 0) {
             finish()
             return
@@ -149,7 +167,7 @@ class ChatActivity : AppCompatActivity() {
                 startActivity(i)
             }
         }
-        
+
         setupHeaderSwipe(headerClickListener)
 
         adapter = MessagesAdapter(
@@ -203,6 +221,111 @@ class ChatActivity : AppCompatActivity() {
         swipeRefresh.setOnRefreshListener { viewModel.loadMessages(token, chatId) }
         viewModel.loadMessages(token, chatId)
         setupInsets()
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateWallpaper()
+        if (DesignEngine.wallpaperMotion) {
+            registerSensor()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterSensor()
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_GYROSCOPE) {
+            if (ts == 0L) {
+                ts = event.timestamp
+                return
+            }
+            val dt = (event.timestamp - ts) / 1000000000.0f
+            ts = event.timestamp
+
+            val dx = event.values[1] * dt
+            val dy = event.values[0] * dt
+
+            val maxScroll = LayoutHelper.dp(20).toFloat()
+
+            targetTranslationX -= dx * 100
+            targetTranslationY += dy * 100
+
+            targetTranslationX = targetTranslationX.coerceIn(-maxScroll, maxScroll)
+            targetTranslationY = targetTranslationY.coerceIn(-maxScroll, maxScroll)
+        }
+    }
+
+    private fun registerSensor() {
+        ts = 0
+        targetTranslationX = wallpaperView.translationX
+        targetTranslationY = wallpaperView.translationY
+
+        parallaxAnimator?.cancel()
+        parallaxAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 2000
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = null
+            addUpdateListener {
+                wallpaperView.translationX += (targetTranslationX - wallpaperView.translationX) * 0.1f
+                wallpaperView.translationY += (targetTranslationY - wallpaperView.translationY) * 0.1f
+                wallpaperBlurView.translationX = wallpaperView.translationX
+                wallpaperBlurView.translationY = wallpaperView.translationY
+            }
+            start()
+        }
+        sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
+
+        wallpaperView.animate().scaleX(1.1f).scaleY(1.1f).setDuration(300).setInterpolator(DecelerateInterpolator()).start()
+        wallpaperBlurView.animate().scaleX(1.1f).scaleY(1.1f).setDuration(300).setInterpolator(DecelerateInterpolator()).start()
+    }
+
+    private fun unregisterSensor() {
+        sensorManager.unregisterListener(this)
+        parallaxAnimator?.cancel()
+        wallpaperView.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(DecelerateInterpolator()).start()
+        wallpaperBlurView.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(DecelerateInterpolator()).start()
+    }
+
+    private fun updateWallpaper() {
+        val wallpaper = DesignEngine.chatWallpaper
+        val uri = if (wallpaper != null && wallpaper.startsWith("/")) {
+            Uri.fromFile(File(wallpaper))
+        } else if (wallpaper != null) {
+            Uri.parse(wallpaper)
+        } else {
+            null
+        }
+
+        if (uri != null) {
+            wallpaperView.setImageURI(uri)
+            wallpaperBlurView.setImageURI(uri)
+        } else {
+            val resId = resources.getIdentifier("chat_bg_default", "drawable", packageName)
+            if (resId != 0) {
+                wallpaperView.setImageResource(resId)
+                wallpaperBlurView.setImageResource(resId)
+            } else {
+                wallpaperView.setBackgroundColor(if (DesignEngine.Theme.colorBackground == Color.BLACK) Color.BLACK else 0xFFE5E5E5.toInt())
+                wallpaperBlurView.setBackgroundColor(if (DesignEngine.Theme.colorBackground == Color.BLACK) Color.BLACK else 0xFFE5E5E5.toInt())
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (DesignEngine.wallpaperBlur) {
+                wallpaperBlurView.setRenderEffect(RenderEffect.createBlurEffect(50f, 50f, Shader.TileMode.MIRROR))
+                wallpaperBlurView.visibility = View.VISIBLE
+            } else {
+                wallpaperBlurView.visibility = View.GONE
+            }
+        }
     }
 
     private fun checkPermissionAndOpenPicker() {
@@ -244,7 +367,7 @@ class ChatActivity : AppCompatActivity() {
                 messages.find { it.sender_id != myId }?.let { targetUserId = it.sender_id }
             }
             emptyText.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
-            
+
             val isAtBottom = !recycler.canScrollVertically(1) || (adapter.itemCount > 0 && recycler.computeVerticalScrollOffset() > 0)
             adapter.update(messages) {
                 if (isFirstLoad) {
@@ -309,7 +432,7 @@ class ChatActivity : AppCompatActivity() {
                     isProxying = false
                     forceRefresh = true
                     swipeRefresh.dispatchTouchEvent(offsetEvent)
-                    true 
+                    true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (!isProxying && event.rawY - startY > 10) isProxying = true
@@ -333,7 +456,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun showMessageOptions(message: Message) {
-        MessageOptionsSheet.show(this, 
+        MessageOptionsSheet.show(this,
             onEdit = { startEditingMessage(message) },
             onDelete = { confirmDeleteMessage(message) }
         )
@@ -343,7 +466,7 @@ class ChatActivity : AppCompatActivity() {
         editingMessageId = message.id
         messageInput.setText(message.content)
         messageInput.requestFocus()
-        sendBtn.setImageResource(R.drawable.ic_edit) 
+        sendBtn.setImageResource(R.drawable.ic_edit)
         attachBtn.setImageResource(R.drawable.ic_close_small)
         val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(messageInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
@@ -367,10 +490,21 @@ class ChatActivity : AppCompatActivity() {
 
     private fun createUI() {
         val isDark = getSharedPreferences("app_theme", MODE_PRIVATE).getBoolean("is_dark_theme", false)
-        
+
         rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
         setContentView(rootLayout)
+
+        wallpaperView = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+        }
+        rootLayout.addView(wallpaperView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        
+        wallpaperBlurView = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            visibility = View.GONE
+        }
+        rootLayout.addView(wallpaperBlurView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
 
         listContainer = FrameLayout(this)
         swipeRefresh = object : SwipeRefreshLayout(this) {
@@ -378,11 +512,13 @@ class ChatActivity : AppCompatActivity() {
         }.apply {
             setProgressBackgroundColorSchemeColor(DesignEngine.Theme.colorCardBackground)
             setColorSchemeColors(DesignEngine.Theme.colorBlue)
+            setBackgroundColor(Color.TRANSPARENT)
         }
         recycler = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@ChatActivity).apply { stackFromEnd = true }
             clipToPadding = false
             overScrollMode = View.OVER_SCROLL_NEVER
+            setBackgroundColor(Color.TRANSPARENT)
         }
         swipeRefresh.addView(recycler)
         listContainer.addView(swipeRefresh, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
@@ -429,15 +565,15 @@ class ChatActivity : AppCompatActivity() {
         }
         infoContainer.addView(chatNameView)
         headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP)) 
+        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP))
 
         // 2. Слой размытия (Blur Layer) — подложка под полем ввода
         val bottomBlurView = View(this).apply {
             val footerBg = GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
-                if (isDark) 
+                if (isDark)
                     intArrayOf(Color.TRANSPARENT, Color.parseColor("#B31A1A1A"), Color.parseColor("#FF1A1A1A"))
-                else 
+                else
                     intArrayOf(Color.TRANSPARENT, Color.parseColor("#B3F2F2F7"), Color.parseColor("#FFF2F2F7"))
             )
             background = footerBg

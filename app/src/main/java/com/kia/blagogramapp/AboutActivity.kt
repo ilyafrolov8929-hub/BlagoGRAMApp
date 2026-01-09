@@ -1,24 +1,17 @@
 package com.kia.blagogramapp
 
-import android.app.ActivityManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.os.StatFs
 import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import java.io.File
 import java.util.*
-import kotlin.math.log10
-import kotlin.math.pow
 
 /**
  * Экран "О приложении" с подробной технической информацией.
@@ -113,23 +106,13 @@ class AboutActivity : AppCompatActivity() {
         addInfoRow(mainCard, "Разработчик", "BlagoGRAM Team", isLast = true)
         contentLayout.addView(mainCard, getCardParams())
 
-        // 2. ПАМЯТЬ
-        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(24)))
-        addSectionHeader(contentLayout, "ИСПОЛЬЗОВАНИЕ ПАМЯТИ")
-        val memoryCard = ContainerCell(this)
-        addInfoRow(memoryCard, "Размер кэша", getCacheSize())
-        addInfoRow(memoryCard, "Размер приложения", getAppSize())
-        addInfoRow(memoryCard, "Свободно в системе", getFreeInternalSpace(), isLast = true)
-        contentLayout.addView(memoryCard, getCardParams())
-
-        // 3. СИСТЕМА
+        // 2. СИСТЕМА
         contentLayout.addView(SpacerCell(this, LayoutHelper.dp(24)))
         addSectionHeader(contentLayout, "СИСТЕМНЫЕ ДАННЫЕ")
         val systemCard = ContainerCell(this)
         addInfoRow(systemCard, "Android версия", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
         addInfoRow(systemCard, "SDK Min / Target", "${applicationInfo.minSdkVersion} / ${applicationInfo.targetSdkVersion}")
-        addInfoRow(systemCard, "Устройство", "${Build.MANUFACTURER} ${Build.MODEL}")
-        addInfoRow(systemCard, "ОЗУ всего", getTotalRAM(), isLast = true)
+        addInfoRow(systemCard, "Устройство", "${Build.MANUFACTURER} ${Build.MODEL}", isLast = true)
         contentLayout.addView(systemCard, getCardParams())
 
         // Copyright
@@ -214,12 +197,18 @@ class AboutActivity : AppCompatActivity() {
             setColorFilter(if (isCurrentThemeDark) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
         })
-        
-        val titleView = TextView(this).apply {
-            text = "О приложении"
-            textSize = 20f
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-            typeface = Typeface.DEFAULT_BOLD
+
+        val titleView = LinearLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_stat_pill)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isCurrentThemeDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+            gravity = Gravity.CENTER // Центрируем текст внутри
+            addView(TextView(context).apply {
+                text = "О приложении" // Добавляем заголовок
+                textSize = 20f
+                setTextColor(DesignEngine.Theme.colorTextPrimary)
+                typeface = Typeface.DEFAULT_BOLD
+            })
         }
         
         val toolbarContent = RelativeLayout(this).apply {
@@ -236,40 +225,6 @@ class AboutActivity : AppCompatActivity() {
     private fun getStatusBarHeight(): Int {
         val id = resources.getIdentifier("status_bar_height", "dimen", "android")
         return if (id > 0) resources.getDimensionPixelSize(id) else 0
-    }
-
-    private fun getCacheSize(): String {
-        var s = getFolderSize(cacheDir) + getFolderSize(externalCacheDir)
-        return formatSize(s)
-    }
-
-    private fun getAppSize(): String {
-        var s: Long = 0
-        try {
-            s = File(packageManager.getApplicationInfo(packageName, 0).publicSourceDir).length() + getFolderSize(filesDir)
-        } catch (e: Exception) {}
-        return formatSize(s)
-    }
-
-    private fun getFreeInternalSpace() = formatSize(StatFs(Environment.getDataDirectory().path).let { it.blockSizeLong * it.availableBlocksLong })
-
-    private fun getTotalRAM(): String {
-        val mi = ActivityManager.MemoryInfo()
-        (getSystemService(ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(mi)
-        return formatSize(mi.totalMem)
-    }
-
-    private fun getFolderSize(f: File?): Long {
-        if (f == null || !f.exists()) return 0
-        if (!f.isDirectory) return f.length()
-        return f.listFiles()?.sumOf { getFolderSize(it) } ?: 0
-    }
-
-    private fun formatSize(size: Long): String {
-        if (size <= 0) return "0 Б"
-        val units = arrayOf("Б", "КБ", "МБ", "ГБ", "ТБ")
-        val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
-        return String.format(Locale.getDefault(), "%.2f %s", size / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
     }
 
     override fun onResume() {

@@ -43,6 +43,11 @@ class ProfileEditActivity : AppCompatActivity() {
 
     private var repo = ApiRepository(RetrofitClient.api)
 
+    private fun getStatusBarHeight(): Int {
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -59,6 +64,8 @@ class ProfileEditActivity : AppCompatActivity() {
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
 
+        val statusBarHeight = getStatusBarHeight()
+
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.isAppearanceLightStatusBars = !isDarkTheme
         controller.isAppearanceLightNavigationBars = !isDarkTheme
@@ -69,67 +76,16 @@ class ProfileEditActivity : AppCompatActivity() {
         }
         setContentView(rootLayout)
 
-        val headerContent = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorCardBackground)
-            elevation = LayoutHelper.dp(4).toFloat()
-        }
-
-        val toolbar = RelativeLayout(this).apply {
-            setPadding(0, LayoutHelper.dp(10), 0, LayoutHelper.dp(10))
-        }
-
-        val btnBack = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorDivider)
-                cornerRadius = LayoutHelper.dp(20).toFloat()
-            }
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
-            id = View.generateViewId()
-        }
-        btnBack.setOnClickListener { finish() }
-
-        val iconBack = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
-        }
-        btnBack.addView(iconBack, LayoutHelper.createLinear(20, 20))
-
-        val paramsBack = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_VERTICAL)
-            marginStart = LayoutHelper.dp(16)
-        }
-        toolbar.addView(btnBack, paramsBack)
-
-        val title = TextView(this).apply {
-            text = "Редактирование"
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-        }
-        val paramsTitle = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        }
-        toolbar.addView(title, paramsTitle)
-
-        val btnSave = ImageView(this).apply {
-            setImageResource(R.drawable.ic_edit) 
-            setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
-        }
-        btnSave.setOnClickListener { saveProfile() }
-        
-        val paramsSave = RelativeLayout.LayoutParams(LayoutHelper.dp(40), LayoutHelper.dp(40)).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_END)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-            marginEnd = LayoutHelper.dp(16)
-        }
-        toolbar.addView(btnSave, paramsSave)
-
-        headerContent.addView(toolbar)
-        rootLayout.addView(headerContent, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Редактирование",
+            leftButtonIconRes = R.drawable.ic_back,
+            isDark = isDarkTheme,
+            leftButtonClickListener = { finish() },
+            rightButtonIconRes = R.drawable.ic_check,
+            rightButtonClickListener = { saveProfile() }
+        )
+        rootLayout.addView(toolbar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
 
 
         val scrollView = ScrollView(this).apply {
@@ -243,14 +199,6 @@ class ProfileEditActivity : AppCompatActivity() {
         avatarView.load("https://blagogram.ru/avatars/${prefs.getString("avatar", "")}") {
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            headerContent.setPadding(0, insets.top, 0, 0)
-            toolbar.setPadding(0, LayoutHelper.dp(10), 0, LayoutHelper.dp(10))
-            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, insets.bottom)
-            WindowInsetsCompat.CONSUMED
         }
     }
 

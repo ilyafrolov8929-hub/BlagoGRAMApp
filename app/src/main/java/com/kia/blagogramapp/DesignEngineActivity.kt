@@ -59,8 +59,6 @@ class DesignEngineActivity : AppCompatActivity() {
         scrollView.addView(contentLayout)
         
         // 4. Шапка профиля
-        // Отступ сверху = высота статус бара + примерная высота тулбара (56dp) + запас
-        // В оригинале marginTop="100dp", здесь рассчитываем динамически
         val topMarginContent = LayoutHelper.dp(20)
         
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
@@ -107,12 +105,13 @@ class DesignEngineActivity : AppCompatActivity() {
         val settingsCard = ContainerCell(this)
         settingsCard.addCell(TextCell(this).apply {
             setData("Настройки чатов", R.drawable.ic_chat)
+            setOnClickListener { startActivity(android.content.Intent(context, ChatSettingsActivity::class.java)) }
         })
         settingsCard.addCell(TextCell(this).apply {
             setData("Уведомления и звуки", R.drawable.ic_music)
         })
         settingsCard.addCell(TextCell(this).apply {
-            setData("Темы и кастомизация", R.drawable.ic_music)
+            setData("Темы и кастомизация", R.drawable.ic_brush)
             setOnClickListener { startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java)) }
         }, isLast = true)
         
@@ -165,12 +164,11 @@ class DesignEngineActivity : AppCompatActivity() {
         val toolbarLayout = RelativeLayout(this)
         toolbarLayout.setBackgroundColor(Color.TRANSPARENT)
         
-        // Отступы внутри тулбара
         toolbarLayout.setPadding(
             LayoutHelper.dp(16), 
             statusBarHeight + LayoutHelper.dp(10),
             LayoutHelper.dp(16), 
-            LayoutHelper.dp(10) // Вернули 10dp
+            LayoutHelper.dp(10)
         )
         
         // Кнопка BACK
@@ -224,7 +222,6 @@ class DesignEngineActivity : AppCompatActivity() {
         }
         themeBtn.addView(themeIcon)
         
-        // Контейнер контента
         val toolbarContent = RelativeLayout(this)
         toolbarContent.layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT)
         
@@ -244,7 +241,6 @@ class DesignEngineActivity : AppCompatActivity() {
         
         toolbarLayout.addView(toolbarContent)
         
-        // Тулбар фиксирован сверху
         rootLayout.addView(toolbarLayout, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.TOP
         })

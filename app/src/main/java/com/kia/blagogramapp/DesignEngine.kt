@@ -13,6 +13,9 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.setPadding
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.google.android.material.imageview.ShapeableImageView
@@ -63,9 +66,35 @@ object DesignEngine {
     var density: Float = 1f
     var context: Context? = null
 
+    // Настройки чата
+    var fontSize: Int = 16
+    var bubbleRadius: Int = 17
+    var chatWallpaper: String? = null
+    var wallpaperBlur: Boolean = false
+    var wallpaperMotion: Boolean = false
+
     fun init(ctx: Context) {
         density = ctx.resources.displayMetrics.density
         context = ctx.applicationContext
+        
+        val prefs = ctx.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+        fontSize = prefs.getInt("font_size", 16)
+        bubbleRadius = prefs.getInt("bubble_radius", 17)
+        chatWallpaper = prefs.getString("chat_wallpaper", null)
+        wallpaperBlur = prefs.getBoolean("wallpaper_blur", false)
+        wallpaperMotion = prefs.getBoolean("wallpaper_motion", false)
+    }
+
+    fun saveChatSettings(context: Context) {
+        val prefs = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putInt("font_size", fontSize)
+            putInt("bubble_radius", bubbleRadius)
+            putString("chat_wallpaper", chatWallpaper)
+            putBoolean("wallpaper_blur", wallpaperBlur)
+            putBoolean("wallpaper_motion", wallpaperMotion)
+            apply()
+        }
     }
 
     /**
@@ -79,6 +108,106 @@ object DesignEngine {
             translationY = LayoutHelper.dp(2).toFloat() // Используем dp для смещения
         }
     }
+
+    fun createToolBar(
+        context: Context,
+        title: String,
+        leftButtonIconRes: Int? = null,
+        rightButtonIconRes: Int? = null,
+        isDark: Boolean = false,
+        leftButtonClickListener: View.OnClickListener? = null,
+        rightButtonClickListener: View.OnClickListener? = null
+    ): RelativeLayout {
+        // Используем цвета из текущей темы DesignEngine.Theme
+        val pillBackgroundColor = Theme.colorCardBackground
+
+        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+        val statusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+        // Главный контейнер тулбара, он будет прозрачным
+        val toolbarLayout = RelativeLayout(context).apply {
+            setPadding(LayoutHelper.dp(16), statusBarHeight + LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
+        }
+
+        // Внутренний контейнер для центрирования
+        val toolbarContent = RelativeLayout(context).apply {
+            layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT)
+        }
+
+        // Левая кнопка (например, "Назад")
+        if (leftButtonIconRes != null) {
+            val leftButton = LinearLayout(context).apply {
+                setBackgroundResource(R.drawable.bg_stat_pill)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+
+                setOnClickListener(leftButtonClickListener)
+
+                addView(ImageView(context).apply {
+                    setImageResource(leftButtonIconRes)
+                    // Используем цвет иконки из темы
+                    setColorFilter(Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+                    layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
+                })
+            }
+
+            val leftParams = LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_START)
+                addRule(RelativeLayout.CENTER_VERTICAL)
+                // Боковой отступ уже есть в родительском toolbarLayout, поэтому marginStart не нужен
+            }
+            toolbarContent.addView(leftButton, leftParams)
+        }
+
+        // Заголовок по центру
+        val titleLayout = LinearLayout(context).apply {
+            setBackgroundResource(R.drawable.bg_stat_pill)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+            gravity = Gravity.CENTER // Центрируем текст внутри
+
+            addView(TextView(context).apply {
+                text = title
+                textSize = 20f
+                // Используем цвет текста из темы
+                setTextColor(Theme.colorTextPrimary)
+                typeface = Typeface.DEFAULT_BOLD
+            })
+        }
+
+        val titleParams = LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
+            addRule(RelativeLayout.CENTER_IN_PARENT)
+        }
+        toolbarContent.addView(titleLayout, titleParams)
+
+        // Правая кнопка (например, "Сохранить")
+        if (rightButtonIconRes != null) {
+            val rightButton = LinearLayout(context).apply {
+                setBackgroundResource(R.drawable.bg_stat_pill)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+
+                setOnClickListener(rightButtonClickListener)
+
+                addView(ImageView(context).apply {
+                    setImageResource(rightButtonIconRes)
+                    // Используем цвет иконки из темы
+                    setColorFilter(Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+                    layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
+                })
+            }
+
+            val rightParams = LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_END)
+                addRule(RelativeLayout.CENTER_VERTICAL)
+                // Боковой отступ уже есть в родительском toolbarLayout, поэтому marginEnd не нужен
+            }
+            toolbarContent.addView(rightButton, rightParams)
+
+        }
+        toolbarLayout.addView(toolbarContent)
+        return toolbarLayout
+    }
+
 
     /**
      * Простое обновление видимости
