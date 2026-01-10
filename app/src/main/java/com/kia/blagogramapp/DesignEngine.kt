@@ -109,6 +109,105 @@ object DesignEngine {
         }
     }
 
+    // ... (внутри объекта DesignEngine)
+
+    fun createChatHeader(
+        context: Context,
+        onBackClick: View.OnClickListener,
+        onMenuClick: View.OnClickListener,onHeaderClick: View.OnClickListener
+    ): Triple<FrameLayout, ShapeableImageView, TextView> {
+        val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+            .getBoolean("is_dark_theme", false)
+        val pillColor = if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
+        // Цвет для обводки. Полупрозрачный черный. Можете поменять на "#1AFFFFFF" для белой.
+        val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#26000000")
+        // Толщина обводки в dp
+        val strokeWidth = 1
+        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+        val statusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+
+        val root = FrameLayout(context)
+
+        // Левая кнопка "назад"
+        val backButton = FrameLayout(context).apply {
+            background = GradientDrawable().apply {
+                setColor(pillColor)
+                cornerRadius = LayoutHelper.dp(18).toFloat()
+                setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            }
+            setOnClickListener(onBackClick)
+            val icon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_back)
+                setColorFilter(Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+            }
+            addView(icon, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
+        }
+        root.addView(backButton, LayoutHelper.createFrame(36, 36, Gravity.START or Gravity.CENTER_VERTICAL))
+
+        // Правая кнопка "меню"
+        val menuButton = FrameLayout(context).apply {
+            background = GradientDrawable().apply {
+                setColor(pillColor)
+                cornerRadius = LayoutHelper.dp(18).toFloat()
+                setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            }
+            setOnClickListener(onMenuClick)
+            val icon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_menu)
+                setColorFilter(Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+            }
+            addView(icon, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
+        }
+        root.addView(menuButton, LayoutHelper.createFrame(36, 36, Gravity.END or Gravity.CENTER_VERTICAL))
+
+
+        // Центральная часть с информацией
+        val centerPill = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                setColor(pillColor)
+                cornerRadius = LayoutHelper.dp(28).toFloat()
+                setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            }
+            setPadding(LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(16), LayoutHelper.dp(6))
+            setOnClickListener(onHeaderClick)
+        }
+
+        val avatarView = ShapeableImageView(context).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(22).toFloat()).build()
+        }
+        centerPill.addView(avatarView, LayoutHelper.createLinear(44, 44))
+
+        val infoContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val nameView = TextView(context).apply {
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Theme.colorTextPrimary)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        val statusView = TextView(context).apply {
+            text = "был(а) недавно" // Placeholder
+            textSize = 10f
+            setTextColor(Theme.colorTextSecondary)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        infoContainer.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        infoContainer.addView(statusView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+
+        centerPill.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 10, 0, 0, 0))
+
+        root.addView(centerPill, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 56, Gravity.CENTER_VERTICAL, 48, 0, 48, 0))
+
+        return Triple(root, avatarView, nameView)
+    }
+
+
     fun createToolBar(
         context: Context,
         title: String,
@@ -123,6 +222,9 @@ object DesignEngine {
 
         val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
         val statusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+        val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#26000000")
+        // Толщина обводки в dp
+        val strokeWidth = 1
         // Главный контейнер тулбара, он будет прозрачным
         val toolbarLayout = RelativeLayout(context).apply {
             setPadding(LayoutHelper.dp(16), statusBarHeight + LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
@@ -136,8 +238,11 @@ object DesignEngine {
         // Левая кнопка (например, "Назад")
         if (leftButtonIconRes != null) {
             val leftButton = LinearLayout(context).apply {
-                setBackgroundResource(R.drawable.bg_stat_pill)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+                drawable.setColor(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+                background = drawable
+
                 setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
 
                 setOnClickListener(leftButtonClickListener)
@@ -160,8 +265,10 @@ object DesignEngine {
 
         // Заголовок по центру
         val titleLayout = LinearLayout(context).apply {
-            setBackgroundResource(R.drawable.bg_stat_pill)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+            val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+            drawable.setColor(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+            drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            background = drawable
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
             gravity = Gravity.CENTER // Центрируем текст внутри
 
@@ -182,8 +289,10 @@ object DesignEngine {
         // Правая кнопка (например, "Сохранить")
         if (rightButtonIconRes != null) {
             val rightButton = LinearLayout(context).apply {
-                setBackgroundResource(R.drawable.bg_stat_pill)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+                drawable.setColor(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+                background = drawable
                 setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
 
                 setOnClickListener(rightButtonClickListener)

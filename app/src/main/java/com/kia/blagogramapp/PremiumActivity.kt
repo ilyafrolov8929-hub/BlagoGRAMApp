@@ -267,18 +267,16 @@ class PremiumActivity : AppCompatActivity() {
         root.addView(subscribeBtn, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 58, Gravity.BOTTOM, 16, 0, 16, 25))
 
         val isDarkThemeNow = themePrefs.getBoolean("is_dark_theme", false)
-        val backBtn = LinearLayout(this).apply {
-            setBackgroundResource(R.drawable.bg_stat_pill)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isDarkThemeNow) 0x30FFFFFF.toInt() else 0x20000000.toInt())
-            setPadding(LayoutHelper.dp(10), LayoutHelper.dp(7), LayoutHelper.dp(10), LayoutHelper.dp(7))
-            setOnClickListener { finish() }
-            addView(ImageView(context).apply {
-                setImageResource(R.drawable.ic_back)
-                setColorFilter(if (isDarkThemeNow) Color.WHITE else Color.BLACK)
-                layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(18), LayoutHelper.dp(18))
-            })
-        }
-        root.addView(backBtn, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP or Gravity.START, 16, 45, 0, 0))
+
+        // Toolbar from DesignEngine
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Lume Infinity",
+            leftButtonIconRes = R.drawable.ic_back,
+            leftButtonClickListener = { finish() },
+            isDark = isDarkThemeNow
+        )
+        root.addView(toolbar)
 
         setContentView(root)
         checkSubscription()

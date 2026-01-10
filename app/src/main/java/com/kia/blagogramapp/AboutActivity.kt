@@ -179,46 +179,15 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar(root: FrameLayout) {
-        val statusBarHeight = getStatusBarHeight()
-        val toolbarLayout = RelativeLayout(this).apply {
-            setPadding(LayoutHelper.dp(16), statusBarHeight + LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
-        }
-        
-        val backBtn = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundResource(R.drawable.bg_stat_pill)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isCurrentThemeDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
-            setOnClickListener { finish() }
-        }
-        backBtn.addView(ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(if (isCurrentThemeDark) Color.WHITE else Color.BLACK)
-            layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(20), LayoutHelper.dp(20))
-        })
 
-        val titleView = LinearLayout(this).apply {
-            setBackgroundResource(R.drawable.bg_stat_pill)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(if (isCurrentThemeDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
-            gravity = Gravity.CENTER // Центрируем текст внутри
-            addView(TextView(context).apply {
-                text = "О приложении" // Добавляем заголовок
-                textSize = 20f
-                setTextColor(DesignEngine.Theme.colorTextPrimary)
-                typeface = Typeface.DEFAULT_BOLD
-            })
-        }
-        
-        val toolbarContent = RelativeLayout(this).apply {
-            layoutParams = RelativeLayout.LayoutParams(-1, -2)
-        }
-        toolbarContent.addView(backBtn, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.ALIGN_PARENT_START); addRule(RelativeLayout.CENTER_VERTICAL) })
-        toolbarContent.addView(titleView, RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
-        toolbarLayout.addView(toolbarContent)
-        
-        root.addView(toolbarLayout, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Кастомизация",
+            leftButtonIconRes = R.drawable.ic_back,
+            leftButtonClickListener = { finish() },
+            isDark = isCurrentThemeDark
+        )
+        root.addView(toolbar)
     }
 
     private fun getCardParams() = LinearLayout.LayoutParams(-1, -2).apply { leftMargin = LayoutHelper.dp(16); rightMargin = LayoutHelper.dp(16) }

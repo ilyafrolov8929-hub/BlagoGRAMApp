@@ -43,6 +43,7 @@
         <activity android:name=".PremiumActivity" />
         <activity android:name=".ChatSettingsActivity" />
         <activity android:name=".WallpaperPreviewActivity" />
+        <activity android:name=".PrivaciActivity" />
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustNothing"

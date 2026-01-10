@@ -97,6 +97,7 @@ class SettingsActivity : AppCompatActivity() {
         })
         accountCard.addCell(TextCell(this).apply {
             setData("Приватность", R.drawable.ic_user)
+            setOnClickListener { startActivity(android.content.Intent(context, PrivaciActivity::class.java)) }
         }, isLast = true)
         sheetContainer.addView(accountCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))

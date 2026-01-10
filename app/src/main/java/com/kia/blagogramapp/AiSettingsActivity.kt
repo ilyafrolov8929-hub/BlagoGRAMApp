@@ -17,45 +17,40 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AiSettingsActivity : AppCompatActivity() {
+    private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         DesignEngine.init(this)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        DesignEngine.Theme.apply(themePrefs.getBoolean("is_dark_theme", false), themePrefs.getBoolean("use_monet", false))
+        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
 
+        isCurrentThemeDark = isDarkTheme
+        isCurrentUseMonet = useMonet
+        
+        // Enable Edge-to-Edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT // Make nav bar transparent like in ChatsActivity
 
+        // Root Layout
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorBackground)
-            setPadding(0, getStatusBarHeight(), 0, 0)
+            setBackgroundColor(DesignEngine.Theme.colorBackground) // Theme color
         }
         setContentView(root)
 
-        // Toolbar
-        val toolbar = RelativeLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(56))
-        }
-        val backBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16))
-            setOnClickListener { finish() }
-        }
-        toolbar.addView(backBtn, LayoutHelper.createRelative(48, 48))
-        
-        val title = TextView(this).apply {
-            text = "Настройки нейросети"
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-        }
-        val titleParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
-        titleParams.addRule(RelativeLayout.CENTER_IN_PARENT)
-        toolbar.addView(title, titleParams)
+        // Toolbar from DesignEngine
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Поиск",
+            leftButtonIconRes = R.drawable.ic_back,
+            leftButtonClickListener = { finish() },
+            isDark = isDarkTheme
+        )
         root.addView(toolbar)
 
         val scroll = ScrollView(this)

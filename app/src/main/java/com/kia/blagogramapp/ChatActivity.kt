@@ -77,8 +77,8 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var emojiBtn: ImageView
     private lateinit var messageInput: EditText
     private lateinit var attachmentsRecycler: RecyclerView
-    private lateinit var attachmentsAdapter: AttachmentsAdapter
-    private lateinit var headerContainer: LinearLayout
+    private lateinit var headerContainer: FrameLayout
+    private lateinit var headerBlurView: View // <--- Добавьте эту переменную в список полей класса
     private lateinit var inputContainer: LinearLayout
     private lateinit var emptyText: TextView
     private lateinit var chatNameView: TextView
@@ -495,6 +495,11 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
         setContentView(rootLayout)
 
+        headerBlurView = View(this).apply {
+            // Начальные стили, будут обновляться динамически
+        }
+        rootLayout.addView(headerBlurView) // <--- Добавьте его в rootLayout
+
         wallpaperView = ImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
         }
@@ -531,41 +536,36 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         }
         listContainer.addView(emptyText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
         rootLayout.addView(listContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        // В методе createUI(), после инициализации listContainer
 
-        headerContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorCardBackground)
-            elevation = LayoutHelper.dp(4).toFloat()
-        }
-        val backBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
-            background = getRippleDrawable()
-            setOnClickListener { finish() }
-        }
-        headerContainer.addView(backBtn, LayoutHelper.createLinear(48, 48, 0f, 0, 4, 0, 4, 0))
-        chatAvatarView = ShapeableImageView(this).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            setBackgroundColor(Color.LTGRAY)
-            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(20).toFloat()).build()
-        }
-        headerContainer.addView(chatAvatarView, LayoutHelper.createLinear(40, 40))
-        val infoContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        chatNameView = TextView(this).apply {
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-        }
-        infoContainer.addView(chatNameView)
-        headerContainer.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 16, 0))
-        rootLayout.addView(headerContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP))
+        val (header, avatar, name) = DesignEngine.createChatHeader(
+            context = this,
+            onBackClick = { finish() },
+            onMenuClick = {
+                // TODO: Заменить на полноценное меню
+                Toast.makeText(this, "Меню чата", Toast.LENGTH_SHORT).show()
+            },
+            onHeaderClick = {
+                if (targetUserId != 0) {
+                    val i = Intent(this, ProfileActivity::class.java)
+                    i.putExtra("user_id", targetUserId)
+                    startActivity(i)
+                }
+            }
+        )
+
+        headerContainer = header
+        chatAvatarView = avatar
+        chatNameView = name
+
+        // LayoutParams для хедера с отступами по бокам
+        val headerParams = LayoutHelper.createFrame(
+            LayoutHelper.MATCH_PARENT,
+            LayoutHelper.WRAP_CONTENT,
+            Gravity.TOP or Gravity.FILL_HORIZONTAL,
+            left = 8, top = 0, right = 8, bottom = 0 // <--- Отступы по бокам
+        )
+        rootLayout.addView(headerContainer, headerParams)
 
         // 2. Слой размытия (Blur Layer) — подложка под полем ввода
         val bottomBlurView = View(this).apply {
