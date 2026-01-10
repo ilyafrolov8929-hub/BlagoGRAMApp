@@ -25,11 +25,13 @@ import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.webkit.MimeTypeMap
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -51,6 +53,8 @@ import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.ui.ChatViewModel
 import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
 import com.kia.blagogramapp.ui.modules.MediaPickerSheet
+import com.kia.blagogramapp.ui.modules.EmojiKeyboardModule
+import com.vanniktech.emoji.EmojiEditText
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,7 +79,8 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var sendBtn: ImageView
     private lateinit var attachBtn: ImageView
     private lateinit var emojiBtn: ImageView
-    private lateinit var messageInput: EditText
+    private lateinit var messageInput: EmojiEditText
+    private lateinit var emojiKeyboard: EmojiKeyboardModule
     private lateinit var attachmentsRecycler: RecyclerView
     private lateinit var headerContainer: FrameLayout
     private lateinit var headerBlurView: View
@@ -93,6 +98,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     private var editingMessageId: Int = -1
 
     private var forceRefresh = false
+    private var keyboardHeight = 0
 
     private lateinit var sensorManager: SensorManager
     private var gyroscope: Sensor? = null
@@ -126,6 +132,9 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
             finish()
             return
         }
+
+        keyboardHeight = getSharedPreferences("app_settings", MODE_PRIVATE)
+            .getInt("kbd_height", LayoutHelper.dp(300))
 
         token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
@@ -185,7 +194,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
             } else {
                 if (text.isNotBlank() || selectedImages.isNotEmpty()) {
                     sendMessage(text)
-                    messageInput.text.clear()
+                    messageInput.text?.clear()
                 }
             }
         }
@@ -214,6 +223,40 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (emojiKeyboard.visibility == View.VISIBLE) {
+                    hideEmojiKeyboard()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showEmojiKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(messageInput.windowToken, 0)
+        
+        emojiKeyboard.setHeight(keyboardHeight)
+        emojiKeyboard.visibility = View.VISIBLE
+        emojiBtn.setImageResource(R.drawable.ic_keyboard)
+        
+        // Manual translation because IME is 0
+        inputContainer.translationY = -keyboardHeight.toFloat()
+        listContainer.translationY = -keyboardHeight.toFloat()
+        scrollToBottomBtn.translationY = -keyboardHeight.toFloat()
+    }
+
+    private fun hideEmojiKeyboard() {
+        emojiKeyboard.visibility = View.GONE
+        emojiBtn.setImageResource(R.drawable.ic_emoji)
+        
+        inputContainer.translationY = 0f
+        listContainer.translationY = 0f
+        scrollToBottomBtn.translationY = 0f
     }
 
     override fun onResume() {
@@ -337,7 +380,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
                 selectedImages.clear()
                 selectedImages.addAll(uris)
                 sendMessage(caption ?: "")
-                messageInput.text.clear()
+                messageInput.text?.clear()
             }
         }
     }
@@ -377,6 +420,15 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
             val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+            
+            val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
+            if (imeHeight > 0) {
+                keyboardHeight = imeHeight
+                getSharedPreferences("app_settings", MODE_PRIVATE)
+                    .edit().putInt("kbd_height", keyboardHeight).apply()
+            }
+
             headerContainer.setPadding(0, systemBars.top, 0, 0)
             inputContainer.setPadding(0, 0, 0, systemBars.bottom)
             inputContainer.post {
@@ -397,10 +449,26 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
                     val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                     val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
-                    inputContainer.translationY = -imeHeight.toFloat()
-                    listContainer.translationY = -imeHeight.toFloat()
-                    scrollToBottomBtn.translationY = -imeHeight.toFloat()
+                    
+                    val emojiOffset = if (emojiKeyboard.visibility == View.VISIBLE) keyboardHeight else 0
+                    val finalOffset = maxOf(imeHeight, emojiOffset)
+
+                    inputContainer.translationY = -finalOffset.toFloat()
+                    listContainer.translationY = -finalOffset.toFloat()
+                    scrollToBottomBtn.translationY = -finalOffset.toFloat()
                     return insets
+                }
+
+                override fun onEnd(animation: WindowInsetsAnimationCompat) {
+                    val insets = ViewCompat.getRootWindowInsets(rootLayout)
+                    val ime = insets?.getInsets(WindowInsetsCompat.Type.ime())
+                    val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+                    val imeHeight = if (ime != null && systemBars != null) (ime.bottom - systemBars.bottom).coerceAtLeast(0) else 0
+                    
+                    if (imeHeight > 0 && emojiKeyboard.visibility == View.VISIBLE) {
+                        emojiKeyboard.visibility = View.GONE
+                        emojiBtn.setImageResource(R.drawable.ic_emoji)
+                    }
                 }
             }
         )
@@ -464,7 +532,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
 
     private fun cancelEditing() {
         editingMessageId = -1
-        messageInput.text.clear()
+        messageInput.text?.clear()
         sendBtn.setImageResource(if (selectedImages.isNotEmpty()) R.drawable.ic_send else R.drawable.ic_mic)
         attachBtn.setImageResource(R.drawable.ic_pin)
     }
@@ -626,10 +694,18 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
             setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
             setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
             background = getRippleDrawable()
+            setOnClickListener {
+                if (emojiKeyboard.visibility == View.VISIBLE) {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.showSoftInput(messageInput, 0)
+                } else {
+                    showEmojiKeyboard()
+                }
+            }
         }
         modernInputRow.addView(emojiBtn, LayoutHelper.createLinear(44, 44))
 
-        messageInput = EditText(this).apply {
+        messageInput = EmojiEditText(this).apply {
             background = null
             hint = "Сообщение"
             setHintTextColor(DesignEngine.Theme.colorTextSecondary)
@@ -658,6 +734,16 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
 
         inputContainer.addView(modernInputRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 16, 0))
         rootLayout.addView(inputContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
+        
+        emojiKeyboard = EmojiKeyboardModule(this, 
+            onEmojiClick = { emoji -> messageInput.append(emoji) },
+            onBackspaceClick = { messageInput.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL)) },
+            onKeyboardClick = {
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.showSoftInput(messageInput, 0)
+            }
+        )
+        rootLayout.addView(emojiKeyboard, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
     }
 
     private fun openViewer(url: String, senderName: String, sentTime: String, caption: String?) {

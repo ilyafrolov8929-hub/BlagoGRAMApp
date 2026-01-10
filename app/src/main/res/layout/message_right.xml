@@ -45,11 +45,14 @@
             app:layout_goneMarginTop="0dp" />
 
         <LinearLayout
+            android:id="@+id/msgTimeContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="1dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
