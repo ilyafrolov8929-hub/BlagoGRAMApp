@@ -28,27 +28,16 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
-
-        val rootLayout = FrameLayout(this)
-        rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
+        // 1. Инициализируем экран и сразу получаем готовый корневой layout
+        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(rootLayout)
 
+        // 2. Получаем тему, так как она нужна для логики тулбара и кнопки "Разработчик"
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
+        isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
+
+        // --- Дальше идет ваш код по наполнению rootLayout ---
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
         val displayName = prefs.getString("display_name", "Пользователь") ?: "Пользователь"
         val status = prefs.getString("status", "") ?: "Нет статуса"
@@ -165,11 +154,11 @@ class SettingsActivity : AppCompatActivity() {
             context = this,
             title = "Настройки",
             leftButtonIconRes = R.drawable.ic_back,
-            isDark = isDarkTheme,
+            isDark = isCurrentThemeDark,
             rightButtonIconRes = R.drawable.ic_moments,
             leftButtonClickListener = { finish() },
             rightButtonClickListener = {
-                themePrefs.edit().putBoolean("is_dark_theme", !isDarkTheme).apply()
+                themePrefs.edit().putBoolean("is_dark_theme", !isCurrentThemeDark).apply()
                 restartWithFade()
             }
         )

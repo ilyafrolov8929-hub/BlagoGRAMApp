@@ -37,19 +37,13 @@ class StatisticsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        isCurrentThemeDark = isDarkTheme
-        DesignEngine.Theme.apply(isDarkTheme, themePrefs.getBoolean("use_monet", false))
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        val rootLayout = FrameLayout(this)
-        rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
+        // 1. Инициализируем экран и получаем готовый корневой FrameLayout
+        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(rootLayout)
+
+// 2. Обновляем локальную переменную темы, так как она нужна в коде этого Activity
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
 
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
@@ -72,7 +66,7 @@ class StatisticsActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(if (isDarkTheme) 0xFF121212.toInt() else 0xFF222222.toInt())
+                setColor(if (isCurrentThemeDark) 0xFF121212.toInt() else 0xFF222222.toInt())
             }
             val p = LayoutHelper.dp(44)
             setPadding(p, p, p, p)
@@ -119,7 +113,7 @@ class StatisticsActivity : AppCompatActivity() {
         val progressBar = View(this).apply {
             background = GradientDrawable().apply {
                 cornerRadius = LayoutHelper.dp(2).toFloat()
-                setColor(if (isDarkTheme) 0xFF333333.toInt() else 0xFFE0E0E0.toInt())
+                setColor(if (isCurrentThemeDark) 0xFF333333.toInt() else 0xFFE0E0E0.toInt())
             }
         }
         progressFill = View(this).apply {
@@ -168,7 +162,7 @@ class StatisticsActivity : AppCompatActivity() {
             context = this,
             title = "Данные и память",
             leftButtonIconRes = R.drawable.ic_back,
-            isDark = isDarkTheme,
+            isDark = isCurrentThemeDark,
             leftButtonClickListener = { finish() }
         )
         rootLayout.addView(toolbar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))

@@ -12,8 +12,10 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.setPadding
 import coil.load
@@ -205,6 +207,168 @@ object DesignEngine {
         root.addView(centerPill, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 56, Gravity.CENTER_VERTICAL, 48, 0, 48, 0))
 
         return Triple(root, avatarView, nameView)
+    }
+
+    /**
+     * Инициализирует базовые параметры экрана: тему, Edge-to-Edge и создает корневой layout.
+     * @param activity Текущая Activity.
+     * @return Возвращает корневой LinearLayout, готовый для добавления контента.
+     */
+    fun initializeScreen(activity: AppCompatActivity): LinearLayout {
+        // 1. Инициализация самого DesignEngine (если еще не сделано)
+        init(activity)
+
+        // 2. Получение и применение настроек темы
+        val themePrefs = activity.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val useMonet = themePrefs.getBoolean("use_monet", false)
+
+        Theme.apply(isDarkTheme, useMonet)
+
+        // 3. Включение режима Edge-to-Edge
+        WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+        activity.window.statusBarColor = Color.TRANSPARENT
+        activity.window.navigationBarColor = Color.TRANSPARENT
+
+        // --- НОВЫЙ БЛОК ---
+        // 4. Настройка цвета иконок системных баров в зависимости от темы
+        val controller = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+        controller.isAppearanceLightStatusBars = !isDarkTheme
+        controller.isAppearanceLightNavigationBars = !isDarkTheme
+        // --- КОНЕЦ НОВОГО БЛОКА ---
+
+        // 5. Создание и возврат корневого контейнера
+        return LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Theme.colorBackground)
+        }
+    }
+
+    /**
+     * Инициализирует базовые параметры экрана и возвращает готовый FrameLayout.
+     * @param activity Текущая Activity.
+     * @return Возвращает корневой FrameLayout, готовый для setContentVew().
+     */
+    fun initializeScreenWithFrameLayout(activity: AppCompatActivity): FrameLayout {
+        // Вызываем основную логику из первой функции
+        initializeScreen(activity)
+
+        // Создаем и возвращаем FrameLayout с правильным фоном
+        return FrameLayout(activity).apply {
+            setBackgroundColor(Theme.colorBackground)
+        }
+    }
+
+    /**
+     * Создает "таблеточный" тулбар для PhotoViewerActivity.
+     * @param context Контекст для создания View.
+     * @param onBackClick Слушатель нажатия на кнопку "назад".
+     * @return Triple, содержащий:
+     *         1. Корневой FrameLayout тулбара.
+     *         2. TextView для имени отправителя.
+     *         3. TextView для даты.
+     */
+    fun createPhotoViewerToolbar(
+        context: Context,
+        onBackClick: View.OnClickListener
+    ): Triple<FrameLayout, TextView, TextView> {
+        // Получаем высоту системного статус-бара
+        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+        val statusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+        val strokeColor = Color.parseColor("#33FFFFFF")
+        // Толщина обводки в dp
+        val strokeWidth = 1
+
+        // Основной контейнер, который будет позиционироваться сверху
+        val toolbarContainer = FrameLayout(context).apply {
+            // Добавляем отступ сверху, равный высоте статус-бара + 8dp
+            setPadding(LayoutHelper.dp(8), statusBarHeight + LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+        }
+
+        // Фон для всех элементов
+        val pillBackground = GradientDrawable().apply {
+            setColor(0x80333333.toInt()) // Полупрозрачный темный цвет
+            cornerRadius = LayoutHelper.dp(28).toFloat()
+        }
+
+        // 1. Кнопка "Назад"
+        val backButton = FrameLayout(context).apply {
+            val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+            drawable.setColor( Color.parseColor("#333333"))
+            drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            background = drawable
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+
+            setOnClickListener(onBackClick)
+            // Добавляем ripple-эффект при нажатии
+            val outValue = TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            foreground = ContextCompat.getDrawable(context, outValue.resourceId)
+        }
+        val backIcon = ImageView(context).apply {
+            setImageResource(R.drawable.ic_back)
+            setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+        }
+        backButton.addView(backIcon, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
+        toolbarContainer.addView(backButton, LayoutHelper.createFrame(48, 48, Gravity.START or Gravity.CENTER_VERTICAL))
+
+        // 2. Центральная часть (Имя + Дата)
+        val centerPill = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+            drawable.setColor( Color.parseColor("#333333"))
+            drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            background = drawable
+            setPadding(LayoutHelper.dp(20), LayoutHelper.dp(8), LayoutHelper.dp(20), LayoutHelper.dp(8))
+        }
+
+        val nameView = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val dateView = TextView(context).apply {
+            setTextColor(0xFFD3D3D3.toInt()) // Светло-серый
+            textSize = 12f
+        }
+
+        centerPill.addView(nameView)
+        centerPill.addView(dateView)
+        toolbarContainer.addView(centerPill, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+
+        return Triple(toolbarContainer, nameView, dateView)
+    }
+
+    /**
+     * Создает контейнер для подписи к фото.
+     * @return Pair, содержащий:
+     *         1. Корневой FrameLayout контейнера.
+     *         2. TextView для текста подписи.
+     */
+    fun createPhotoCaptionView(context: Context): Pair<FrameLayout, TextView> {
+        val captionContainer = FrameLayout(context).apply {
+            val strokeColor = Color.parseColor("#33FFFFFF")
+            val strokeWidth = 1
+
+            val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+            drawable.setColor( Color.parseColor("#333333"))
+            drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+            background = drawable
+
+            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+        }
+
+        val textView = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
+            maxLines = 8
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        captionContainer.addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+
+        return captionContainer to textView
     }
 
 

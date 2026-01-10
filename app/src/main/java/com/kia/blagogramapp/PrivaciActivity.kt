@@ -21,25 +21,14 @@ class PrivaciActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-
-        // Enable Edge-to-Edge
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        // Рут экран
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorBackground)
-        }
+        // 1. Инициализируем экран и сразу получаем готовый корневой layout
+        val root = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(root)
+
+        // 2. Получаем тему, так как она нужна для логики тулбара и кнопки "Разработчик"
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
+        isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
         // Тулбар
         val toolbar = DesignEngine.createToolBar(
@@ -47,7 +36,7 @@ class PrivaciActivity : AppCompatActivity() {
             title = "Приватность",
             leftButtonIconRes = R.drawable.ic_back,
             leftButtonClickListener = { finish() },
-            isDark = isDarkTheme
+            isDark = isCurrentThemeDark
         )
         root.addView(toolbar)
 

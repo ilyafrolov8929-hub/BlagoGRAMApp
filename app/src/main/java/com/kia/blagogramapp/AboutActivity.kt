@@ -24,24 +24,14 @@ class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        if (!isDarkTheme) {
-            window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
-        window.statusBarColor = Color.TRANSPARENT
-
-        val rootLayout = FrameLayout(this)
-        rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
+        // 1. Инициализируем экран и получаем готовый корневой FrameLayout
+        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(rootLayout)
+
+        // 2. Обновляем локальную переменную темы, так как она нужна в коде этого Activity
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
+        isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
         val scrollView = ScrollView(this)
         scrollView.isFillViewport = true

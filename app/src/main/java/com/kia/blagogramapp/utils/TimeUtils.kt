@@ -66,4 +66,48 @@ object TimeUtils {
         }
     }
 
+    /**
+     * Форматирует дату для PhotoViewerActivity.
+     * Формат: "сегодня в 14:30", "вчера в 09:15", "8 янв. в 12:00".
+     * Год добавляется, если он не совпадает с текущим.
+     * @param raw Исходная строка с датой (например, "2026-01-10 11:26:34").
+     * @return Отформатированная строка.
+     */
+    fun formatPhotoViewerDate(raw: String): String {
+        if (raw.isBlank()) return ""
+        val date = safeParse(raw) ?: return "" // Используем вашу утилиту safeParse
+
+        val msgCalendar = Calendar.getInstance().apply { time = date }
+        val now = Calendar.getInstance()
+
+        // Форматы времени и даты
+        val timeFormat = SimpleDateFormat("HH:mm", Locale("ru"))
+        val dayMonthFormat = SimpleDateFormat("d MMM", Locale("ru"))
+        val dayMonthYearFormat = SimpleDateFormat("d MMM yyyy", Locale("ru"))
+
+        val timeString = "в ${timeFormat.format(date)}"
+
+        // Сегодня
+        if (now.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR) &&
+            now.get(Calendar.DAY_OF_YEAR) == msgCalendar.get(Calendar.DAY_OF_YEAR)) {
+            return "сегодня $timeString"
+        }
+
+        // Вчера
+        val yesterday = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
+        if (yesterday.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR) &&
+            yesterday.get(Calendar.DAY_OF_YEAR) == msgCalendar.get(Calendar.DAY_OF_YEAR)) {
+            return "вчера $timeString"
+        }
+
+        // Другая дата
+        return if (now.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR)) {
+            // Этот год
+            "${dayMonthFormat.format(date)} $timeString"
+        } else {
+            // Другой год
+            "${dayMonthYearFormat.format(date)} $timeString"
+        }
+    }
+
 }

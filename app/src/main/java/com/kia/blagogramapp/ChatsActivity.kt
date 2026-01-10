@@ -42,23 +42,16 @@ class ChatsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
+        // 1. Инициализируем все настройки экрана одним вызовом
+        DesignEngine.initializeScreen(this)
+
+        // 2. Обновляем локальные переменные темы, они нужны для тулбара и onResume
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
+        isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
+        isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
-
+        // 3. Создаем и устанавливаем ваш кастомный layout
+        // Его фон будет установлен автоматически, если он использует DesignEngine.Theme.colorBackground
         layout = ChatListLayout(this)
         setContentView(layout)
 
@@ -71,7 +64,7 @@ class ChatsActivity : AppCompatActivity() {
             title = "Lume",
             leftButtonIconRes = R.drawable.ic_menu,
             rightButtonIconRes = R.drawable.ic_search,
-            isDark = isDarkTheme,
+            isDark = isCurrentThemeDark,
             leftButtonClickListener = { toggleDrawer() },
             rightButtonClickListener = { startActivity(Intent(this, SearchUserActivity::class.java)) }
         )

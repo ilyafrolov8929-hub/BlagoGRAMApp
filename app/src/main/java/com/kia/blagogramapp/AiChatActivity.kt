@@ -53,13 +53,9 @@ class AiChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        DesignEngine.Theme.apply(themePrefs.getBoolean("is_dark_theme", false), themePrefs.getBoolean("use_monet", false))
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
+        // 1. Инициализируем экран и сразу получаем готовый корневой layout
+        val root = DesignEngine.initializeScreenWithFrameLayout(this)
+        setContentView(root)
 
         createUI()
         setupRecycler()

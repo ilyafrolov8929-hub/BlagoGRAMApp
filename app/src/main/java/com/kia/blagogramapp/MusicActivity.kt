@@ -48,7 +48,7 @@ class MusicActivity : AppCompatActivity() {
     private lateinit var emptyTv: TextView
     private lateinit var miniPlayer: MiniPlayer
     private var fullPlayer: FullPlayer? = null
-    
+
     private var currentMode = 0 // 0 - Популярное, 1 - Моя музыка
     private var searchJob: Job? = null
 
@@ -61,77 +61,33 @@ class MusicActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        DesignEngine.Theme.apply(themePrefs.getBoolean("is_dark_theme", false), themePrefs.getBoolean("use_monet", false))
-        
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
+        // Вызываем super.onCreate() в начале, что является хорошей практикой
         super.onCreate(savedInstanceState)
 
-        root = FrameLayout(this).apply {
-            setBackgroundColor(DesignEngine.Theme.colorBackground)
-        }
+        // 1. Инициализируем экран и сразу получаем готовый корневой FrameLayout
+        root = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(root)
+
+        // 2. Получаем тему, так как она нужна для логики тулбара и кнопки "Разработчик"
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
 
         val mainContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, LayoutHelper.dp(40), 0, 0)
         }
         root.addView(mainContent)
 
-        // Header
-        val header = RelativeLayout(this).apply {
-            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(8))
-        }
-        
-        val backBtn = ImageView(this).apply {
-            id = View.generateViewId()
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorTextPrimary, android.graphics.PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
-            val outValue = TypedValue()
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
-            background = context.getDrawable(outValue.resourceId)
-            setOnClickListener { finish() }
-        }
-        val backParams = RelativeLayout.LayoutParams(LayoutHelper.dp(40), LayoutHelper.dp(40)).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_START)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-        }
-        header.addView(backBtn, backParams)
-
-        val title = TextView(this).apply {
-            text = "Музыка"
-            textSize = 24f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-        }
-        val titleParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.END_OF, backBtn.id)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-            marginStart = LayoutHelper.dp(8)
-        }
-        header.addView(title, titleParams)
-
-        val addLocalBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_music)
-            setColorFilter(DesignEngine.Theme.colorBlue, android.graphics.PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
-            val outValue = TypedValue()
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
-            background = context.getDrawable(outValue.resourceId)
-            setOnClickListener { musicPickerLauncher.launch("audio/*") }
-        }
-        val addParams = RelativeLayout.LayoutParams(LayoutHelper.dp(40), LayoutHelper.dp(40)).apply {
-            addRule(RelativeLayout.ALIGN_PARENT_END)
-            addRule(RelativeLayout.CENTER_VERTICAL)
-        }
-        header.addView(addLocalBtn, addParams)
-
-        mainContent.addView(header)
+        // Тулбар
+        val toolbar = DesignEngine.createToolBar(
+            context = this,
+            title = "Музыка",
+            leftButtonIconRes = R.drawable.ic_back,
+            leftButtonClickListener = { finish() },
+            rightButtonIconRes = R.drawable.ic_music,
+            rightButtonClickListener = { musicPickerLauncher.launch("audio/*") },
+            isDark = isCurrentThemeDark
+        )
+        mainContent.addView(toolbar)
 
         // Tabs
         tabsLayout = LinearLayout(this).apply {
@@ -164,7 +120,7 @@ class MusicActivity : AppCompatActivity() {
         swipeRefresh = SwipeRefreshLayout(this).apply {
             setProgressBackgroundColorSchemeColor(DesignEngine.Theme.colorCardBackground)
             setColorSchemeColors(DesignEngine.Theme.colorBlue)
-            setOnRefreshListener { 
+            setOnRefreshListener {
                 if (currentMode == 0) {
                     val query = searchEdit.text.toString()
                     if (query.isNotEmpty()) searchMusic(query) else loadPopular()
@@ -173,7 +129,7 @@ class MusicActivity : AppCompatActivity() {
                 }
             }
         }
-        
+
         recycler = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@MusicActivity)
             clipToPadding = false
@@ -218,16 +174,16 @@ class MusicActivity : AppCompatActivity() {
 
     private fun switchTab(mode: Int) {
         if (currentMode == mode) return
-        
+
         currentMode = mode
         recycler.adapter = null
         emptyTv.visibility = View.GONE
-        
+
         for (i in 0 until tabsLayout.childCount) {
             val tv = tabsLayout.getChildAt(i) as TextView
             tv.setTextColor(if (i == mode) DesignEngine.Theme.colorBlue else DesignEngine.Theme.colorTextSecondary)
         }
-        
+
         if (mode == 1) {
             val initialHeight = searchContainer.height
             val animator = ValueAnimator.ofInt(initialHeight, 0)
@@ -237,7 +193,7 @@ class MusicActivity : AppCompatActivity() {
                 searchContainer.layoutParams = lp
             }
             animator.duration = 250
-            
+
             searchContainer.animate()
                 .alpha(0f)
                 .translationY(-LayoutHelper.dp(20).toFloat())
@@ -250,19 +206,19 @@ class MusicActivity : AppCompatActivity() {
                 }
                 .start()
             animator.start()
-            
+
             loadMyMusic()
         } else {
             searchContainer.visibility = View.VISIBLE
             searchContainer.alpha = 0f
             searchContainer.translationY = -LayoutHelper.dp(20).toFloat()
-            
+
             searchContainer.measure(
                 View.MeasureSpec.makeMeasureSpec(root.width, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
             )
             val targetHeight = searchContainer.measuredHeight
-            
+
             val animator = ValueAnimator.ofInt(0, targetHeight)
             animator.addUpdateListener { valueAnimator ->
                 val lp = searchContainer.layoutParams
@@ -282,7 +238,7 @@ class MusicActivity : AppCompatActivity() {
                 }
                 .start()
             animator.start()
-            
+
             loadPopular()
         }
     }
@@ -308,7 +264,7 @@ class MusicActivity : AppCompatActivity() {
             try {
                 val response = ApiClient.jamendoApi.getPopularTracks()
                 showJamendoTracks(response.results)
-            } catch (e: Exception) { 
+            } catch (e: Exception) {
                 e.printStackTrace()
                 swipeRefresh.isRefreshing = false
             }
@@ -321,7 +277,7 @@ class MusicActivity : AppCompatActivity() {
             try {
                 val response = ApiClient.jamendoApi.searchTracks(query = query)
                 showJamendoTracks(response.results)
-            } catch (e: Exception) { 
+            } catch (e: Exception) {
                 e.printStackTrace()
                 swipeRefresh.isRefreshing = false
             }
@@ -394,7 +350,7 @@ class MusicActivity : AppCompatActivity() {
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        
+
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24))
@@ -404,7 +360,7 @@ class MusicActivity : AppCompatActivity() {
             }
             layoutParams = FrameLayout.LayoutParams(LayoutHelper.dp(300), LayoutHelper.WRAP_CONTENT)
         }
-        
+
         val titleTv = TextView(context).apply {
             text = title
             textSize = 20f
@@ -412,7 +368,7 @@ class MusicActivity : AppCompatActivity() {
             setTextColor(DesignEngine.Theme.colorTextPrimary)
         }
         root.addView(titleTv)
-        
+
         val msgTv = TextView(context).apply {
             text = message
             textSize = 16f
@@ -422,7 +378,7 @@ class MusicActivity : AppCompatActivity() {
             layoutParams = p
         }
         root.addView(msgTv)
-        
+
         val buttons = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END
@@ -430,7 +386,7 @@ class MusicActivity : AppCompatActivity() {
             p.topMargin = LayoutHelper.dp(24)
             layoutParams = p
         }
-        
+
         val btnCancel = Button(context).apply {
             text = "ОТМЕНА"
             background = null
@@ -438,7 +394,7 @@ class MusicActivity : AppCompatActivity() {
             setOnClickListener { dialog.dismiss() }
         }
         buttons.addView(btnCancel)
-        
+
         val btnOk = Button(context).apply {
             text = "УДАЛИТЬ"
             background = null
@@ -449,7 +405,7 @@ class MusicActivity : AppCompatActivity() {
             }
         }
         buttons.addView(btnOk)
-        
+
         root.addView(buttons)
         dialog.setContentView(root)
         dialog.show()
@@ -465,9 +421,9 @@ class MusicActivity : AppCompatActivity() {
             val track = tracks[position]
             val cell = holder.itemView as MusicCell
             cell.setData(track.name, track.artistName, track.image)
-            
+
             val isDownloaded = MusicManager.playlist.value.any { it.title == track.name && it.artist == track.artistName }
-            
+
             if (isDownloaded) {
                 cell.moreBtn.setImageResource(R.drawable.ic_check)
                 cell.moreBtn.setColorFilter(DesignEngine.Theme.colorBlue, android.graphics.PorterDuff.Mode.SRC_IN)
@@ -479,14 +435,14 @@ class MusicActivity : AppCompatActivity() {
                 cell.moreBtn.setColorFilter(DesignEngine.Theme.colorBlue, android.graphics.PorterDuff.Mode.SRC_IN)
                 cell.moreBtn.visibility = View.VISIBLE
                 cell.loadingContainer.visibility = View.GONE
-                
+
                 cell.moreBtn.setOnClickListener {
                     cell.moreBtn.visibility = View.GONE
                     cell.loadingContainer.visibility = View.VISIBLE
                     cell.progressBar.progress = 0
                     cell.progressText.text = "0%"
-                    
-                    MusicManager.downloadAndAddTrack(this@MusicActivity, track.audio, track.name, track.artistName, track.image, 
+
+                    MusicManager.downloadAndAddTrack(this@MusicActivity, track.audio, track.name, track.artistName, track.image,
                         onProgress = { progress ->
                             cell.progressBar.progress = progress
                             cell.progressText.text = "$progress%"
@@ -523,7 +479,7 @@ class MusicActivity : AppCompatActivity() {
             cell.moreBtn.setColorFilter(DesignEngine.Theme.colorLogout, android.graphics.PorterDuff.Mode.SRC_IN)
             cell.moreBtn.visibility = View.VISIBLE
             cell.loadingContainer.visibility = View.GONE
-            
+
             cell.moreBtn.setOnClickListener {
                 showCustomConfirmDialog(this@MusicActivity, "Удаление трека", "Вы уверены, что хотите удалить трек \"${track.title}\"?") {
                     MusicManager.deleteTrack(this@MusicActivity, track)

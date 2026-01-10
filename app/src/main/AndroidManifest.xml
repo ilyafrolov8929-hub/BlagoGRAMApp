@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.camera.any" />
 
     <application
         android:name=".App"
@@ -44,6 +47,8 @@
         <activity android:name=".ChatSettingsActivity" />
         <activity android:name=".WallpaperPreviewActivity" />
         <activity android:name=".PrivaciActivity" />
+        <activity android:name=".CameraActivity" 
+            android:theme="@style/Theme.App.NoActionBar" />
 
         <activity android:name=".ChatActivity"
             android:windowSoftInputMode="adjustNothing"

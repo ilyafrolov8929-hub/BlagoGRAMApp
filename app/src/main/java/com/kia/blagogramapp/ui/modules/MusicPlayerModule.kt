@@ -1,12 +1,14 @@
 package com.kia.blagogramapp.ui.modules
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
+import android.graphics.drawable.ClipDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
@@ -36,14 +38,14 @@ class MiniPlayer(context: Context) : CardView(context) {
     private val artistView: TextView
     private val playPauseBtn: ImageView
     private val progressBar: ProgressBar
-    
+
     private var updateJob: Job? = null
 
     init {
         radius = LayoutHelper.dp(16).toFloat()
         cardElevation = LayoutHelper.dp(8).toFloat()
         setCardBackgroundColor(DesignEngine.Theme.colorCardBackground)
-        
+
         val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
 
         progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -97,7 +99,7 @@ class MiniPlayer(context: Context) : CardView(context) {
         artistView.text = track.artist
         coverView.load(track.albumArtUri) { error(R.drawable.ic_music); placeholder(R.drawable.ic_music) }
         playPauseBtn.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
-        
+
         progressBar.max = track.duration.toInt()
         startUpdateTask()
     }
@@ -118,10 +120,11 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
     private val titleView: TextView
     private val artistView: TextView
     private val playPauseBtn: FrameLayout
+    // ВОЗВРАЩАЕМ SEEKBAR
     private val seekBar: SeekBar
     private val timeCurrent: TextView
     private val timeTotal: TextView
-    
+
     private var updateJob: Job? = null
     var onCloseListener: (() -> Unit)? = null
 
@@ -131,11 +134,37 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         isFocusable = true
         elevation = LayoutHelper.dp(20).toFloat()
 
-        val scroll = ScrollView(context).apply { isFillViewport = true }
+        val themePrefs = context.getSharedPreferences("app_theme", AppCompatActivity.MODE_PRIVATE)
+        val isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
+
+        val toolbar = DesignEngine.createToolBar(
+            context = context,
+            title = "Ваша музыка",
+            leftButtonIconRes = R.drawable.ic_back,
+            rightButtonIconRes = null,
+            isDark = isCurrentThemeDark,
+            leftButtonClickListener = { onCloseListener?.invoke() },
+            rightButtonClickListener = null
+        ).apply {
+            id = View.generateViewId()
+        }
+        addView(toolbar, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+
+        val bottomControls = LinearLayout(context).apply {
+            id = View.generateViewId()
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(DesignEngine.Theme.colorBackground)
+            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(16), LayoutHelper.dp(24), LayoutHelper.dp(40))
+        }
+
+        val scroll = ScrollView(context).apply {
+            isFillViewport = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
         val scrollContent = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(LayoutHelper.dp(32), LayoutHelper.dp(100), LayoutHelper.dp(32), LayoutHelper.dp(200))
+            setPadding(LayoutHelper.dp(32), LayoutHelper.dp(32), LayoutHelper.dp(32), LayoutHelper.dp(32))
         }
 
         coverView = ShapeableImageView(context).apply {
@@ -143,7 +172,9 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
             shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(24).toFloat()).build()
             elevation = LayoutHelper.dp(10).toFloat()
         }
-        scrollContent.addView(coverView, LayoutHelper.createLinear(280, 280, gravity = Gravity.CENTER_HORIZONTAL))
+        scrollContent.addView(coverView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, gravity = Gravity.CENTER_HORIZONTAL, top = 24, bottom = 0).apply {
+            height = context.resources.displayMetrics.widthPixels - LayoutHelper.dp(64)
+        })
 
         titleView = TextView(context).apply {
             textSize = 22f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary)
@@ -157,98 +188,137 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         scrollContent.addView(artistView)
 
         scroll.addView(scrollContent)
-        addView(scroll, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        val scrollParams = LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT)
+        scrollParams.addRule(RelativeLayout.BELOW, toolbar.id)
+        scrollParams.addRule(RelativeLayout.ABOVE, bottomControls.id)
+        addView(scroll, scrollParams)
 
-        val closeBtn = ImageView(context).apply {
-            id = View.generateViewId()
-            setImageResource(R.drawable.ic_back)
-            setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
-            val outValue = TypedValue()
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
-            if (outValue.resourceId != 0) background = context.getDrawable(outValue.resourceId)
-            setOnClickListener { onCloseListener?.invoke() ?: (parent as? ViewGroup)?.removeView(this@FullPlayer) }
+        // ИЗМЕНЕНИЕ: Создаем кастомный Drawable для SeekBar
+        val cornerRadius = LayoutHelper.dp(23).toFloat()
+        val progressDrawable = LayerDrawable(arrayOf(
+            // Фон (неактивная часть)
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(DesignEngine.Theme.colorHeader) // Используем серый цвет для фона
+                cornerRadii = floatArrayOf(cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius)
+            },
+            // Прогресс (активная часть)
+            ClipDrawable(
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(DesignEngine.Theme.colorBlue)
+                    cornerRadii = floatArrayOf(cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius)
+                },
+                Gravity.START,
+                ClipDrawable.HORIZONTAL
+            ).apply { id = android.R.id.progress }
+        )).apply {
+            setId(0, android.R.id.background)
         }
-        addView(closeBtn, LayoutHelper.createRelative(48, 48, 16, 40, 0, 0))
 
-        val bottomControls = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorBackground)
-            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(16), LayoutHelper.dp(24), LayoutHelper.dp(40))
-        }
-
+        // ИЗМЕНЕНИЕ: Создаем и стилизуем SeekBar
         seekBar = SeekBar(context).apply {
-            progressDrawable.setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
-            thumb.setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
+            this.progressDrawable = progressDrawable
+            // Делаем "бегунок" полностью прозрачным, чтобы его не было видно
+            this.thumb.alpha = 0
+            // ↓↓↓ ДОБАВЬТЕ ЭТИ ДВЕ СТРОЧКИ ↓↓↓
+            this.setPadding(0, 0, 0, 0)
+            this.splitTrack = false
+            // Возвращаем обработчик перемотки
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) { if (f) MusicManager.seekTo(p) }
+                override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        MusicManager.seekTo(p)
+                        // Обновляем текст текущего времени сразу при перемотке
+                        timeCurrent.text = formatTime(p.toLong())
+                    }
+                }
                 override fun onStartTrackingTouch(s: SeekBar?) {}
                 override fun onStopTrackingTouch(s: SeekBar?) {}
             })
         }
-        bottomControls.addView(seekBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+
+        // Добавляем SeekBar с нужной высотой и отступами, чтобы было легче нажимать
+        bottomControls.addView(seekBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0))
 
         val timeBox = RelativeLayout(context)
         timeCurrent = TextView(context).apply { textSize = 11f; setTextColor(DesignEngine.Theme.colorTextSecondary) }
         timeTotal = TextView(context).apply { textSize = 11f; setTextColor(DesignEngine.Theme.colorTextSecondary) }
-        val totalP = RelativeLayout.LayoutParams(-2, -2).apply { addRule(RelativeLayout.ALIGN_PARENT_END) }
+        val totalP = LayoutParams(-2, -2).apply { addRule(ALIGN_PARENT_END) }
         timeBox.addView(timeCurrent); timeBox.addView(timeTotal, totalP)
-        bottomControls.addView(timeBox, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, -2))
+        bottomControls.addView(timeBox, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, -2, top = 4))
 
         val buttons = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(0, LayoutHelper.dp(24), 0, 0)
         }
 
-        val prev = ImageView(context).apply { 
+        val prev = ImageView(context).apply {
             setImageResource(R.drawable.ic_prev); setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
             setOnClickListener { MusicManager.playPrevious() }
+            background = createSelectableBackground(context)
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
         }
         buttons.addView(prev, LayoutHelper.createLinear(48, 48))
 
         playPauseBtn = FrameLayout(context).apply {
-            val circle = View(context).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(DesignEngine.Theme.colorBlue) } }
+            val circle = View(context).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (isCurrentThemeDark) Color.parseColor("#2A2A2A") else Color.parseColor("#F0F0F0"))
+                }
+            }
             addView(circle, LayoutHelper.createFrame(70, 70))
-            val icon = ImageView(context).apply { setImageResource(R.drawable.ic_play); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) }
+            val icon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_play)
+                setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
+            }
             addView(icon, LayoutHelper.createFrame(32, 32, Gravity.CENTER))
             setOnClickListener { MusicManager.togglePlayPause() }
         }
-        buttons.addView(playPauseBtn, LayoutHelper.createLinear(70, 70, 0f, 0, 32, 0, 32, 0))
+        buttons.addView(playPauseBtn, LayoutHelper.createLinear(70, 70, 0f, 0, 48, 0, 48, 0))
 
-        val next = ImageView(context).apply { 
+        val next = ImageView(context).apply {
             setImageResource(R.drawable.ic_next); setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
             setOnClickListener { MusicManager.playNext() }
+            background = createSelectableBackground(context)
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
         }
         buttons.addView(next, LayoutHelper.createLinear(48, 48))
 
         bottomControls.addView(buttons)
-        val bParams = RelativeLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
-        bParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+        val bParams = LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
+        bParams.addRule(ALIGN_PARENT_BOTTOM)
         addView(bottomControls, bParams)
+    }
+
+    private fun createSelectableBackground(context: Context): Drawable? = with(TypedValue()) {
+        context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, this, true)
+        context.getDrawable(resourceId)
     }
 
     fun animateOpen(fromView: View) {
         val location = IntArray(2)
         fromView.getLocationInWindow(location)
-        
+
         visibility = View.VISIBLE
         alpha = 0f
-        
+
         post {
             val fromX = location[0].toFloat()
             val fromY = location[1].toFloat()
             val fromW = fromView.width.toFloat()
             val fromH = fromView.height.toFloat()
-            
+
             val screenW = width.toFloat()
             val screenH = height.toFloat()
-            
+
             if (screenW == 0f || screenH == 0f) return@post
 
             translationX = fromX + fromW / 2 - screenW / 2
             translationY = fromY + fromH / 2 - screenH / 2
             scaleX = fromW / screenW
             scaleY = fromH / screenH
-            
+
             animate()
                 .alpha(1f)
                 .translationX(0f)
@@ -265,15 +335,15 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
     fun animateClose(toView: View, onEnd: () -> Unit) {
         val location = IntArray(2)
         toView.getLocationInWindow(location)
-        
+
         val toX = location[0].toFloat()
         val toY = location[1].toFloat()
         val toW = toView.width.toFloat()
         val toH = toView.height.toFloat()
-        
+
         val screenW = width.toFloat()
         val screenH = height.toFloat()
-        
+
         animate()
             .alpha(0f)
             .translationX(toX + toW / 2 - screenW / 2)
@@ -295,6 +365,8 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         titleView.text = track.title
         artistView.text = track.artist
         coverView.load(track.albumArtUri) { error(R.drawable.ic_music); placeholder(R.drawable.ic_music) }
+
+        // Связываем данные с SeekBar
         seekBar.max = track.duration.toInt()
         timeTotal.text = formatTime(track.duration)
         val icon = playPauseBtn.getChildAt(1) as ImageView
@@ -307,6 +379,7 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         updateJob = CoroutineScope(Dispatchers.Main).launch {
             while (true) {
                 val pos = MusicManager.getCurrentPosition()
+                // Обновляем SeekBar
                 seekBar.progress = pos
                 timeCurrent.text = formatTime(pos.toLong())
                 delay(1000)

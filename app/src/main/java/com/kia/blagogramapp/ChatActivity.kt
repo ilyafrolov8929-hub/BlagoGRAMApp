@@ -78,7 +78,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var messageInput: EditText
     private lateinit var attachmentsRecycler: RecyclerView
     private lateinit var headerContainer: FrameLayout
-    private lateinit var headerBlurView: View // <--- Добавьте эту переменную в список полей класса
+    private lateinit var headerBlurView: View
     private lateinit var inputContainer: LinearLayout
     private lateinit var emptyText: TextView
     private lateinit var chatNameView: TextView
@@ -114,21 +114,11 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
+        val root = DesignEngine.initializeScreenWithFrameLayout(this)
+        setContentView(root)
 
         createUI()
-
+        
         chatId = intent.getIntExtra("chat_id", 0)
         targetUserId = intent.getIntExtra("user_id", 0)
 
@@ -495,16 +485,14 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
         setContentView(rootLayout)
 
-        headerBlurView = View(this).apply {
-            // Начальные стили, будут обновляться динамически
-        }
-        rootLayout.addView(headerBlurView) // <--- Добавьте его в rootLayout
+        headerBlurView = View(this)
+        rootLayout.addView(headerBlurView)
 
         wallpaperView = ImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
         }
         rootLayout.addView(wallpaperView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
-        
+
         wallpaperBlurView = ImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             visibility = View.GONE
@@ -536,13 +524,11 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         }
         listContainer.addView(emptyText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
         rootLayout.addView(listContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
-        // В методе createUI(), после инициализации listContainer
 
         val (header, avatar, name) = DesignEngine.createChatHeader(
             context = this,
             onBackClick = { finish() },
             onMenuClick = {
-                // TODO: Заменить на полноценное меню
                 Toast.makeText(this, "Меню чата", Toast.LENGTH_SHORT).show()
             },
             onHeaderClick = {
@@ -558,16 +544,14 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         chatAvatarView = avatar
         chatNameView = name
 
-        // LayoutParams для хедера с отступами по бокам
         val headerParams = LayoutHelper.createFrame(
             LayoutHelper.MATCH_PARENT,
             LayoutHelper.WRAP_CONTENT,
             Gravity.TOP or Gravity.FILL_HORIZONTAL,
-            left = 8, top = 0, right = 8, bottom = 0 // <--- Отступы по бокам
+            left = 8, top = 0, right = 8, bottom = 0
         )
         rootLayout.addView(headerContainer, headerParams)
 
-        // 2. Слой размытия (Blur Layer) — подложка под полем ввода
         val bottomBlurView = View(this).apply {
             val footerBg = GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
@@ -747,8 +731,15 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == Activity.RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
-            UCrop.getOutput(data!!)?.let { MediaPickerSheet.currentInstance?.updatePreviewUri(it) }
+        if (resultCode == Activity.RESULT_OK) {
+            when (requestCode) {
+                UCrop.REQUEST_CROP -> {
+                    UCrop.getOutput(data!!)?.let { MediaPickerSheet.currentInstance?.updatePreviewUri(it) }
+                }
+                1001 -> {
+                    data?.data?.let { uri -> MediaPickerSheet.currentInstance?.showPreview(uri) }
+                }
+            }
         }
     }
 }

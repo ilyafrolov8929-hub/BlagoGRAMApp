@@ -30,29 +30,16 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // 1. Инициализация тем
-        DesignEngine.init(this)
+
+        // 1. Инициализируем экран и получаем готовый FrameLayout
+        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
+        rootLayout.id = View.generateViewId() // Сохраняем присвоение ID, если он где-то используется
+
+        // 2. Получаем тему, так как она нужна для логики UI (цвета полей ввода)
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        DesignEngine.Theme.apply(isDarkTheme)
 
-        // 2. Настройка окна
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val window = window
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-        
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
-
-        // 3. Верстка UI кодом
-        val rootLayout = FrameLayout(this)
-        rootLayout.id = View.generateViewId()
-        rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
-        
-        // Обработка Insets (клавиатура и бары)
+        // 3. Обработка Insets (клавиатура и бары) - этот код специфичен и остается
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
             view.setPadding(

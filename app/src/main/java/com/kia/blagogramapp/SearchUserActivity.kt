@@ -40,32 +40,14 @@ class SearchUserActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализация тем
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        // Enable Edge-to-Edge
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT // Make nav bar transparent like in ChatsActivity
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
-
-        // Root Layout
-        val rootLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorBackground) // Theme color
-        }
+        // 1. Инициализируем экран и сразу получаем готовый корневой layout
+        val rootLayout = DesignEngine.initializeScreen(this)
         setContentView(rootLayout)
+
+        // 2. Обновляем локальные переменные темы, так как они нужны для тулбара
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
+        isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
         // Toolbar from DesignEngine
         val toolbar = DesignEngine.createToolBar(

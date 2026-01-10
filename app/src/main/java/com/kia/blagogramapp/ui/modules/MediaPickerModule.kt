@@ -3,6 +3,7 @@ package com.kia.blagogramapp.ui.modules
 import android.app.Activity
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
@@ -16,9 +17,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.*
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,6 +33,7 @@ import coil.load
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.imageview.ShapeableImageView
+import com.kia.blagogramapp.CameraActivity
 import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.LayoutHelper
 import com.kia.blagogramapp.R
@@ -112,7 +120,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
         header.addView(titleContainer, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
 
         val closeBtn = ImageView(context).apply { setImageResource(R.drawable.ic_close_small); setColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN); setOnClickListener { dialog?.dismiss() } }
-        header.addView(closeBtn, LayoutHelper.createRelative(24, 24).apply { addRule(RelativeLayout.ALIGN_PARENT_RIGHT) })
+        header.addView(closeBtn, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply { addRule(RelativeLayout.ALIGN_PARENT_RIGHT) })
         gridContainer.addView(header)
 
         recyclerView = RecyclerView(context).apply {
@@ -243,272 +251,110 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
     }
 
     private fun initAvatarEditor() {
-        // Используем FrameLayout как корень, чтобы накладывать слои
-        val editorRoot = FrameLayout(context).apply {
-            setBackgroundColor(Color.BLACK)
-        }
-
-        // 1. Слой с Кроппером (самый нижний)
+        val editorRoot = FrameLayout(context).apply { setBackgroundColor(Color.BLACK) }
         val cropContainer = FrameLayout(context)
-        editorImage = com.github.chrisbanes.photoview.PhotoView(context).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-        }
+        editorImage = com.github.chrisbanes.photoview.PhotoView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         cropContainer.addView(editorImage, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         editorOverlay = CircleOverlayView(context)
         cropContainer.addView(editorOverlay, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-
         editorRoot.addView(cropContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
 
-        // 2. ВЕРХНЯЯ ПАНЕЛЬ (Хедер + Миниатюра внутри)
-        val headerStack = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorSheetBackground)
-        }
-
-        // Верхняя строка: Кнопка назад и заголовок
+        val headerStack = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(DesignEngine.Theme.colorSheetBackground) }
         val headerTopRow = RelativeLayout(context)
-
-        // Кнопка назад (исправлено создание RelativeLayout)
-        val backBtn = ImageView(context).apply {
+        val backBtn = ImageView(context).apply { 
             setImageResource(R.drawable.ic_back)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
             setOnClickListener { showGrid() }
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
+            val p = LayoutHelper.dp(12)
+            setPadding(p, p, p, p)
         }
-        headerTopRow.addView(backBtn, LayoutHelper.createRelative(48, 48, RelativeLayout.CENTER_VERTICAL))
-
-        headerTopRow.addView(TextView(context).apply {
-            text = "Миниатюра"
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-        }, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        })
-
+        headerTopRow.addView(backBtn, LayoutHelper.createRelative(48, 48).apply { addRule(RelativeLayout.CENTER_VERTICAL) })
+        headerTopRow.addView(TextView(context).apply { text = "Миниатюра"; textSize = 20f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) }, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
         headerStack.addView(headerTopRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 56))
 
-        // Блок ПРЕВЬЮ (внутри хедера)
-        val previewRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(LayoutHelper.dp(30), 0, LayoutHelper.dp(30), LayoutHelper.dp(20))
-        }
-
-        editorSmallAvatar = ShapeableImageView(context).apply {
-            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(20).toFloat()).build()
-            scaleType = ImageView.ScaleType.MATRIX
-            setBackgroundColor(Color.GRAY)
-        }
+        val previewRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(LayoutHelper.dp(30), 0, LayoutHelper.dp(30), LayoutHelper.dp(20)) }
+        editorSmallAvatar = ShapeableImageView(context).apply { shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(20).toFloat()).build(); scaleType = ImageView.ScaleType.MATRIX; setBackgroundColor(Color.GRAY) }
         previewRow.addView(editorSmallAvatar, LayoutHelper.createLinear(40, 40))
-
-        val nameContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(LayoutHelper.dp(12), 0, 0, 0)
-        }
-        editorName = TextView(context).apply {
-            val prefs = context.getSharedPreferences("app", Context.MODE_PRIVATE)
-            text = prefs.getString("display_name", "Пользователь")
-            textSize = 15f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-        }
+        val nameContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(LayoutHelper.dp(12), 0, 0, 0) }
+        editorName = TextView(context).apply { text = context.getSharedPreferences("app", Context.MODE_PRIVATE).getString("display_name", "Пользователь"); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) }
         nameContainer.addView(editorName)
-        nameContainer.addView(TextView(context).apply {
-            text = "пример миниатюры"
-            textSize = 12f
-            setTextColor(0x80FFFFFF.toInt())
-        })
-        previewRow.addView(nameContainer)
-        headerStack.addView(previewRow)
+        nameContainer.addView(TextView(context).apply { text = "пример миниатюры"; textSize = 12f; setTextColor(0x80FFFFFF.toInt()) })
+        previewRow.addView(nameContainer); headerStack.addView(previewRow)
 
-        // Игнорируем отступы системы для хедера, чтобы он заезжал под статус-бар
-        ViewCompat.setOnApplyWindowInsetsListener(headerStack) { v, insets ->
-            val status = insets.getInsets(WindowInsetsCompat.Type.statusBars())
-            v.setPadding(0, status.top, 0, 0)
-            insets
-        }
-
-        // Градиент ПОД хедером
-        val topGradient = View(context).apply {
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(DesignEngine.Theme.colorSheetBackground, Color.TRANSPARENT)
-            )
-        }
-
+        ViewCompat.setOnApplyWindowInsetsListener(headerStack) { v, insets -> v.setPadding(0, insets.getInsets(WindowInsetsCompat.Type.statusBars()).top, 0, 0); insets }
         val topFixedContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        topFixedContainer.addView(headerStack)
-        topFixedContainer.addView(topGradient, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 80))
-
+        topFixedContainer.addView(headerStack); topFixedContainer.addView(View(context).apply { background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(DesignEngine.Theme.colorSheetBackground, Color.TRANSPARENT)) }, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 80))
         editorRoot.addView(topFixedContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP))
 
-        // 3. НИЖНЯЯ ПАНЕЛЬ (Кнопка + Градиент)
         val bottomFixedContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-
-        val bottomGradient = View(context).apply {
-            background = GradientDrawable(
-                GradientDrawable.Orientation.BOTTOM_TOP,
-                intArrayOf(DesignEngine.Theme.colorSheetBackground, Color.TRANSPARENT)
-            )
-        }
-
-        val bottomBar = FrameLayout(context).apply {
-            setBackgroundColor(DesignEngine.Theme.colorSheetBackground)
-            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(16), LayoutHelper.dp(24), LayoutHelper.dp(32))
-        }
-
-        bottomBar.addView(FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadius = LayoutHelper.dp(12).toFloat()
-            }
-            setOnClickListener { cropAndFinish() }
-            addView(TextView(context).apply {
-                text = "Продолжить"
-                setTextColor(Color.BLACK)
-                typeface = Typeface.DEFAULT_BOLD
-                textSize = 16f
-            }, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
-        }, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 54))
-
-        bottomFixedContainer.addView(bottomGradient, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 80))
+        bottomFixedContainer.addView(View(context).apply { background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(DesignEngine.Theme.colorSheetBackground, Color.TRANSPARENT)) }, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 80))
+        val bottomBar = FrameLayout(context).apply { setBackgroundColor(DesignEngine.Theme.colorSheetBackground); setPadding(LayoutHelper.dp(24), LayoutHelper.dp(16), LayoutHelper.dp(24), LayoutHelper.dp(32)) }
+        bottomBar.addView(FrameLayout(context).apply { background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = LayoutHelper.dp(12).toFloat() }; setOnClickListener { cropAndFinish() }; addView(TextView(context).apply { text = "Продолжить"; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD; textSize = 16f }, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER)) }, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 54))
         bottomFixedContainer.addView(bottomBar)
-
         editorRoot.addView(bottomFixedContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
 
-        editorContainer.removeAllViews()
-        editorContainer.addView(editorRoot, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-
+        editorContainer.removeAllViews(); editorContainer.addView(editorRoot, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         updateSystemBars()
         editorImage.attacher.setOnMatrixChangeListener { syncSmallPreview() }
     }
 
-
-
     private fun syncSmallPreview() {
         val drawable = editorImage.drawable ?: return
-        val matrix = Matrix()
-        editorImage.attacher.getDisplayMatrix(matrix)
-
-        val overlaySize = editorOverlay.getSize()
-        val cx = editorOverlay.getCenterX()
-        val cy = editorOverlay.getCenterY()
-
-        val smallPreviewSize = LayoutHelper.dp(40).toFloat()
-        val scale = smallPreviewSize / overlaySize
-
-        val finalMatrix = Matrix(matrix)
-        finalMatrix.postTranslate(-cx, -cy)
-        finalMatrix.postScale(scale, scale)
-        finalMatrix.postTranslate(smallPreviewSize / 2f, smallPreviewSize / 2f)
-
-        editorSmallAvatar.imageMatrix = finalMatrix
-        editorSmallAvatar.invalidate()
+        val matrix = Matrix(); editorImage.attacher.getDisplayMatrix(matrix)
+        val overlaySize = editorOverlay.getSize(); val cx = editorOverlay.getCenterX(); val cy = editorOverlay.getCenterY()
+        val smallPreviewSize = LayoutHelper.dp(40).toFloat(); val scale = smallPreviewSize / overlaySize
+        val finalMatrix = Matrix(matrix).apply { postTranslate(-cx, -cy); postScale(scale, scale); postTranslate(smallPreviewSize / 2f, smallPreviewSize / 2f) }
+        editorSmallAvatar.imageMatrix = finalMatrix; editorSmallAvatar.invalidate()
     }
 
     private fun openExternalEditor(uri: Uri) {
         val activity = context as? Activity ?: return
-        val destinationUri = Uri.fromFile(File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg"))
         val options = UCrop.Options().apply {
-            setToolbarColor(DesignEngine.Theme.colorBackground)
-            setStatusBarColor(DesignEngine.Theme.colorBackground)
-            setToolbarWidgetColor(DesignEngine.Theme.colorTextPrimary)
-            setActiveControlsWidgetColor(DesignEngine.Theme.colorBlue)
-            setRootViewBackgroundColor(DesignEngine.Theme.colorBackground)
-            setCropFrameColor(Color.WHITE)
-            setToolbarTitle("Редактор")
+            setToolbarColor(DesignEngine.Theme.colorBackground); setStatusBarColor(DesignEngine.Theme.colorBackground)
+            setToolbarWidgetColor(DesignEngine.Theme.colorTextPrimary); setActiveControlsWidgetColor(DesignEngine.Theme.colorBlue)
+            setRootViewBackgroundColor(DesignEngine.Theme.colorBackground); setCropFrameColor(Color.WHITE); setToolbarTitle("Редактор")
         }
-        UCrop.of(uri, destinationUri).withOptions(options).start(activity)
+        UCrop.of(uri, Uri.fromFile(File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg"))).withOptions(options).start(activity)
     }
 
     private fun cropAndFinish() {
-        val drawable = editorImage.drawable as? BitmapDrawable ?: return
-        val originalBitmap = drawable.bitmap
+        val originalBitmap = (editorImage.drawable as? BitmapDrawable)?.bitmap ?: return
         val rect = editorOverlay.getCropRect(editorImage)
-        
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val matrix = Matrix(); editorImage.getDisplayMatrix(matrix)
                 val inverse = Matrix(); matrix.invert(inverse)
                 val mappedRect = RectF(); inverse.mapRect(mappedRect, rect)
-                
-                val cropped = Bitmap.createBitmap(
-                    originalBitmap,
-                    mappedRect.left.toInt().coerceAtLeast(0),
-                    mappedRect.top.toInt().coerceAtLeast(0),
-                    mappedRect.width().toInt().coerceAtMost(originalBitmap.width - mappedRect.left.toInt()),
-                    mappedRect.height().toInt().coerceAtMost(originalBitmap.height - mappedRect.top.toInt())
-                )
-                
+                val cropped = Bitmap.createBitmap(originalBitmap, mappedRect.left.toInt().coerceAtLeast(0), mappedRect.top.toInt().coerceAtLeast(0), mappedRect.width().toInt().coerceAtMost(originalBitmap.width - mappedRect.left.toInt()), mappedRect.height().toInt().coerceAtMost(originalBitmap.height - mappedRect.top.toInt()))
                 val file = File(context.cacheDir, "avatar_${System.currentTimeMillis()}.jpg")
                 FileOutputStream(file).use { cropped.compress(Bitmap.CompressFormat.JPEG, 90, it) }
-                
-                (context as? Activity)?.runOnUiThread {
-                    dialog?.dismiss()
-                    onResult?.invoke(listOf(Uri.fromFile(file)), null)
-                }
+                (context as? Activity)?.runOnUiThread { dialog?.dismiss(); onResult?.invoke(listOf(Uri.fromFile(file)), null) }
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     private fun updateSystemBars() {
         val activity = context as? Activity ?: return
-        val window = activity.window
-        val isEditor = editorContainer.visibility == View.VISIBLE
-
-        // 1. Говорим Activity игнорировать границы системных баров
+        val window = activity.window; val isEditor = editorContainer.visibility == View.VISIBLE
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
         if (isEditor) {
             val bgColor = DesignEngine.Theme.colorSheetBackground
-
-            // --- ДОБАВЬТЕ ЭТУ СТРОКУ ---
-            // Убирает системное затемнение фона (черную пелену) за панелью
             dialog?.window?.setDimAmount(0f)
-            // ---------------------------
-
-            // 2. Устанавливаем идентичный фон окна
             window.setBackgroundDrawable(ColorDrawable(bgColor))
-
-            // 3. Делаем бары полностью прозрачными
-            window.statusBarColor = bgColor
-            window.navigationBarColor = bgColor
-
-            // 4. Отключаем принудительный серый фильтр Android 10+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                window.isNavigationBarContrastEnforced = false
-                window.isStatusBarContrastEnforced = false
-            }
-
-            // 5. Иконки (белые на темном фоне)
-            val controller = WindowCompat.getInsetsController(window, window.decorView)
-            controller.let {
-                it.isAppearanceLightStatusBars = false
-                it.isAppearanceLightNavigationBars = false
-            }
+            window.statusBarColor = bgColor; window.navigationBarColor = bgColor
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { window.isNavigationBarContrastEnforced = false; window.isStatusBarContrastEnforced = false }
+            WindowCompat.getInsetsController(window, window.decorView).let { it.isAppearanceLightStatusBars = false; it.isAppearanceLightNavigationBars = false }
         } else {
-            // Возвращаем стандартное затемнение, если вышли из редактора (по желанию)
             dialog?.window?.setDimAmount(0.5f)
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
+            window.statusBarColor = Color.TRANSPARENT; window.navigationBarColor = Color.TRANSPARENT
         }
     }
 
-
-
-
     private fun updateUIState() {
-        val isEditor = editorContainer.visibility == View.VISIBLE
-        val isPreview = previewContainer.visibility == View.VISIBLE
-        
+        val isEditor = editorContainer.visibility == View.VISIBLE; val isPreview = previewContainer.visibility == View.VISIBLE
         behavior?.isDraggable = !(isEditor || isPreview)
         updateSystemBars()
-
-        if (isEditor) {
-            floatingBottomBar.visibility = View.GONE; return
-        }
-        
+        if (isEditor) { floatingBottomBar.visibility = View.GONE; return }
         floatingBottomBar.visibility = View.VISIBLE
         val count = adapter.selected.size
         if (isPreview) {
@@ -530,86 +376,44 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
 
     fun syncBarPosition(slideOffset: Float = lastSlideOffset) {
         lastSlideOffset = slideOffset
-        val totalHeight = height
-        if (totalHeight <= 0) return
-        if (previewContainer.visibility == View.VISIBLE || editorContainer.visibility == View.VISIBLE) {
-            floatingBottomBar.translationY = -currentKeyboardHeight.toFloat(); return
-        }
-        val translation = (totalHeight - (behavior?.peekHeight ?: 0)) * (1f - slideOffset)
-        floatingBottomBar.translationY = -translation - currentKeyboardHeight
+        val totalHeight = height; if (totalHeight <= 0) return
+        if (previewContainer.visibility == View.VISIBLE || editorContainer.visibility == View.VISIBLE) { floatingBottomBar.translationY = -currentKeyboardHeight.toFloat(); return }
+        floatingBottomBar.translationY = -(totalHeight - (behavior?.peekHeight ?: 0)) * (1f - slideOffset) - currentKeyboardHeight
     }
 
-    private fun onSendClicked() {
-        val list = if (adapter.selected.isEmpty()) currentPreviewUri?.let { listOf(it) } ?: emptyList() else adapter.selected.toList()
-        dialog?.dismiss(); onResult?.invoke(list, captionInput.text.toString())
-    }
-
-    private fun showGrid() {
-        previewContainer.visibility = View.GONE; editorContainer.visibility = View.GONE; gridContainer.visibility = View.VISIBLE
-        behavior?.state = BottomSheetBehavior.STATE_COLLAPSED; updateUIState()
-    }
-
-    private fun showPreview(uri: Uri) {
+    private fun onSendClicked() { val list = if (adapter.selected.isEmpty()) currentPreviewUri?.let { listOf(it) } ?: emptyList() else adapter.selected.toList(); dialog?.dismiss(); onResult?.invoke(list, captionInput.text.toString()) }
+    private fun showGrid() { previewContainer.visibility = View.GONE; editorContainer.visibility = View.GONE; gridContainer.visibility = View.VISIBLE; behavior?.state = BottomSheetBehavior.STATE_COLLAPSED; updateUIState() }
+    
+    fun showPreview(uri: Uri) {
         currentPreviewUri = uri
         if (mode == Mode.AVATAR) {
-            editorImage.load(uri) { listener(onSuccess = { _, result -> 
-                editorSmallAvatar.setImageDrawable(result.drawable)
-                editorImage.post { syncSmallPreview() } 
-            }) }
+            editorImage.load(uri) { listener(onSuccess = { _, result -> editorSmallAvatar.setImageDrawable(result.drawable); editorImage.post { syncSmallPreview() } }) }
             gridContainer.visibility = View.GONE; editorContainer.visibility = View.VISIBLE
-            behavior?.state = BottomSheetBehavior.STATE_EXPANDED
         } else {
             previewImage.load(uri); gridContainer.visibility = View.GONE; previewContainer.visibility = View.VISIBLE
-            behavior?.state = BottomSheetBehavior.STATE_EXPANDED
         }
-        updateUIState()
+        behavior?.state = BottomSheetBehavior.STATE_EXPANDED; updateUIState()
     }
 
     fun updatePreviewUri(uri: Uri) {
         currentPreviewUri = uri
-        if (mode == Mode.AVATAR) { 
-            editorImage.load(uri) { listener(onSuccess = { _, result -> 
-                editorSmallAvatar.setImageDrawable(result.drawable)
-                editorImage.post { syncSmallPreview() } 
-            }) }
-        } else previewImage.load(uri)
+        if (mode == Mode.AVATAR) { editorImage.load(uri) { listener(onSuccess = { _, result -> editorSmallAvatar.setImageDrawable(result.drawable); editorImage.post { syncSmallPreview() } }) } } 
+        else previewImage.load(uri)
     }
 
-    private fun togglePreviewSelection() {
-        currentPreviewUri?.let { uri -> if (adapter.selected.contains(uri)) adapter.selected.remove(uri) else adapter.selected.add(uri); adapter.notifyDataSetChanged(); updateUIState() }
-    }
-
+    private fun togglePreviewSelection() { currentPreviewUri?.let { uri -> if (adapter.selected.contains(uri)) adapter.selected.remove(uri) else adapter.selected.add(uri); adapter.notifyDataSetChanged(); updateUIState() } }
     private fun getPhotoWord(count: Int) = when { count % 100 in 11..19 -> "фотографий"; count % 10 == 1 -> "фотография"; count % 10 in 2..4 -> "фотографии"; else -> "фотографий" }
-
-    private fun createBottomItem(iconRes: Int, title: String, color: Int) = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(LayoutHelper.dp(12), 0, LayoutHelper.dp(12), 0)
-        val circle = FrameLayout(context).apply { background = GradientDrawable().apply { setColor(color); cornerRadius = LayoutHelper.dp(24).toFloat() } }
-        circle.addView(ImageView(context).apply { setImageResource(iconRes); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) }, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
-        addView(circle, LayoutHelper.createLinear(48, 48)); addView(TextView(context).apply { text = title; textSize = 11f; setTextColor(DesignEngine.Theme.colorTextSecondary); setPadding(0, LayoutHelper.dp(4), 0, 0) })
-    }
+    private fun createBottomItem(iconRes: Int, title: String, color: Int) = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(LayoutHelper.dp(12), 0, LayoutHelper.dp(12), 0); val circle = FrameLayout(context).apply { background = GradientDrawable().apply { setColor(color); cornerRadius = LayoutHelper.dp(24).toFloat() } }; circle.addView(ImageView(context).apply { setImageResource(iconRes); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) }, LayoutHelper.createFrame(24, 24, Gravity.CENTER)); addView(circle, LayoutHelper.createLinear(48, 48)); addView(TextView(context).apply { text = title; textSize = 11f; setTextColor(DesignEngine.Theme.colorTextSecondary); setPadding(0, LayoutHelper.dp(4), 0, 0) }) }
 
     private fun loadAlbums() {
-        albums.clear()
-        val cursor = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media._ID), null, null, "${MediaStore.Images.Media.DATE_ADDED} DESC")
-        val albumMap = mutableMapOf<String, Album>()
-        var allCount = 0; var firstUri: Uri? = null
-        cursor?.use {
-            val nameCol = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME); val idCol = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID); val mediaIdCol = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            while (it.moveToNext()) {
-                val name = it.getString(nameCol) ?: "Unknown"; val id = it.getString(idCol); val mediaId = it.getLong(mediaIdCol); val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaId)
-                if (firstUri == null) firstUri = uri; allCount++; val album = albumMap[id]
-                if (album == null) albumMap[id] = Album(id, name, uri, 1) else album.count++
-            }
-        }
+        albums.clear(); val cursor = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media._ID), null, null, "${MediaStore.Images.Media.DATE_ADDED} DESC")
+        val albumMap = mutableMapOf<String, Album>(); var allCount = 0; var firstUri: Uri? = null
+        cursor?.use { val nameCol = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME); val idCol = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID); val mediaIdCol = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID); while (it.moveToNext()) { val name = it.getString(nameCol) ?: "Unknown"; val id = it.getString(idCol); val mediaId = it.getLong(mediaIdCol); val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaId); if (firstUri == null) firstUri = uri; allCount++; val album = albumMap[id]; if (album == null) albumMap[id] = Album(id, name, uri, 1) else album.count++ } }
         albums.add(Album(null, "Все медиа", firstUri, allCount)); albums.addAll(albumMap.values.sortedByDescending { it.count })
     }
 
     private fun loadPhotos(bucketId: String?) {
-        val photos = mutableListOf<Uri>()
-        context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media._ID), if (bucketId != null) "${MediaStore.Images.Media.BUCKET_ID} = ?" else null, if (bucketId != null) arrayOf(bucketId) else null, "${MediaStore.Images.Media.DATE_ADDED} DESC")?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            while (cursor.moveToNext()) photos.add(ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cursor.getLong(idColumn)))
-        }
+        val photos = mutableListOf<Uri>(); context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media._ID), if (bucketId != null) "${MediaStore.Images.Media.BUCKET_ID} = ?" else null, if (bucketId != null) arrayOf(bucketId) else null, "${MediaStore.Images.Media.DATE_ADDED} DESC")?.use { cursor -> val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID); while (cursor.moveToNext()) photos.add(ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cursor.getLong(idColumn))) }
         adapter.items = photos; adapter.notifyDataSetChanged()
     }
 
@@ -617,24 +421,66 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
 
     inner class MediaAdapter : RecyclerView.Adapter<MediaAdapter.ViewHolder>() {
         var items = listOf<Uri>(); val selected = mutableListOf<Uri>(); var onSelectionChanged: (() -> Unit)? = null
-        inner class ViewHolder(view: View, val image: ShapeableImageView, val checkText: TextView) : RecyclerView.ViewHolder(view)
+        
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val image: ShapeableImageView? = view.findViewWithTag("image")
+            val checkText: TextView? = view.findViewWithTag("check")
+            val previewView: PreviewView? = view.findViewWithTag("preview")
+        }
+
+        override fun getItemViewType(position: Int) = if (position == 0 && mode == Mode.CHAT) 0 else 1
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val frame = FrameLayout(context).apply { layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, LayoutHelper.dp(120)); setPadding(1, 1, 1, 1) }
-            val iv = ShapeableImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP }; frame.addView(iv, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-            val tv = TextView(context).apply { textSize = 12f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); gravity = Gravity.CENTER }; frame.addView(tv, LayoutHelper.createFrame(24, 24, Gravity.TOP or Gravity.END, 0, 6, 6, 0))
-            return ViewHolder(frame, iv, tv)
+            if (viewType == 0) {
+                val pv = PreviewView(context).apply { tag = "preview"; scaleType = PreviewView.ScaleType.FILL_CENTER }
+                frame.addView(pv, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+                val icon = ImageView(context).apply { 
+                    setImageResource(R.drawable.ic_camera)
+                    setColorFilter(Color.WHITE)
+                    val p = LayoutHelper.dp(40)
+                    setPadding(p, p, p, p)
+                }
+                frame.addView(icon, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            } else {
+                val iv = ShapeableImageView(context).apply { tag = "image"; scaleType = ImageView.ScaleType.CENTER_CROP }
+                frame.addView(iv, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+                val tv = TextView(context).apply { tag = "check"; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); gravity = Gravity.CENTER }
+                frame.addView(tv, LayoutHelper.createFrame(24, 24, Gravity.TOP or Gravity.END, 0, 6, 6, 0))
+            }
+            return ViewHolder(frame)
         }
+
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val uri = items[position]; holder.image.load(uri)
-            val selIndex = selected.indexOf(uri)
-            holder.checkText.apply {
+            if (getItemViewType(position) == 0) {
+                holder.itemView.setOnClickListener { (context as? Activity)?.startActivityForResult(Intent(context, CameraActivity::class.java), 1001) }
+                startTinyPreview(holder.previewView)
+                return
+            }
+            val uri = items[if (mode == Mode.CHAT) position - 1 else position]
+            holder.image?.load(uri); val selIndex = selected.indexOf(uri)
+            holder.checkText?.apply {
                 visibility = if (mode == Mode.AVATAR) View.GONE else View.VISIBLE
                 if (selIndex != -1) { text = (selIndex + 1).toString(); background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorBlue); cornerRadius = LayoutHelper.dp(12).toFloat(); setStroke(LayoutHelper.dp(2), Color.WHITE) } } else { text = ""; background = GradientDrawable().apply { setColor(0x33000000); cornerRadius = LayoutHelper.dp(12).toFloat(); setStroke(LayoutHelper.dp(2), Color.WHITE) } }
                 setOnClickListener { if (selected.contains(uri)) selected.remove(uri) else selected.add(uri); notifyDataSetChanged(); onSelectionChanged?.invoke() }
             }
-            holder.image.setOnClickListener { showPreview(uri) }
+            holder.image?.setOnClickListener { showPreview(uri) }
         }
-        override fun getItemCount() = items.size
+
+        private fun startTinyPreview(previewView: PreviewView?) {
+            if (previewView == null) return
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                try {
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(context as LifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview)
+                } catch (e: Exception) {}
+            }, ContextCompat.getMainExecutor(context))
+        }
+
+        override fun getItemCount() = if (mode == Mode.CHAT) items.size + 1 else items.size
     }
 
     private fun showAlbumPicker() {
@@ -658,45 +504,21 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCC000000.toInt(); style = Paint.Style.FILL }
         private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
         private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = LayoutHelper.dp(2).toFloat() }
-        
         fun getCenterX() = width / 2f
         fun getCenterY() = height / 2f
         fun getSize() = (width.coerceAtMost(height) * 0.9f)
-
-        fun getCropRect(view: View): RectF {
-            val size = getSize(); val cx = getCenterX(); val cy = getCenterY()
-            return RectF(cx - size/2, cy - size/2, cx + size/2, cy + size/2)
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
-            val size = getSize(); canvas.drawCircle(width / 2f, height / 2f, size / 2f, clearPaint)
-            canvas.drawCircle(width / 2f, height / 2f, size / 2f, borderPaint); canvas.restoreToCount(layer)
-        }
+        fun getCropRect(view: View): RectF { val size = getSize(); val cx = getCenterX(); val cy = getCenterY(); return RectF(cx - size/2, cy - size/2, cx + size/2, cy + size/2) }
+        override fun onDraw(canvas: Canvas) { val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null); canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint); val size = getSize(); canvas.drawCircle(width / 2f, height / 2f, size / 2f, clearPaint); canvas.drawCircle(width / 2f, height / 2f, size / 2f, borderPaint); canvas.restoreToCount(layer) }
     }
 
     companion object {
         var currentInstance: MediaPickerSheet? = null
         fun show(context: Context, mode: Mode = Mode.CHAT, onResult: (List<Uri>, String?) -> Unit) {
             val dialog = BottomSheetDialog(context, R.style.BottomSheetDialogTheme); val sheet = MediaPickerSheet(context, mode); sheet.onResult = onResult; sheet.dialog = dialog
-            dialog.window?.let { window -> 
-                WindowCompat.setDecorFitsSystemWindows(window, false)
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                window.statusBarColor = Color.TRANSPARENT
-                window.navigationBarColor = DesignEngine.Theme.colorSheetBackground
-                
-                val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE).getBoolean("is_dark_theme", false)
-                val controller = WindowCompat.getInsetsController(window, window.decorView)
-                controller.isAppearanceLightStatusBars = !isDark
-                controller.isAppearanceLightNavigationBars = !isDark
-            }
+            dialog.window?.let { window -> WindowCompat.setDecorFitsSystemWindows(window, false); window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS); window.statusBarColor = Color.TRANSPARENT; window.navigationBarColor = DesignEngine.Theme.colorSheetBackground; val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE).getBoolean("is_dark_theme", false); val controller = WindowCompat.getInsetsController(window, window.decorView); controller.isAppearanceLightStatusBars = !isDark; controller.isAppearanceLightNavigationBars = !isDark }
             dialog.setContentView(sheet)
             val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-            if (bottomSheet != null) {
-                bottomSheet.setBackgroundColor(Color.TRANSPARENT); val behavior = BottomSheetBehavior.from(bottomSheet); sheet.behavior = behavior; behavior.peekHeight = LayoutHelper.dp(450); behavior.state = BottomSheetBehavior.STATE_COLLAPSED; behavior.isFitToContents = false; behavior.expandedOffset = 0; bottomSheet.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-                behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() { override fun onStateChanged(bottomSheet: View, newState: Int) { if (newState == BottomSheetBehavior.STATE_HIDDEN) { dialog.dismiss(); currentInstance = null } }; override fun onSlide(bottomSheet: View, slideOffset: Float) { sheet.syncBarPosition(slideOffset) } })
-            }
+            if (bottomSheet != null) { bottomSheet.setBackgroundColor(Color.TRANSPARENT); val behavior = BottomSheetBehavior.from(bottomSheet); sheet.behavior = behavior; behavior.peekHeight = LayoutHelper.dp(450); behavior.state = BottomSheetBehavior.STATE_COLLAPSED; behavior.isFitToContents = false; behavior.expandedOffset = 0; bottomSheet.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT; behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() { override fun onStateChanged(bottomSheet: View, newState: Int) { if (newState == BottomSheetBehavior.STATE_HIDDEN) { dialog.dismiss(); currentInstance = null } }; override fun onSlide(bottomSheet: View, slideOffset: Float) { sheet.syncBarPosition(slideOffset) } }) }
             dialog.show()
         }
     }

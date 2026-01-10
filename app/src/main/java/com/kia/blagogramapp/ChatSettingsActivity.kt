@@ -41,27 +41,12 @@ class ChatSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
+        // 1. Инициализируем экран и сразу получаем готовый корневой layout
+        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
+        setContentView(rootLayout)
+
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        // Настройка прозрачности системных панелей
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
-
-        val statusBarHeight = getStatusBarHeight()
-
-        val rootLayout = FrameLayout(this)
-        rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
-        setContentView(rootLayout)
 
         val scrollView = ScrollView(this)
         scrollView.isFillViewport = true

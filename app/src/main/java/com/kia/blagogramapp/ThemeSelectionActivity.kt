@@ -26,28 +26,13 @@ class ThemeSelectionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DesignEngine.init(this)
-        
+        val rootLayout = DesignEngine.initializeScreen(this)
+        setContentView(rootLayout)
+
+        // 2. Получаем настройки темы, так как они нужны дальше в коде
         val prefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDark = prefs.getBoolean("is_dark_theme", false)
         val useMonet = prefs.getBoolean("use_monet", false)
-
-        DesignEngine.Theme.apply(isDark, useMonet)
-        val statusBarHeight = getStatusBarHeight()
-        // Настройка прозрачности системных панелей
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-        
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDark
-        controller.isAppearanceLightNavigationBars = !isDark
-
-        // Root
-        val rootLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(DesignEngine.Theme.colorBackground)
-        }
+        val isDark = prefs.getBoolean("is_dark_theme", false)
         setContentView(rootLayout)
         // Toolbar from DesignEngine
         val toolbar = DesignEngine.createToolBar(

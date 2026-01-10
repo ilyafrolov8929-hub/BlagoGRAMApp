@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Фон (серая, незаполненная часть) -->
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <solid android:color="#E0E0E0" /> <!-- Светло-серый цвет для фона -->
+        </shape>
+    </item>
+
+    <!-- Прогресс (синяя, заполненная часть) -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="10dp" />
+                <solid android:color="?attr/colorAccent" /> <!-- Используем цвет из темы -->
+            </shape>
+        </clip>
+    </item>
+
+</layer-list>
