@@ -1,14 +1,19 @@
 package com.kia.blagogramapp
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.RelativeLayout
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.Gson
@@ -39,19 +44,25 @@ class ChatsActivity : AppCompatActivity() {
     private var pollingJob: Job? = null
     private var fullPlayer: FullPlayer? = null
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (!isGranted) {
+            Toast.makeText(this, "Уведомления отключены. Вы можете пропустить важные сообщения.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализируем все настройки экрана одним вызовом
+        checkNotificationPermission()
+
         DesignEngine.initializeScreen(this)
 
-        // 2. Обновляем локальные переменные темы, они нужны для тулбара и onResume
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
         isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
-        // 3. Создаем и устанавливаем ваш кастомный layout
-        // Его фон будет установлен автоматически, если он использует DesignEngine.Theme.colorBackground
         layout = ChatListLayout(this)
         setContentView(layout)
 
@@ -75,6 +86,39 @@ class ChatsActivity : AppCompatActivity() {
         layout.swipeRefresh.post {
             layout.swipeRefresh.isRefreshing = true
             loadChats()
+        }
+
+        // ОБРАБОТКА ПЕРЕХОДА ИЗ УВЕДОМЛЕНИЯ
+        handleNotificationIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        val chatId = intent?.getIntExtra("open_chat_id", 0) ?: 0
+        if (chatId != 0) {
+            val name = intent?.getStringExtra("open_chat_name")
+            val avatar = intent?.getStringExtra("open_chat_avatar")
+            val userId = intent?.getIntExtra("open_chat_user_id", 0) ?: 0
+
+            val chatIntent = Intent(this, ChatActivity::class.java).apply {
+                putExtra("chat_id", chatId)
+                putExtra("chat_name", name)
+                putExtra("chat_avatar", avatar)
+                putExtra("user_id", userId)
+            }
+            startActivity(chatIntent)
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
@@ -178,7 +222,6 @@ class ChatsActivity : AppCompatActivity() {
         }
         if (fullPlayer?.parent == null) {
             layout.addView(fullPlayer)
-            // Анимация открытия из мини-плеера в боковом меню
             fullPlayer?.animateOpen(sideMenu.miniPlayerContainer)
         }
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
@@ -240,7 +283,7 @@ class ChatsActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                delay(5000) // Обновляем список чатов каждые 5 секунд
+                delay(5000)
             }
         }
     }
@@ -253,7 +296,6 @@ class ChatsActivity : AppCompatActivity() {
         val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val items = chats.map { c ->
             val isSavedMessages = c.user_id == myId
-
             val prefix = if (c.last_sender_id == myId && !isSavedMessages) "Вы: " else ""
 
             ChatItem(
@@ -361,8 +403,6 @@ class ChatsActivity : AppCompatActivity() {
         }
 
         startPolling()
-
-        // Используем DesignEngine для обновления премиум-статуса
         DesignEngine.setPremiumStatus(sideMenu.premiumBadge, SubscriptionManager.isPremium(this))
     }
 
