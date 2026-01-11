@@ -453,6 +453,7 @@ object DesignEngine {
         // Правая кнопка (например, "Сохранить")
         if (rightButtonIconRes != null) {
             val rightButton = LinearLayout(context).apply {
+                tag = "toolbar_right_icon" // Добавляем тег
                 val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
                 drawable.setColor(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
                 drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)

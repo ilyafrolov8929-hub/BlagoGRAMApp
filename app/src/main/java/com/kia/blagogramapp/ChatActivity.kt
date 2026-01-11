@@ -244,7 +244,6 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         emojiKeyboard.visibility = View.VISIBLE
         emojiBtn.setImageResource(R.drawable.ic_keyboard)
         
-        // Manual translation because IME is 0
         inputContainer.translationY = -keyboardHeight.toFloat()
         listContainer.translationY = -keyboardHeight.toFloat()
         scrollToBottomBtn.translationY = -keyboardHeight.toFloat()
@@ -450,7 +449,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                     val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
                     
-                    val emojiOffset = if (emojiKeyboard.visibility == View.VISIBLE) keyboardHeight else 0
+                    val emojiOffset = if (emojiKeyboard.visibility == View.VISIBLE) emojiKeyboard.height else 0
                     val finalOffset = maxOf(imeHeight, emojiOffset)
 
                     inputContainer.translationY = -finalOffset.toFloat()
@@ -465,7 +464,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
                     val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
                     val imeHeight = if (ime != null && systemBars != null) (ime.bottom - systemBars.bottom).coerceAtLeast(0) else 0
                     
-                    if (imeHeight > 0 && emojiKeyboard.visibility == View.VISIBLE) {
+                    if (imeHeight > 0 && emojiKeyboard.visibility == View.VISIBLE && !emojiKeyboard.isSearching) {
                         emojiKeyboard.visibility = View.GONE
                         emojiBtn.setImageResource(R.drawable.ic_emoji)
                     }
@@ -741,6 +740,11 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
             onKeyboardClick = {
                 val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                 imm.showSoftInput(messageInput, 0)
+            },
+            onHeightChanged = { height ->
+                inputContainer.translationY = -height.toFloat()
+                listContainer.translationY = -height.toFloat()
+                scrollToBottomBtn.translationY = -height.toFloat()
             }
         )
         rootLayout.addView(emojiKeyboard, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))

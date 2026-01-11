@@ -140,10 +140,10 @@ class MessagesAdapter(
             // ПРИМЕНЯЕМ РАЗМЕР ТЕКСТА И ПАДДИНГИ
             if (isOnlyEmoji) {
                 val emojiSize = when (emojiCount) {
-                    1 -> 50f
-                    2 -> 35f
-                    3 -> 28f
-                    else -> 22f
+                    1 -> 64f // Очень крупный
+                    2 -> 48f
+                    3 -> 36f
+                    else -> 26f
                 }
                 text.setTextSize(TypedValue.COMPLEX_UNIT_SP, emojiSize)
                 text.setPadding(LayoutHelper.dp(8), LayoutHelper.dp(4), LayoutHelper.dp(8), LayoutHelper.dp(4))

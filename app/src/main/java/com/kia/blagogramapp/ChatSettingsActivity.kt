@@ -1,6 +1,7 @@
 package com.kia.blagogramapp
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -47,6 +48,7 @@ class ChatSettingsActivity : AppCompatActivity() {
 
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val cameraPrefs = getSharedPreferences("camera_settings", Context.MODE_PRIVATE)
 
         val scrollView = ScrollView(this)
         scrollView.isFillViewport = true
@@ -130,7 +132,7 @@ class ChatSettingsActivity : AppCompatActivity() {
         sheetContainer.addView(fontSizeCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(5)))
 
-        // --- 3. УГЛЫ БЛОКОВ С СООБЩЕНИЯМИ ---
+        // --- 2. УГЛЫ БЛОКОВ С СООБЩЕНИЯМИ ---
         sheetContainer.addView(HeaderCell(this).apply {
             text = "Углы блоков с сообщениями"
             setTextColor(DesignEngine.Theme.colorBlue)
@@ -161,6 +163,63 @@ class ChatSettingsActivity : AppCompatActivity() {
         radiusLayout.addView(radiusValue)
         radiusCard.addView(radiusLayout)
         sheetContainer.addView(radiusCard)
+        sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(16)))
+
+        // --- 3. НАСТРОЙКИ КАМЕРЫ ---
+        sheetContainer.addView(HeaderCell(this).apply { 
+            text = "Настройки камеры" 
+            setTextColor(DesignEngine.Theme.colorBlue)
+            isAllCaps = false
+            textSize = 14f
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
+        })
+
+        val cameraCard = ContainerCell(this)
+
+        // Тип камеры
+        val typeCell = TextCell(this).apply {
+            val type = cameraPrefs.getString("camera_type", "Camera 2")
+            setData("Тип камеры", R.drawable.ic_camera)
+            val valueText = TextView(context).apply {
+                text = type
+                setTextColor(DesignEngine.Theme.colorBlue)
+                textSize = 14f
+            }
+            addView(valueText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 48, 0))
+            setOnClickListener {
+                val types = arrayOf("Camera 1", "Camera 2", "Camera X")
+                AlertDialog.Builder(this@ChatSettingsActivity)
+                    .setTitle("Тип камеры")
+                    .setItems(types) { _, which ->
+                        cameraPrefs.edit().putString("camera_type", types[which]).apply()
+                        valueText.text = types[which]
+                    }
+                    .show()
+            }
+        }
+        cameraCard.addCell(typeCell)
+
+        // Бесшовное переключение
+        cameraCard.addCell(createSwitchCell("Бесшовное переключение", cameraPrefs.getBoolean("seamless", true)) { isChecked ->
+            cameraPrefs.edit().putBoolean("seamless", isChecked).apply()
+        })
+
+        // Стабилизация
+        cameraCard.addCell(createSwitchCell("Стабилизация", cameraPrefs.getBoolean("stabilization", false)) { isChecked ->
+            cameraPrefs.edit().putBoolean("stabilization", isChecked).apply()
+        })
+
+        // Запоминать последнюю камеру
+        cameraCard.addCell(createSwitchCell("Запоминать последнюю камеру", cameraPrefs.getBoolean("remember_camera", false), "При записи видеосообщений будет автоматически выбрана последняя использованная камера.") { isChecked ->
+            cameraPrefs.edit().putBoolean("remember_camera", isChecked).apply()
+        })
+
+        // Статичный зум
+        cameraCard.addCell(createSwitchCell("Статичный зум", cameraPrefs.getBoolean("static_zoom", false)) { isChecked ->
+            cameraPrefs.edit().putBoolean("static_zoom", isChecked).apply()
+        }, isLast = true)
+
+        sheetContainer.addView(cameraCard)
 
         rootLayout.addView(scrollView)
 
@@ -197,6 +256,46 @@ class ChatSettingsActivity : AppCompatActivity() {
         })
 
         updateBubbles()
+    }
+
+    private fun createSwitchCell(title: String, isChecked: Boolean, description: String? = null, onCheckedChange: (Boolean) -> Unit): LinearLayout {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
+        }
+
+        val topLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val textView = TextView(this).apply {
+            text = title
+            textSize = 16f
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val switch = Switch(this).apply {
+            this.isChecked = isChecked
+            setOnCheckedChangeListener { _, checked -> onCheckedChange(checked) }
+        }
+
+        topLayout.addView(textView)
+        topLayout.addView(switch)
+        container.addView(topLayout)
+
+        if (description != null) {
+            val descView = TextView(this).apply {
+                text = description
+                textSize = 13f
+                setTextColor(DesignEngine.Theme.colorTextSecondary)
+                setPadding(0, LayoutHelper.dp(4), LayoutHelper.dp(48), 0)
+            }
+            container.addView(descView)
+        }
+
+        return container
     }
 
     private fun showWallpaperDialog() {
