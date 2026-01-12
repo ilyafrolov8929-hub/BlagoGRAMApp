@@ -8,5 +8,6 @@ data class ChatItem(
     val last_message: String?,
     val last_time: String?,
     val unread: Int,
-    val pinned: Boolean = false
+    val pinned: Boolean = false,
+    val is_premium: Boolean = false
 )

@@ -175,7 +175,8 @@ class SearchUserActivity : AppCompatActivity() {
                 i.putExtra("chat_id", chatId)
                 i.putExtra("chat_name", user.display_name)
                 i.putExtra("chat_avatar", user.avatar)
-                i.putExtra("target_user_id", user.id) // Передаем ID пользователя явно
+                i.putExtra("user_id", user.id) // Передаем ID пользователя явно
+                i.putExtra("is_premium", user.is_premium) // Передаем статус премиума
                 startActivity(i)
                 finish()
 

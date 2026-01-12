@@ -103,12 +103,14 @@ class ChatsActivity : AppCompatActivity() {
             val name = intent?.getStringExtra("open_chat_name")
             val avatar = intent?.getStringExtra("open_chat_avatar")
             val userId = intent?.getIntExtra("open_chat_user_id", 0) ?: 0
+            val isPremium = intent?.getBooleanExtra("open_chat_is_premium", false) ?: false
 
             val chatIntent = Intent(this, ChatActivity::class.java).apply {
                 putExtra("chat_id", chatId)
                 putExtra("chat_name", name)
                 putExtra("chat_avatar", avatar)
                 putExtra("user_id", userId)
+                putExtra("is_premium", isPremium)
             }
             startActivity(chatIntent)
         }
@@ -159,16 +161,17 @@ class ChatsActivity : AppCompatActivity() {
         sideMenu.addItem("Избранное", R.drawable.ic_saved_messages) {
             val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
-            val savedChat = (layout.recycler.adapter as? ChatsAdapter)?.items?.find {
-                it is ChatItem && it.user_id == myId
-            } as? ChatItem
+            val savedChat = (layout.recycler.adapter as? ChatsAdapter)?.items?.filterIsInstance<ChatItem>()?.find {
+                it.user_id == myId
+            }
 
             if (savedChat != null) {
                 val i = Intent(this, ChatActivity::class.java)
                 i.putExtra("chat_id", savedChat.chat_id)
                 i.putExtra("chat_name", "Избранное")
                 i.putExtra("chat_avatar", "action_saved")
-                i.putExtra("target_user_id", myId)
+                i.putExtra("user_id", myId)
+                i.putExtra("is_premium", savedChat.is_premium)
                 startActivity(i)
             } else {
                 Toast.makeText(this, "Напишите самому себе, чтобы активировать Избранное", Toast.LENGTH_SHORT).show()
@@ -306,7 +309,8 @@ class ChatsActivity : AppCompatActivity() {
                 last_message = prefix + (c.last_msg ?: ""),
                 last_time = c.last_time,
                 unread = c.unread,
-                pinned = c.pinned
+                pinned = c.pinned,
+                is_premium = c.is_premium
             )
         }
 
@@ -317,7 +321,8 @@ class ChatsActivity : AppCompatActivity() {
                 i.putExtra("chat_id", chat.chat_id)
                 i.putExtra("chat_name", chat.name)
                 i.putExtra("chat_avatar", chat.avatar)
-                i.putExtra("target_user_id", chat.user_id)
+                i.putExtra("user_id", chat.user_id)
+                i.putExtra("is_premium", chat.is_premium)
                 startActivity(i)
             },
             onLongClick = { chat ->

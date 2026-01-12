@@ -55,7 +55,8 @@ class ChatsAdapter(
                 time = time,
                 unread = c.unread,
                 avatar = c.avatar,
-                pinned = c.pinned
+                pinned = c.pinned,
+                isPremium = c.is_premium
             )
             
             holder.cell.setOnClickListener { onClick(c) }

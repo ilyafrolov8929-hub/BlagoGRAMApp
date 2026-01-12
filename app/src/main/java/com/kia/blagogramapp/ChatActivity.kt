@@ -88,6 +88,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var emptyText: TextView
     private lateinit var chatNameView: TextView
     private lateinit var chatAvatarView: ShapeableImageView
+    private lateinit var premiumBadge: ImageView
     private lateinit var listContainer: FrameLayout
     private lateinit var scrollToBottomBtn: FrameLayout
     private lateinit var wallpaperView: ImageView
@@ -142,7 +143,11 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         setupViewModel()
         val chatName = intent.getStringExtra("chat_name") ?: "Чат"
         val avatarUrl = intent.getStringExtra("chat_avatar")
+        val isPremium = intent.getBooleanExtra("is_premium", false)
+
         chatNameView.text = chatName
+        premiumBadge.visibility = if (isPremium) View.VISIBLE else View.GONE
+
         if (avatarUrl == "action_saved") {
             chatAvatarView.setPadding(0, 0, 0, 0)
             chatAvatarView.scaleType = ImageView.ScaleType.CENTER
@@ -592,7 +597,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         listContainer.addView(emptyText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
         rootLayout.addView(listContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
 
-        val (header, avatar, name) = DesignEngine.createChatHeader(
+        val (header, avatar, name, badge) = DesignEngine.createChatHeader(
             context = this,
             onBackClick = { finish() },
             onMenuClick = {
@@ -610,6 +615,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         headerContainer = header
         chatAvatarView = avatar
         chatNameView = name
+        premiumBadge = badge
 
         val headerParams = LayoutHelper.createFrame(
             LayoutHelper.MATCH_PARENT,

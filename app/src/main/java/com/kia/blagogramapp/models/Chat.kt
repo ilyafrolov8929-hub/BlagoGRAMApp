@@ -9,5 +9,6 @@ data class Chat(
     val unread: Int,
     val last_sender_id: Int?,
     val user_id: Int?, // ID собеседника для личных чатов
-    val pinned: Boolean = false
+    val pinned: Boolean = false,
+    val is_premium: Boolean = false
 )

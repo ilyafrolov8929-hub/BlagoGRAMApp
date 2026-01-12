@@ -10,5 +10,6 @@ data class Message(
     val is_read: Int,
     val display_name: String,
     val avatar: String,
-    val images: List<String> = emptyList()
+    val images: List<String> = emptyList(),
+    val is_premium: Boolean = false
 )
