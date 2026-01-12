@@ -22,10 +22,7 @@ import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.models.ChatItem
 import com.kia.blagogramapp.network.RetrofitClient
-import com.kia.blagogramapp.ui.modules.ChatListLayout
-import com.kia.blagogramapp.ui.modules.FullPlayer
-import com.kia.blagogramapp.ui.modules.MessageOptionsSheet
-import com.kia.blagogramapp.ui.modules.SideMenuModule
+import com.kia.blagogramapp.ui.modules.*
 import com.kia.blagogramapp.utils.DevModeManager
 import com.kia.blagogramapp.utils.MusicManager
 import kotlinx.coroutines.*
@@ -34,7 +31,7 @@ import kotlinx.coroutines.flow.combine
 class ChatsActivity : AppCompatActivity() {
 
     private lateinit var layout: ChatListLayout
-    private lateinit var sideMenu: SideMenuModule
+    private var sideMenu: SideMenuModule? = null
     private var repo = ApiRepository(RetrofitClient.api)
 
     private var isCurrentThemeDark: Boolean = false
@@ -66,17 +63,30 @@ class ChatsActivity : AppCompatActivity() {
         layout = ChatListLayout(this)
         setContentView(layout)
 
-        sideMenu = SideMenuModule(this).create(layout, getStatusBarHeight())
-        setupSideMenu()
+        if (DesignEngine.useBottomNavigation) {
+            BottomNavigationModule(this).create(layout, BottomNavigationModule.Screen.CHATS)
+            layout.recycler.setPadding(0, layout.recycler.paddingTop, 0, LayoutHelper.dp(100))
+        } else {
+            sideMenu = SideMenuModule(this).create(layout, getStatusBarHeight())
+            setupSideMenu()
+        }
+
         observeMusic()
 
+        val toolbarLeftIcon = if (DesignEngine.useBottomNavigation) R.drawable.ic_user else R.drawable.ic_menu
         val toolbar = DesignEngine.createToolBar(
             context = this,
             title = "Lume",
-            leftButtonIconRes = R.drawable.ic_menu,
+            leftButtonIconRes = toolbarLeftIcon,
             rightButtonIconRes = R.drawable.ic_search,
             isDark = isCurrentThemeDark,
-            leftButtonClickListener = { toggleDrawer() },
+            leftButtonClickListener = { 
+                if (DesignEngine.useBottomNavigation) {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                } else {
+                    toggleDrawer()
+                }
+            },
             rightButtonClickListener = { startActivity(Intent(this, SearchUserActivity::class.java)) }
         )
         layout.addView(toolbar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
@@ -88,7 +98,6 @@ class ChatsActivity : AppCompatActivity() {
             loadChats()
         }
 
-        // ОБРАБОТКА ПЕРЕХОДА ИЗ УВЕДОМЛЕНИЯ
         handleNotificationIntent(intent)
     }
 
@@ -125,9 +134,10 @@ class ChatsActivity : AppCompatActivity() {
     }
 
     private fun setupSideMenu() {
+        val sm = sideMenu ?: return
         if (DevModeManager.isEnabled(this)) {
             val mockProfile = DevModeManager.getMockUserProfile()
-            sideMenu.updateHeader(
+            sm.updateHeader(
                 mockProfile.display_name ?: "Разработчик",
                 mockProfile.username,
                 mockProfile.status ?: "В локальном режиме",
@@ -135,7 +145,7 @@ class ChatsActivity : AppCompatActivity() {
             )
         } else {
             val prefs = getSharedPreferences("app", MODE_PRIVATE)
-            sideMenu.updateHeader(
+            sm.updateHeader(
                 prefs.getString("display_name", "Вы") ?: "Вы",
                 prefs.getString("login", "username") ?: "username",
                 prefs.getString("status", "Статус") ?: "Нет статуса",
@@ -143,22 +153,22 @@ class ChatsActivity : AppCompatActivity() {
             )
         }
 
-        sideMenu.onMusicClick = {
+        sm.onMusicClick = {
             showFullPlayer()
             toggleDrawer()
         }
 
-        sideMenu.addItem("Профиль", R.drawable.ic_user) {
+        sm.addItem("Профиль", R.drawable.ic_user) {
             startActivity(Intent(this, ProfileActivity::class.java))
             toggleDrawer()
         }
 
-        sideMenu.addItem("AI Помошник", R.drawable.ic_ai) {
+        sm.addItem("AI Помошник", R.drawable.ic_ai) {
             startActivity(Intent(this, AiChatActivity::class.java))
             toggleDrawer()
         }
 
-        sideMenu.addItem("Избранное", R.drawable.ic_saved_messages) {
+        sm.addItem("Избранное", R.drawable.ic_saved_messages) {
             val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
 
             val savedChat = (layout.recycler.adapter as? ChatsAdapter)?.items?.filterIsInstance<ChatItem>()?.find {
@@ -179,27 +189,27 @@ class ChatsActivity : AppCompatActivity() {
             toggleDrawer()
         }
 
-        sideMenu.addItem("Музыка", R.drawable.ic_music) {
+        sm.addItem("Музыка", R.drawable.ic_music) {
             startActivity(Intent(this, MusicActivity::class.java))
             toggleDrawer()
         }
 
-        sideMenu.addItem("Настройки", R.drawable.ic_settings) {
+        sm.addItem("Настройки", R.drawable.ic_settings) {
             startActivity(Intent(this, SettingsActivity::class.java))
             toggleDrawer()
         }
 
-        sideMenu.addSpacer()
-        sideMenu.addDivider()
+        sm.addSpacer()
+        sm.addDivider()
 
-        sideMenu.addItem("О приложении", R.drawable.ic_more) {
+        sm.addItem("О приложении", R.drawable.ic_more) {
             startActivity(Intent(this, AboutActivity::class.java))
             toggleDrawer()
         }
 
-        sideMenu.setPaddingBottom(20)
+        sm.setPaddingBottom(20)
 
-        sideMenu.drawerOverlay.setOnClickListener { if (isDrawerOpen) toggleDrawer() }
+        sm.drawerOverlay.setOnClickListener { if (isDrawerOpen) toggleDrawer() }
     }
 
     private fun observeMusic() {
@@ -207,7 +217,7 @@ class ChatsActivity : AppCompatActivity() {
             combine(MusicManager.currentTrack, MusicManager.isPlaying) { track, playing ->
                 track to playing
             }.collect { (track, playing) ->
-                sideMenu.updateMusic(track, playing)
+                sideMenu?.updateMusic(track, playing)
                 if (track != null) {
                     fullPlayer?.bind(track, playing)
                 }
@@ -225,28 +235,31 @@ class ChatsActivity : AppCompatActivity() {
         }
         if (fullPlayer?.parent == null) {
             layout.addView(fullPlayer)
-            fullPlayer?.animateOpen(sideMenu.miniPlayerContainer)
+            val anchor = sideMenu?.miniPlayerContainer ?: layout 
+            fullPlayer?.animateOpen(anchor)
         }
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
     }
 
     private fun closeFullPlayer() {
-        fullPlayer?.animateClose(sideMenu.miniPlayerContainer) {
+        val anchor = sideMenu?.miniPlayerContainer ?: layout
+        fullPlayer?.animateClose(anchor) {
             layout.removeView(fullPlayer)
         }
     }
 
     private fun toggleDrawer() {
+        val sm = sideMenu ?: return
         if (isDrawerOpen) {
-            sideMenu.drawerPanel.animate().translationX(-sideMenu.drawerPanel.width.toFloat())
+            sm.drawerPanel.animate().translationX(-sm.drawerPanel.width.toFloat())
                 .setInterpolator(DecelerateInterpolator())
                 .setDuration(300).start()
-            sideMenu.drawerOverlay.animate().alpha(0f).setDuration(300)
-                .withEndAction { sideMenu.drawerOverlay.visibility = View.GONE }.start()
+            sm.drawerOverlay.animate().alpha(0f).setDuration(300)
+                .withEndAction { sm.drawerOverlay.visibility = View.GONE }.start()
         } else {
-            sideMenu.drawerOverlay.visibility = View.VISIBLE
-            sideMenu.drawerOverlay.animate().alpha(1f).setDuration(300).start()
-            sideMenu.drawerPanel.animate().translationX(0f)
+            sm.drawerOverlay.visibility = View.VISIBLE
+            sm.drawerOverlay.animate().alpha(1f).setDuration(300).start()
+            sm.drawerPanel.animate().translationX(0f)
                 .setInterpolator(DecelerateInterpolator())
                 .setDuration(300).start()
         }
@@ -297,6 +310,8 @@ class ChatsActivity : AppCompatActivity() {
 
     private fun updateAdapter(chats: List<Chat>) {
         val myId = if (DevModeManager.isEnabled(this)) 1 else getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        
+        // Мапим чаты из API
         val items = chats.map { c ->
             val isSavedMessages = c.user_id == myId
             val prefix = if (c.last_sender_id == myId && !isSavedMessages) "Вы: " else ""
@@ -312,11 +327,30 @@ class ChatsActivity : AppCompatActivity() {
                 pinned = c.pinned,
                 is_premium = c.is_premium
             )
+        }.toMutableList()
+
+        // Добавляем AI Помощника в начало списка (если его нет)
+        if (items.none { it.chat_id == -100 }) {
+            items.add(0, ChatItem(
+                chat_id = -100,
+                user_id = -2,
+                name = "Lume AI",
+                avatar = "ai_bot", // Специальный тег для аватара
+                last_message = "Ваш персональный помощник",
+                last_time = "",
+                unread = 0,
+                pinned = true,
+                is_premium = true
+            ))
         }
 
         layout.recycler.adapter = ChatsAdapter(
             items = items,
             onClick = { chat ->
+                if (chat.chat_id == -100) {
+                    startActivity(Intent(this, AiChatActivity::class.java))
+                    return@ChatsAdapter
+                }
                 val i = Intent(this, ChatActivity::class.java)
                 i.putExtra("chat_id", chat.chat_id)
                 i.putExtra("chat_name", chat.name)
@@ -326,7 +360,7 @@ class ChatsActivity : AppCompatActivity() {
                 startActivity(i)
             },
             onLongClick = { chat ->
-                showChatMenu(chat)
+                if (chat.chat_id != -100) showChatMenu(chat)
             }
         )
     }
@@ -402,13 +436,14 @@ class ChatsActivity : AppCompatActivity() {
         super.onResume()
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark ||
-            themePrefs.getBoolean("use_monet", false) != isCurrentUseMonet) {
+            themePrefs.getBoolean("use_monet", false) != isCurrentUseMonet ||
+            themePrefs.getBoolean("use_bottom_navigation", false) != DesignEngine.useBottomNavigation) {
             recreate()
             return
         }
 
         startPolling()
-        DesignEngine.setPremiumStatus(sideMenu.premiumBadge, SubscriptionManager.isPremium(this))
+        sideMenu?.premiumBadge?.let { DesignEngine.setPremiumStatus(it, SubscriptionManager.isPremium(this)) }
     }
 
     override fun onPause() {

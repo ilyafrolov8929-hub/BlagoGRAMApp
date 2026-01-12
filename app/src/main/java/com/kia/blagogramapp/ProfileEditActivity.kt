@@ -37,9 +37,10 @@ class ProfileEditActivity : AppCompatActivity() {
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
     private lateinit var avatarView: ShapeableImageView
+    private lateinit var coverView: ShapeableImageView
 
     private var avatarFile: File? = null
-    private var avatarFileName: String? = null
+    private var coverFile: File? = null
 
     private var repo = ApiRepository(RetrofitClient.api)
 
@@ -96,39 +97,69 @@ class ProfileEditActivity : AppCompatActivity() {
         val scrollContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24))
+            setPadding(LayoutHelper.dp(20), LayoutHelper.dp(16), LayoutHelper.dp(20), LayoutHelper.dp(24))
         }
 
-        val avatarContainer = FrameLayout(this)
+        val headerContainer = FrameLayout(this)
         
+        coverView = ShapeableImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(DesignEngine.Theme.colorDivider)
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                .setAllCornerSizes(LayoutHelper.dp(16).toFloat())
+                .build()
+            setOnClickListener {
+                MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.COVER) { uris, _ ->
+                    if (uris.isNotEmpty()) handleSelectedCover(uris[0])
+                }
+            }
+        }
+        headerContainer.addView(coverView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 160))
+
+        val editCoverBtn = ImageView(this).apply {
+            setImageResource(R.drawable.ic_camera)
+            setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+            background = GradientDrawable().apply {
+                setColor(0x66000000)
+                shape = GradientDrawable.OVAL
+            }
+            setOnClickListener {
+                MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.COVER) { uris, _ ->
+                    if (uris.isNotEmpty()) handleSelectedCover(uris[0])
+                }
+            }
+        }
+        headerContainer.addView(editCoverBtn, LayoutHelper.createFrame(36, 36, Gravity.TOP or Gravity.END, 0, 12, 12, 0))
+
         avatarView = ShapeableImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             setBackgroundColor(Color.LTGRAY)
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setAllCornerSizes(LayoutHelper.dp(60).toFloat())
+                .setAllCornerSizes(LayoutHelper.dp(50).toFloat())
                 .build()
+            strokeWidth = LayoutHelper.dp(3).toFloat()
+            strokeColor = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBackground)
         }
-        avatarContainer.addView(avatarView, LayoutHelper.createFrame(120, 120, Gravity.CENTER))
+        headerContainer.addView(avatarView, LayoutHelper.createFrame(100, 100, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
 
         val editAvatarBtn = ImageView(this).apply {
             setImageResource(R.drawable.ic_edit)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
-            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+            setPadding(LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6))
             background = GradientDrawable().apply {
                 setColor(DesignEngine.Theme.colorBlue)
                 shape = GradientDrawable.OVAL
             }
             setOnClickListener {
                 MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.AVATAR) { uris, _ ->
-                    if (uris.isNotEmpty()) {
-                        handleSelectedAvatar(uris[0])
-                    }
+                    if (uris.isNotEmpty()) handleSelectedAvatar(uris[0])
                 }
             }
         }
-        
-        avatarContainer.addView(editAvatarBtn, LayoutHelper.createFrame(40, 40, Gravity.BOTTOM or Gravity.END))
-        scrollContainer.addView(avatarContainer, LayoutHelper.createLinear(120, 120, 0f, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 32))
+        headerContainer.addView(editAvatarBtn, LayoutHelper.createFrame(32, 32, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 35, 0, 0, 0))
+
+        scrollContainer.addView(headerContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 200, 0f, 0, 0, 0, 0, 24))
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -196,22 +227,27 @@ class ProfileEditActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
         inputName.setText(prefs.getString("display_name", ""))
         inputStatus.setText(prefs.getString("status", ""))
+        
         avatarView.load("https://blagogram.ru/avatars/${prefs.getString("avatar", "")}") {
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
+        }
+        
+        coverView.load("https://blagogram.ru/covers/${prefs.getString("cover", "")}") {
+            error(Color.LTGRAY)
         }
     }
 
     private fun handleSelectedAvatar(uri: Uri) {
         avatarView.load(uri)
         val path = uri.path ?: return
-        val originalFile = File(path)
-        
-        // Since MediaPickerSheet already returned a cropped and somewhat compressed file,
-        // we just need to ensure it's optimized for upload.
-        val compressed = compressImage(originalFile)
-        avatarFile = compressed
-        avatarFileName = compressed.name
+        avatarFile = compressImage(File(path))
+    }
+
+    private fun handleSelectedCover(uri: Uri) {
+        coverView.load(uri)
+        val path = uri.path ?: return
+        coverFile = compressImage(File(path))
     }
 
     private fun compressImage(originalFile: File): File {
@@ -221,8 +257,7 @@ class ProfileEditActivity : AppCompatActivity() {
             androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
         )
 
-        var bmp = BitmapFactory.decodeFile(originalFile.absolutePath)
-        if (bmp == null) return originalFile
+        var bmp = BitmapFactory.decodeFile(originalFile.absolutePath) ?: return originalFile
 
         val matrix = android.graphics.Matrix()
         when (orientation) {
@@ -233,7 +268,7 @@ class ProfileEditActivity : AppCompatActivity() {
 
         val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
         
-        val maxSize = 1080
+        val maxSize = 1200
         val ratio = rotated.width.toFloat() / rotated.height.toFloat()
         val newWidth: Int
         val newHeight: Int
@@ -261,20 +296,26 @@ class ProfileEditActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val avatarLocal = avatarFile
-                val response = if (avatarLocal != null) {
-                    val req = avatarLocal.asRequestBody("image/jpeg".toMediaType())
-                    val part = MultipartBody.Part.createFormData("avatar", avatarLocal.name, req)
-                    repo.profileEditMultipart(token, name, status, part)
-                } else {
-                    repo.profileEdit(token, name, status)
+                val avatarPart = avatarFile?.let {
+                    val req = it.asRequestBody("image/jpeg".toMediaType())
+                    MultipartBody.Part.createFormData("avatar", it.name, req)
+                }
+                val coverPart = coverFile?.let {
+                    val req = it.asRequestBody("image/jpeg".toMediaType())
+                    MultipartBody.Part.createFormData("cover", it.name, req)
                 }
 
+                val response = repo.profileEditMultipart(token, name, status, avatarPart, coverPart)
+
                 if (response["ok"] == true) {
-                    val result = response["result"] as Map<*, *>
-                    prefs.edit().putString("display_name", name).putString("status", status).apply()
-                    val avatarFromServer = result["avatar"]?.toString()
-                    if (avatarFromServer != null) prefs.edit().putString("avatar", avatarFromServer).apply()
+                    val result = response["result"] as? Map<*, *> ?: response
+                    prefs.edit().apply {
+                        putString("display_name", name)
+                        putString("status", status)
+                        (result["avatar"] as? String)?.let { putString("avatar", it) }
+                        (result["cover"] as? String)?.let { putString("cover", it) }
+                        apply()
+                    }
                     runOnUiThread {
                         Toast.makeText(this@ProfileEditActivity, "Сохранено!", Toast.LENGTH_SHORT).show()
                         finish()

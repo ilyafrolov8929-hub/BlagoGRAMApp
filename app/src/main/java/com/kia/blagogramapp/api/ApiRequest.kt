@@ -20,6 +20,7 @@ data class ApiRequest(
     val status: String? = null,
     val theme: String? = null,
     val avatar: String? = null,
+    val cover: String? = null,
     val avatar_data: String? = null,
     val offset: Int? = null,
     val query: String? = null,

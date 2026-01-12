@@ -29,12 +29,12 @@ class ThemeSelectionActivity : AppCompatActivity() {
         val rootLayout = DesignEngine.initializeScreen(this)
         setContentView(rootLayout)
 
-        // 2. Получаем настройки темы, так как они нужны дальше в коде
         val prefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val useMonet = prefs.getBoolean("use_monet", false)
         val isDark = prefs.getBoolean("is_dark_theme", false)
-        setContentView(rootLayout)
-        // Toolbar from DesignEngine
+        val useBottomNav = prefs.getBoolean("use_bottom_navigation", false)
+
+        // Toolbar
         val toolbar = DesignEngine.createToolBar(
             context = this,
             title = "Кастомизация",
@@ -44,132 +44,92 @@ class ThemeSelectionActivity : AppCompatActivity() {
         )
         rootLayout.addView(toolbar)
 
-        // --- ЗАГОЛОВОК СЕКЦИИ ---
-        val sectionTitle = HeaderCell(this).apply {
-            text = "ТЕМА"
-        }
-        rootLayout.addView(sectionTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 16, 16, 4))
+        // --- SECTION: THEME ---
+        rootLayout.addView(HeaderCell(this).apply { text = "ТЕМА" }, 
+            LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 16, 16, 4))
 
-        // --- CARDS CONTENT ---
         val scrollView = HorizontalScrollView(this).apply {
             isFillViewport = true
-            clipToPadding = false
             overScrollMode = View.OVER_SCROLL_NEVER
             scrollBarSize = 0
         }
 
         val cardsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
             setPadding(LayoutHelper.dp(16), 0, LayoutHelper.dp(16), 0)
         }
 
-        // 1. LIGHT THEME CARD
-        val lightCard = ThemePreviewCell(this, "Светлая", 
-            previewBg = 0xFFF5F5F5.toInt(), 
-            previewCard = 0xFFFFFFFF.toInt(),
-            previewText = 0xFF000000.toInt(),
-            previewAccent = 0xFF007AFF.toInt()
-        ).apply {
+        cardsContainer.addView(ThemePreviewCell(this, "Светлая", 0xFFF5F5F5.toInt(), 0xFFFFFFFF.toInt(), 0xFF000000.toInt(), 0xFF007AFF.toInt()).apply {
             isSelectedTheme = !isDark
-            setOnClickListener {
-                if (isDark) {
-                    prefs.edit().putBoolean("is_dark_theme", false).apply()
-                    recreateActivity()
-                }
-            }
-        }
-        cardsContainer.addView(lightCard, LayoutHelper.createLinear(110, 180, 0f, 0, 8, 0, 8, 0))
+            setOnClickListener { if (isDark) { prefs.edit().putBoolean("is_dark_theme", false).apply(); recreateActivity() } }
+        }, LayoutHelper.createLinear(110, 180, 0f, 0, 8, 0, 8, 0))
 
-        // 2. DARK THEME CARD
-        val darkCard = ThemePreviewCell(this, "Тёмная",
-            previewBg = 0xFF1A1A1A.toInt(),
-            previewCard = 0xFF2C2C2E.toInt(),
-            previewText = 0xFFFFFFFF.toInt(),
-            previewAccent = 0xFF0A84FF.toInt()
-        ).apply {
+        cardsContainer.addView(ThemePreviewCell(this, "Тёмная", 0xFF1A1A1A.toInt(), 0xFF2C2C2E.toInt(), 0xFFFFFFFF.toInt(), 0xFF0A84FF.toInt()).apply {
             isSelectedTheme = isDark
-            setOnClickListener {
-                if (!isDark) {
-                    prefs.edit().putBoolean("is_dark_theme", true).apply()
-                    recreateActivity()
-                }
-            }
-        }
-        cardsContainer.addView(darkCard, LayoutHelper.createLinear(110, 180, 0f, 0, 8, 0, 8, 0))
+            setOnClickListener { if (!isDark) { prefs.edit().putBoolean("is_dark_theme", true).apply(); recreateActivity() } }
+        }, LayoutHelper.createLinear(110, 180, 0f, 0, 8, 0, 8, 0))
 
         scrollView.addView(cardsContainer)
         rootLayout.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 8, 0, 24))
 
-        // --- MONET SWITCH ---
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-             val switchContainer = LinearLayout(this).apply {
-                 orientation = LinearLayout.HORIZONTAL
-                 gravity = Gravity.CENTER_VERTICAL
-                 background = GradientDrawable().apply {
-                     setColor(DesignEngine.Theme.colorCardBackground)
-                     cornerRadius = LayoutHelper.dp(12).toFloat()
-                 }
-                 setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
-             }
-             
-             val textLayout = LinearLayout(this).apply {
-                 orientation = LinearLayout.VERTICAL
-                 gravity = Gravity.CENTER_VERTICAL
-             }
-             
-             val textTitle = TextView(this).apply {
-                 text = "Динамические цвета"
-                 textSize = 16f
-                 typeface = Typeface.DEFAULT_BOLD
-                 setTextColor(DesignEngine.Theme.colorTextPrimary)
-             }
-             
-             val textSubtitle = TextView(this).apply {
-                 text = "Использовать цвета обоев (Monet)"
-                 textSize = 13f
-                 setTextColor(DesignEngine.Theme.colorTextSecondary)
-             }
-             
-             textLayout.addView(textTitle)
-             textLayout.addView(textSubtitle)
-             
-             switchContainer.addView(textLayout, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f))
-             
-             val switchView = Switch(this).apply {
-                 isChecked = useMonet
-                 thumbTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
-                 trackTintList = android.content.res.ColorStateList.valueOf(
-                     if(isDark) Color.parseColor("#505050") else Color.parseColor("#E0E0E0")
-                 )
-                 
-                 setOnCheckedChangeListener { _, isChecked ->
-                     prefs.edit().putBoolean("use_monet", isChecked).apply()
-                     recreateActivity()
-                 }
-             }
-             switchContainer.addView(switchView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
-             
-             rootLayout.addView(switchContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 16, 0))
-        }
+        // --- SECTION: NAVIGATION ---
+        rootLayout.addView(HeaderCell(this).apply { text = "ИНТЕРФЕЙС" }, 
+            LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 16, 4))
 
+        val navSwitch = createSwitchItem("Нижняя навигация", "Как в VK / Telegram iOS", useBottomNav) { isChecked ->
+            prefs.edit().putBoolean("use_bottom_navigation", isChecked).apply()
+            recreateActivity()
+        }
+        rootLayout.addView(navSwitch, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 8, 16, 8))
+
+        // Monet Switch
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val monetSwitch = createSwitchItem("Динамические цвета", "Использовать цвета обоев (Monet)", useMonet) { isChecked ->
+                prefs.edit().putBoolean("use_monet", isChecked).apply()
+                recreateActivity()
+            }
+            rootLayout.addView(monetSwitch, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 8, 16, 0))
+        }
+    }
+
+    private fun createSwitchItem(title: String, subtitle: String, checked: Boolean, onChecked: (Boolean) -> Unit): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                setColor(DesignEngine.Theme.colorCardBackground)
+                cornerRadius = LayoutHelper.dp(12).toFloat()
+            }
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
+
+            val textLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            textLayout.addView(TextView(context).apply {
+                text = title
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(DesignEngine.Theme.colorTextPrimary)
+            })
+            textLayout.addView(TextView(context).apply {
+                text = subtitle
+                textSize = 13f
+                setTextColor(DesignEngine.Theme.colorTextSecondary)
+            })
+            addView(textLayout, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f))
+
+            addView(Switch(context).apply {
+                isChecked = checked
+                thumbTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
+                setOnCheckedChangeListener { _, isChecked -> onChecked(isChecked) }
+            })
+        }
     }
 
     private fun recreateActivity() {
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         startActivity(intent)
-    }
-    
-    private fun getRippleDrawable(): android.graphics.drawable.Drawable {
-        val outValue = android.util.TypedValue()
-        theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
-        return getDrawable(outValue.resourceId)!!
-    }
-
-    private fun getStatusBarHeight(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
     }
 }
 

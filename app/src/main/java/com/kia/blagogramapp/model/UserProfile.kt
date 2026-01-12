@@ -9,7 +9,8 @@ data class UserProfile(
     val friends_count: Int = 0,
     val followers_count: Int = 0,
     val is_premium: Boolean = false,
-    val premium_info: PremiumInfo? = null
+    val premium_info: PremiumInfo? = null,
+    val cover: String? = null
 )
 
 data class PremiumInfo(

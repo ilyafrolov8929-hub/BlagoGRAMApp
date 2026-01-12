@@ -74,6 +74,9 @@ object DesignEngine {
     var chatWallpaper: String? = null
     var wallpaperBlur: Boolean = false
     var wallpaperMotion: Boolean = false
+    
+    // Навигация
+    var useBottomNavigation: Boolean = false
 
     fun init(ctx: Context) {
         density = ctx.resources.displayMetrics.density
@@ -85,6 +88,7 @@ object DesignEngine {
         chatWallpaper = prefs.getString("chat_wallpaper", null)
         wallpaperBlur = prefs.getBoolean("wallpaper_blur", false)
         wallpaperMotion = prefs.getBoolean("wallpaper_motion", false)
+        useBottomNavigation = prefs.getBoolean("use_bottom_navigation", false)
     }
 
     fun saveChatSettings(context: Context) {
@@ -109,8 +113,6 @@ object DesignEngine {
             visibility = View.GONE
         }
     }
-
-    // ... (внутри объекта DesignEngine)
 
     fun createChatHeader(
         context: Context,
@@ -1019,10 +1021,17 @@ class ChatCell(context: Context) : FrameLayout(context) {
             avatarView.scaleType = ImageView.ScaleType.CENTER
             avatarView.setImageResource(R.drawable.ic_saved_messages)
             avatarView.setBackgroundResource(R.drawable.bg_saved_messages_circle)
+        } else if (avatar == "ai_bot") {
+            avatarView.scaleType = ImageView.ScaleType.CENTER
+            avatarView.setImageResource(R.drawable.ic_ai) // Или любая иконка робота
+            avatarView.setColorFilter(Color.WHITE)
+            avatarView.setBackgroundResource(R.drawable.bg_saved_messages_circle)
+            avatarView.backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
         } else {
             avatarView.scaleType = ImageView.ScaleType.CENTER_CROP
             avatarView.setPadding(0, 0, 0, 0)
             avatarView.setBackgroundResource(0)
+            avatarView.clearColorFilter()
             val avatarUrl = if (!avatar.isNullOrEmpty()) "https://blagogram.ru/avatars/$avatar" else null
             avatarView.load(avatarUrl) {
                 crossfade(true)

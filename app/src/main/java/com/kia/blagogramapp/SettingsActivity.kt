@@ -1,6 +1,7 @@
 package com.kia.blagogramapp
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
@@ -18,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.kia.blagogramapp.ui.modules.BottomNavigationModule
 import com.kia.blagogramapp.utils.DevModeManager
 
 class SettingsActivity : AppCompatActivity() {
@@ -36,6 +38,9 @@ class SettingsActivity : AppCompatActivity() {
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
         isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
+
+        // Автоматическая настройка нижней навигации
+        BottomNavigationModule(this).create(rootLayout, BottomNavigationModule.Screen.SETTINGS)
 
         // --- Дальше идет ваш код по наполнению rootLayout ---
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
@@ -57,6 +62,9 @@ class SettingsActivity : AppCompatActivity() {
             isFillViewport = true
             clipToPadding = false
             overScrollMode = View.OVER_SCROLL_NEVER
+            if (DesignEngine.useBottomNavigation) {
+                setPadding(0, 0, 0, LayoutHelper.dp(80))
+            }
         }
 
         val contentLayout = LinearLayout(this).apply {
@@ -77,16 +85,16 @@ class SettingsActivity : AppCompatActivity() {
         val accountCard = ContainerCell(this)
         accountCard.addCell(TextCell(this).apply {
             setData("Профиль", R.drawable.ic_edit)
-            setOnClickListener { startActivity(android.content.Intent(context, ProfileEditActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, ProfileEditActivity::class.java)) }
         })
         accountCard.addCell(TextCell(this).apply {
             setData("Lume Infinity", R.drawable.ic_premium_diamond)
             setIconColor(DesignEngine.COLOR_BLUE)
-            setOnClickListener { startActivity(android.content.Intent(context, PremiumActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, PremiumActivity::class.java)) }
         })
         accountCard.addCell(TextCell(this).apply {
             setData("Приватность", R.drawable.ic_user)
-            setOnClickListener { startActivity(android.content.Intent(context, PrivaciActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, PrivaciActivity::class.java)) }
         }, isLast = true)
         sheetContainer.addView(accountCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
@@ -95,16 +103,16 @@ class SettingsActivity : AppCompatActivity() {
         val settingsCard = ContainerCell(this)
         settingsCard.addCell(TextCell(this).apply {
             setData("Настройки чатов", R.drawable.ic_chat)
-            setOnClickListener { startActivity(android.content.Intent(context, ChatSettingsActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, ChatSettingsActivity::class.java)) }
         })
         settingsCard.addCell(TextCell(this).apply { setData("Уведомления и звуки", R.drawable.ic_music) })
         settingsCard.addCell(TextCell(this).apply {
             setData("Кастомизация", R.drawable.ic_brush)
-            setOnClickListener { startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, ThemeSelectionActivity::class.java)) }
         })
         settingsCard.addCell(TextCell(this).apply {
             setData("AI Настройки", R.drawable.ic_ai)
-            setOnClickListener { startActivity(android.content.Intent(context, AiSettingsActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, AiSettingsActivity::class.java)) }
         }, isLast = true)
         sheetContainer.addView(settingsCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
@@ -113,11 +121,11 @@ class SettingsActivity : AppCompatActivity() {
         val infoCard = ContainerCell(this)
         infoCard.addCell(TextCell(this).apply {
             setData("Данные и память", R.drawable.ic_data_and_storage)
-            setOnClickListener { startActivity(android.content.Intent(context, StatisticsActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, StatisticsActivity::class.java)) }
         })
         infoCard.addCell(TextCell(this).apply {
             setData("О приложении", R.drawable.ic_more)
-            setOnClickListener { startActivity(android.content.Intent(context, AboutActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(context, AboutActivity::class.java)) }
         })
         infoCard.addCell(TextCell(this).apply {
             val isDev = DevModeManager.isEnabled(this@SettingsActivity)
@@ -138,8 +146,8 @@ class SettingsActivity : AppCompatActivity() {
             setIconColor(DesignEngine.Theme.colorLogout)
             setOnClickListener {
                 getSharedPreferences("app", MODE_PRIVATE).edit().clear().apply()
-                val intent = android.content.Intent(this@SettingsActivity, StartActivity::class.java)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                val intent = Intent(this@SettingsActivity, StartActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
                 finish()
             }
@@ -175,13 +183,16 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark) restartWithFade()
+        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark ||
+            themePrefs.getBoolean("use_bottom_navigation", false) != DesignEngine.useBottomNavigation) {
+            restartWithFade()
+        }
     }
 
     private fun restartWithFade() {
         val intent = intent
-        finish() 
-        startActivity(intent) 
+        finish()
+        startActivity(intent)
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 

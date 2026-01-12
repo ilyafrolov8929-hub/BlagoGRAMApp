@@ -53,12 +53,14 @@ class AiChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализируем экран и сразу получаем готовый корневой layout
-        val root = DesignEngine.initializeScreenWithFrameLayout(this)
-        setContentView(root)
+        // 1. Инициализируем экран
+        rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
+        setContentView(rootLayout)
 
         createUI()
         setupRecycler()
+
+        // Убрали докбар отсюда, так как AI теперь просто чат в списке
 
         lifecycleScope.launch {
             db.aiMessageDao().getAllMessages().collect { messages ->
@@ -181,10 +183,6 @@ class AiChatActivity : AppCompatActivity() {
     }
 
     private fun createUI() {
-        rootLayout = FrameLayout(this)
-        rootLayout.setBackgroundColor(DesignEngine.Theme.colorBackground)
-        setContentView(rootLayout)
-
         headerContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -271,10 +269,12 @@ class AiChatActivity : AppCompatActivity() {
     private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
             val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+            
             headerContainer.setPadding(0, systemBars.top, 0, 0)
             
-            // Базовый отступ под навигацию (когда клавы нет)
-            inputContainer.setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), systemBars.bottom + LayoutHelper.dp(8))
+            val bottomPadding = systemBars.bottom
+            inputContainer.setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), bottomPadding + LayoutHelper.dp(8))
             
             inputContainer.post {
                 val h = headerContainer.height
@@ -296,10 +296,8 @@ class AiChatActivity : AppCompatActivity() {
                     val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                     
-                    // Вычисляем высоту клавиатуры за вычетом системного бара
                     val imeHeight = (ime.bottom - systemBars.bottom).coerceAtLeast(0)
                     
-                    // Двигаем поле ввода и список плавно
                     inputContainer.translationY = -imeHeight.toFloat()
                     listContainer.translationY = -imeHeight.toFloat()
                     
@@ -307,5 +305,9 @@ class AiChatActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    override fun onResume() {
+        super.onResume()
     }
 }

@@ -203,6 +203,7 @@ class LoginActivity : AppCompatActivity() {
                             putString("login", response.result.username)
                             putString("display_name", response.result.display_name)
                             putString("status", response.result.status)
+                            putString("cover", response.result.cover)
                         }
                         startActivity(Intent(this@LoginActivity, ChatsActivity::class.java))
                         finishAffinity()

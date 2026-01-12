@@ -36,7 +36,8 @@ class ApiRepository(private val api: BlagoApi) {
                 "username" to "dev_user",
                 "display_name" to "Разработчик (Local)",
                 "status" to "Режим разработки активен",
-                "avatar" to ""
+                "avatar" to "",
+                "cover" to ""
             ) as Map<String, Any>
         }
 
@@ -370,7 +371,8 @@ class ApiRepository(private val api: BlagoApi) {
         token: String,
         displayName: String?,
         status: String?,
-        avatar: MultipartBody.Part?
+        avatar: MultipartBody.Part?,
+        cover: MultipartBody.Part? = null
     ): Map<String, Any> {
         if (isDevMode()) return mapOf("ok" to true)
 
@@ -386,7 +388,8 @@ class ApiRepository(private val api: BlagoApi) {
             tokenBody,
             nameBody,
             statusBody,
-            avatar
+            avatar,
+            cover
         )
 
         if (!resp.isSuccessful) {
@@ -444,7 +447,8 @@ class ApiRepository(private val api: BlagoApi) {
                     plan = it["plan"]?.toString(),
                     expires_at = it["expires_at"]?.toString()
                 )
-            }
+            },
+            cover = r["cover"]?.toString()
         )
     }
 

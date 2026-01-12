@@ -85,7 +85,7 @@ class SideMenuModule(val context: Context) {
                     .setAllCornerSizes(LayoutHelper.dp(28).toFloat())
                     .build()
 
-                val sw = LayoutHelper.dp(3)
+                val sw = LayoutHelper.dp(2)
                 strokeWidth = sw.toFloat()
                 strokeColor = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue)
                 setPadding(sw, sw, sw, sw)

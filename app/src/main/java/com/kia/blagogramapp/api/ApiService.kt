@@ -127,7 +127,8 @@ interface ApiService {
         @Part("token") token: RequestBody,
         @Part("display_name") displayName: RequestBody?,
         @Part("status") status: RequestBody?,
-        @Part avatar: MultipartBody.Part?
+        @Part avatar: MultipartBody.Part?,
+        @Part cover: MultipartBody.Part?
     ): Response<Map<String, Any>>
 
     @FormUrlEncoded

@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.WindowCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.google.gson.Gson
@@ -189,10 +190,11 @@ class ProfileActivity : AppCompatActivity() {
         val statusText = prefs.getString("status", "")
         val avatar = prefs.getString("avatar", "")
         val myId = prefs.getInt("user_id", 0)
+        val cover = prefs.getString("cover", "")
         
         loadUserProfileFromCache(myId)
         if (layout.userID.text.isNullOrEmpty() || layout.userID.text == "@") {
-             updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(this))
+             updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(this), cover)
         }
         if (myId != 0) loadUserProfile(myId)
     }
@@ -203,7 +205,7 @@ class ProfileActivity : AppCompatActivity() {
         if (!json.isNullOrEmpty()) {
             try {
                 val profile = Gson().fromJson(json, UserProfile::class.java)
-                updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium)
+                updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover)
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
@@ -216,13 +218,13 @@ class ProfileActivity : AppCompatActivity() {
                 val json = Gson().toJson(profile)
                 getSharedPreferences("app_cache", MODE_PRIVATE).edit().putString("profile_$userId", json).apply()
                 runOnUiThread {
-                    updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium)
+                    updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover)
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int, isPremium: Boolean) {
+    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int, isPremium: Boolean, cover: String?) {
         layout.userID.text = "@$login"
         layout.profileUsername.text = displayName
         layout.status.text = statusText
@@ -243,25 +245,42 @@ class ProfileActivity : AppCompatActivity() {
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
         }
-        layout.profileCover.load(avatarUrl) {
-            crossfade(true)
-            listener(onSuccess = { _, result ->
-                try {
-                    val bmp: Bitmap = result.drawable.toBitmap()
-                    val height = bmp.height.coerceAtMost(70)
-                    if (height < 10) return@listener
-                    val crop = Bitmap.createBitmap(bmp, 0, 0, bmp.width, height)
-                    var brightness = 0
-                    for (x in 0 until crop.width) {
-                        for (y in 0 until crop.height) {
-                            val color = crop.getPixel(x, y)
-                            brightness += (Color.red(color) * 0.299 + Color.green(color) * 0.587 + Color.blue(color) * 0.114).toInt()
+
+        if (!cover.isNullOrEmpty()) {
+            val coverUrl = "https://blagogram.ru/covers/$cover"
+            layout.profileCover.load(coverUrl) {
+                crossfade(true)
+                listener(onSuccess = { _, result ->
+                    try {
+                        val bmp = result.drawable.toBitmap()
+                        val height = bmp.height.coerceAtMost(70)
+                        if (height < 10) return@listener
+
+                        val crop = Bitmap.createBitmap(bmp, 0, 0, bmp.width, height)
+
+                        var brightness = 0
+                        for (x in 0 until crop.width) {
+                            for (y in 0 until crop.height) {
+                                val c = crop.getPixel(x, y)
+                                brightness += (
+                                        Color.red(c) * 0.299 +
+                                                Color.green(c) * 0.587 +
+                                                Color.blue(c) * 0.114
+                                        ).toInt()
+                            }
                         }
-                    }
-                    brightness /= (crop.width * crop.height)
-                    applyTopBarStyle(brightness > 140)
-                } catch (_: Exception) { }
-            })
+
+                        brightness /= (crop.width * crop.height)
+                        applyTopBarStyle(brightness > 140)
+                    } catch (_: Exception) {}
+                }, onError = { _, _ ->
+                    applyTopBarStyle(false)
+                })
+            }
+        } else {
+            // Если обложки нет, убираем изображение и оставляем градиент из ProfileLayout
+            layout.profileCover.setImageDrawable(null)
+            applyTopBarStyle(false)
         }
     }
 

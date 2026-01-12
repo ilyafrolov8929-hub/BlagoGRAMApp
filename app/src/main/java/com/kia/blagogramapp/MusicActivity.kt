@@ -3,6 +3,7 @@ package com.kia.blagogramapp
 import android.animation.ValueAnimator
 import android.app.Dialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
@@ -29,6 +30,7 @@ import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.JamendoTrack
 import com.kia.blagogramapp.models.Track
+import com.kia.blagogramapp.ui.modules.BottomNavigationModule
 import com.kia.blagogramapp.ui.modules.FullPlayer
 import com.kia.blagogramapp.ui.modules.MiniPlayer
 import com.kia.blagogramapp.utils.MusicManager
@@ -61,14 +63,12 @@ class MusicActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Вызываем super.onCreate() в начале, что является хорошей практикой
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализируем экран и сразу получаем готовый корневой FrameLayout
+        // 1. Инициализируем экран
         root = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(root)
 
-        // 2. Получаем тему, так как она нужна для логики тулбара и кнопки "Разработчик"
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
         val isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
 
@@ -76,6 +76,9 @@ class MusicActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
         }
         root.addView(mainContent)
+
+        // Автоматическая настройка навигации
+        BottomNavigationModule(this).create(root, BottomNavigationModule.Screen.MUSIC)
 
         // Тулбар
         val toolbar = DesignEngine.createToolBar(
@@ -133,7 +136,7 @@ class MusicActivity : AppCompatActivity() {
         recycler = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@MusicActivity)
             clipToPadding = false
-            setPadding(0, 0, 0, LayoutHelper.dp(100))
+            setPadding(0, 0, 0, LayoutHelper.dp(if (DesignEngine.useBottomNavigation) 180 else 100))
         }
         swipeRefresh.addView(recycler)
         mainContent.addView(swipeRefresh, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 0, 1f))
@@ -152,7 +155,8 @@ class MusicActivity : AppCompatActivity() {
             visibility = View.GONE
             setOnClickListener { showFullPlayer() }
         }
-        val miniParams = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 32)
+        val miniBottomPadding = if (DesignEngine.useBottomNavigation) 100 else 32
+        val miniParams = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, miniBottomPadding)
         root.addView(miniPlayer, miniParams)
 
         setupListeners()
@@ -409,6 +413,15 @@ class MusicActivity : AppCompatActivity() {
         root.addView(buttons)
         dialog.setContentView(root)
         dialog.show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        if (themePrefs.getBoolean("is_dark_theme", false) != (DesignEngine.Theme.colorBackground == 0xFF1A1A1A.toInt()) ||
+            themePrefs.getBoolean("use_bottom_navigation", false) != DesignEngine.useBottomNavigation) {
+            recreate()
+        }
     }
 
     inner class JamendoAdapter(private val tracks: List<JamendoTrack>) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {

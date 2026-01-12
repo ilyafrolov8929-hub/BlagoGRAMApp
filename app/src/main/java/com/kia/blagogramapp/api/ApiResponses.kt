@@ -15,6 +15,7 @@ data class LoginResult(
     val username: String,
     val display_name: String,
     val avatar: String,
+    val cover: String,
     val token: String,
     val status: String
 )
