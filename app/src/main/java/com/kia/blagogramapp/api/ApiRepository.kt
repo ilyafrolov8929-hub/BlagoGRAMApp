@@ -6,6 +6,7 @@ import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.model.UserProfile
+import com.kia.blagogramapp.model.PremiumInfo
 import com.kia.blagogramapp.models.SearchUserItem
 import com.kia.blagogramapp.utils.DevModeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -418,6 +419,16 @@ class ApiRepository(private val api: BlagoApi) {
         if (body["ok"] != true) throw Exception(body["error"].toString())
 
         val r = body["result"] as Map<String, Any>
+        
+        // Обработка нового формата премиум-данных
+        val premiumData = r["premium"] as? Map<String, Any>
+        val isActive = when(val active = premiumData?.get("active")) {
+            is Boolean -> active
+            is Number -> active.toInt() == 1
+            is String -> active == "1" || active == "true"
+            else -> false
+        }
+
         return UserProfile(
             id = (r["id"] as Number).toInt(),
             username = r["username"]?.toString() ?: r["login"]?.toString() ?: "",
@@ -426,11 +437,13 @@ class ApiRepository(private val api: BlagoApi) {
             status = r["status"]?.toString(),
             friends_count = (r["friends_count"] as? Number)?.toInt() ?: 0,
             followers_count = (r["followers_count"] as? Number)?.toInt() ?: 0,
-            is_premium = when(val p = r["is_premium"]) {
-                is Boolean -> p
-                is Number -> p.toInt() == 1
-                is String -> p == "1" || p == "true"
-                else -> false
+            is_premium = isActive,
+            premium_info = premiumData?.let {
+                PremiumInfo(
+                    active = isActive,
+                    plan = it["plan"]?.toString(),
+                    expires_at = it["expires_at"]?.toString()
+                )
             }
         )
     }

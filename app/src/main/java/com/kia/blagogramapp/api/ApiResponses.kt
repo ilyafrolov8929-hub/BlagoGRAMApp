@@ -37,7 +37,8 @@ data class ChatItem(
     val avatar: String,
     val last_message: String?,
     val last_time: String?,
-    val unread: Int
+    val unread: Int,
+    val is_premium: Boolean = false
 )
 
 data class MessageListResponse(
@@ -56,7 +57,8 @@ data class MessageItem(
     val is_read: Int,
     val display_name: String,
     val avatar: String,
-    val images: List<String>?
+    val images: List<String>?,
+    val is_premium: Boolean = false
 )
 
 data class SendMessageResponse(

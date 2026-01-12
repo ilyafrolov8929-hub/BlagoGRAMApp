@@ -12,9 +12,9 @@ android {
         applicationId "com.kia.blagogramapp"
         minSdk 23
         targetSdk 36
-        versionCode 8
+        versionCode 9
 
-        versionName '0.8.0'
+        versionName '0.8.1'
     }
 
     buildTypes {

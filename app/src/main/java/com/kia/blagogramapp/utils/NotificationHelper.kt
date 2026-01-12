@@ -73,6 +73,7 @@ object NotificationHelper {
             putExtra("open_chat_name", chat.name)
             putExtra("open_chat_avatar", chat.avatar)
             putExtra("open_chat_user_id", chat.user_id ?: 0)
+            putExtra("open_chat_is_premium", chat.is_premium)
         }
         
         val pendingIntent = PendingIntent.getActivity(

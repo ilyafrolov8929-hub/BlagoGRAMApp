@@ -105,9 +105,8 @@ object DesignEngine {
     fun createPremiumBadge(context: Context): ImageView {
         return ImageView(context).apply {
             setImageResource(R.drawable.infinity)
-            setColorFilter(COLOR_BLUE, PorterDuff.Mode.SRC_IN)
+            setColorFilter(Theme.colorBlue, PorterDuff.Mode.SRC_IN)
             visibility = View.GONE
-            translationY = LayoutHelper.dp(2).toFloat() // Используем dp для смещения
         }
     }
 
@@ -117,7 +116,7 @@ object DesignEngine {
         context: Context,
         onBackClick: View.OnClickListener,
         onMenuClick: View.OnClickListener,onHeaderClick: View.OnClickListener
-    ): Triple<FrameLayout, ShapeableImageView, TextView> {
+    ): Quadruple<FrameLayout, ShapeableImageView, TextView, ImageView> {
         val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
             .getBoolean("is_dark_theme", false)
         val pillColor = if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
@@ -185,6 +184,12 @@ object DesignEngine {
         val infoContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
+        
+        val nameRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        
         val nameView = TextView(context).apply {
             textSize = 18f
             typeface = Typeface.DEFAULT_BOLD
@@ -192,6 +197,16 @@ object DesignEngine {
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
         }
+        
+        val premiumBadge = createPremiumBadge(context).apply {
+            val p = LayoutHelper.createLinear(16, 16)
+            p.marginStart = LayoutHelper.dp(4)
+            layoutParams = p
+        }
+        
+        nameRow.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 0))
+        nameRow.addView(premiumBadge)
+        
         val statusView = TextView(context).apply {
             text = "был(а) недавно" // Placeholder
             textSize = 10f
@@ -199,14 +214,14 @@ object DesignEngine {
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
         }
-        infoContainer.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        infoContainer.addView(nameRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
         infoContainer.addView(statusView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
 
         centerPill.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 1f, 0, 10, 0, 0, 0))
 
         root.addView(centerPill, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 56, Gravity.CENTER_VERTICAL, 48, 0, 48, 0))
 
-        return Triple(root, avatarView, nameView)
+        return Quadruple(root, avatarView, nameView, premiumBadge)
     }
 
     /**
@@ -253,7 +268,7 @@ object DesignEngine {
         // Вызываем основную логику из первой функции
         initializeScreen(activity)
 
-        // Создаем и возвращаем FrameLayout с правильным фоном
+        // Создаем и возвращаем FrameLayout with correct background
         return FrameLayout(activity).apply {
             setBackgroundColor(Theme.colorBackground)
         }
@@ -707,6 +722,7 @@ class MusicCell(context: Context) : FrameLayout(context) {
 class ProfileHeaderCell(context: Context) : FrameLayout(context) {
     val avatarView: ShapeableImageView
     val nameView: TextView
+    val premiumBadge: ImageView
     val statusView: TextView
 
     init {
@@ -729,25 +745,42 @@ class ProfileHeaderCell(context: Context) : FrameLayout(context) {
         val textContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
+        
+        val nameRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        
         nameView = TextView(context).apply {
             textSize = 18f
             setTextColor(DesignEngine.COLOR_PROFILE_NAME)
             typeface = Typeface.DEFAULT_BOLD
         }
+        
+        premiumBadge = DesignEngine.createPremiumBadge(context).apply {
+            val p = LayoutHelper.createLinear(18, 18)
+            p.marginStart = LayoutHelper.dp(6)
+            layoutParams = p
+        }
+        
+        nameRow.addView(nameView)
+        nameRow.addView(premiumBadge)
+        
         statusView = TextView(context).apply {
             textSize = 14f
             setTextColor(DesignEngine.COLOR_PROFILE_STATUS)
         }
-        textContainer.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        textContainer.addView(nameRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
         textContainer.addView(statusView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
         linearLayout.addView(textContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 0, 0))
 
         addView(linearLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP or Gravity.START, 24, 100, 24, 0))
     }
 
-    fun setData(name: String, status: String, avatarUrl: String) {
+    fun setData(name: String, status: String, avatarUrl: String, isPremium: Boolean = false) {
         nameView.text = name
         statusView.text = status
+        premiumBadge.visibility = if (isPremium) View.VISIBLE else View.GONE
         avatarView.load(avatarUrl) {
             crossfade(true)
             placeholder(R.drawable.ic_user_placeholder)
@@ -845,11 +878,17 @@ class SpacerCell(context: Context, height: Int) : View(context) {
 }
 
 /**
+ * Quadruple helper for createChatHeader
+ */
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+/**
  * Ячейка чата
  */
 class ChatCell(context: Context) : FrameLayout(context) {
     val avatarView: ShapeableImageView
     val nameView: TextView
+    val premiumBadge: ImageView
     val messageView: TextView
     val timeView: TextView
     val unreadBadge: TextView
@@ -879,6 +918,11 @@ class ChatCell(context: Context) : FrameLayout(context) {
             gravity = Gravity.CENTER_VERTICAL
         }
         
+        val nameRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        
         nameView = TextView(context).apply {
             textSize = 17f
             typeface = Typeface.DEFAULT_BOLD
@@ -887,6 +931,15 @@ class ChatCell(context: Context) : FrameLayout(context) {
             ellipsize = TextUtils.TruncateAt.END
         }
         
+        premiumBadge = DesignEngine.createPremiumBadge(context).apply {
+            val p = LayoutHelper.createLinear(14, 14)
+            p.marginStart = LayoutHelper.dp(4)
+            layoutParams = p
+        }
+        
+        nameRow.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 0))
+        nameRow.addView(premiumBadge)
+        
         messageView = TextView(context).apply {
             textSize = 15f
             setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
@@ -894,7 +947,7 @@ class ChatCell(context: Context) : FrameLayout(context) {
             ellipsize = TextUtils.TruncateAt.END
         }
         
-        textContainer.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
+        textContainer.addView(nameRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
         textContainer.addView(messageView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 2, 0, 0))
         
         addView(textContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START, 66, 0, 60, 0))
@@ -943,10 +996,11 @@ class ChatCell(context: Context) : FrameLayout(context) {
         addView(metaContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END))
     }
 
-    fun setData(name: String, message: String, time: String, unread: Int, avatar: String?, pinned: Boolean = false) {
+    fun setData(name: String, message: String, time: String, unread: Int, avatar: String?, pinned: Boolean = false, isPremium: Boolean = false) {
         nameView.text = name
         messageView.text = message
         timeView.text = time
+        premiumBadge.visibility = if (isPremium) View.VISIBLE else View.GONE
         
         if (unread > 0) {
             unreadBadge.text = unread.toString()
