@@ -455,10 +455,10 @@ object DesignEngine {
 
             addView(TextView(context).apply {
                 text = title
+                typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
                 textSize = 20f
                 // Используем цвет текста из темы
                 setTextColor(Theme.colorTextPrimary)
-                typeface = Typeface.DEFAULT_BOLD
             })
         }
 

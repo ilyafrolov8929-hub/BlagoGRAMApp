@@ -48,6 +48,8 @@
         <activity android:name=".ChatSettingsActivity" />
         <activity android:name=".WallpaperPreviewActivity" />
         <activity android:name=".PrivaciActivity" />
+        <activity android:name=".RegisterActivity" />
+        <activity android:name=".DatabaseDumpActivity" />
         <activity android:name=".CameraActivity" 
             android:theme="@style/Theme.App.NoActionBar" />
 

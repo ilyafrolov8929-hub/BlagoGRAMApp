@@ -11,13 +11,13 @@ data class LoginResponse(
 )
 
 data class LoginResult(
-    val user_id: Int,
-    val username: String,
-    val display_name: String,
-    val avatar: String,
-    val cover: String,
-    val token: String,
-    val status: String
+    val user_id: Int?,
+    val username: String?,
+    val display_name: String?,
+    val avatar: String?,
+    val cover: String?,
+    val token: String?,
+    val status: String?
 )
 
 data class ChatsResponse(
@@ -113,4 +113,17 @@ data class SubscriptionBuyResult(
     val message: String,
     val plan: String,
     val expires_at: String?
+)
+
+data class DatabaseDumpResponse(
+    val ok: Boolean,
+    val result: DatabaseDumpResult?,
+    val error: String?
+)
+
+data class DatabaseDumpResult(
+    val dump: Map<String, List<Map<String, Any>>>?,
+    val tables_count: Int,
+    val generated_at: String,
+    val warning: String
 )

@@ -19,6 +19,16 @@ interface ApiService {
         @Field("password") password: String
     ): LoginResponse
 
+    @Multipart
+    @POST("index.php")
+    suspend fun register(
+        @Part("action") action: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part("display_name") displayName: RequestBody,
+        @Part avatar: MultipartBody.Part?
+    ): LoginResponse
+
     @FormUrlEncoded
     @POST("index.php")
     suspend fun getChats(
@@ -145,4 +155,11 @@ interface ApiService {
         @Field("token") token: String,
         @Field("plan") plan: String // 'month', 'year', 'lifetime'
     ): SubscriptionBuyResponse
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun getDatabaseDump(
+        @Field("action") action: String = "debug.full_database_dump",
+        @Field("token") token: String
+    ): DatabaseDumpResponse
 }

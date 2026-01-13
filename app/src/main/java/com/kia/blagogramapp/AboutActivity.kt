@@ -11,6 +11,7 @@ import android.view.View
 import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import com.kia.blagogramapp.utils.DevModeManager
 import java.util.*
 
 /**
@@ -80,6 +81,16 @@ class AboutActivity : AppCompatActivity() {
                 text = "Версия $vName ($vCode)"
             } catch (e: Exception) {
                 text = "Версия 1.0.0"
+            }
+
+            // Секретный вход в дамп базы
+            setOnLongClickListener {
+                if (DevModeManager.isEnabled(this@AboutActivity)) {
+                    startActivity(Intent(this@AboutActivity, DatabaseDumpActivity::class.java))
+                    true
+                } else {
+                    false
+                }
             }
         }
         contentLayout.addView(versionTextView, LinearLayout.LayoutParams(-1, -2))
@@ -172,7 +183,7 @@ class AboutActivity : AppCompatActivity() {
 
         val toolbar = DesignEngine.createToolBar(
             context = this,
-            title = "Кастомизация",
+            title = "О приложении",
             leftButtonIconRes = R.drawable.ic_back,
             leftButtonClickListener = { finish() },
             isDark = isCurrentThemeDark

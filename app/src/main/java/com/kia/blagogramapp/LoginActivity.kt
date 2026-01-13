@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -68,7 +69,6 @@ class LoginActivity : AppCompatActivity() {
             setOnClickListener { finish() }
             alpha = 0f
         }
-        val statusBarHeight = getStatusBarHeight()
         rootLayout.addView(backBtn, LayoutHelper.createFrame(48, 48, Gravity.TOP or Gravity.START, 16, 40, 0, 0))
 
         val centerLayout = LinearLayout(this).apply {
@@ -160,7 +160,7 @@ class LoginActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             setPadding(LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10), LayoutHelper.dp(10))
             setOnClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://blagogram.ru/register.php?fromApp=1")))
+                startActivity(Intent(this@LoginActivity, RegisterActivity::class.java))
             }
         }
         centerLayout.addView(registerLink, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
@@ -194,7 +194,10 @@ class LoginActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 try {
+                    Log.d("LOGIN_DEBUG", "Sending login request for user: $l")
                     val response = ApiClient.api.login(login = l, password = p)
+                    Log.d("LOGIN_DEBUG", "Response: ok=${response.ok}, error=${response.error}, result=${response.result}")
+                    
                     if (response.ok && response.result != null) {
                         getSharedPreferences("app", MODE_PRIVATE).edit {
                             putString("token", response.result.token)
@@ -208,23 +211,17 @@ class LoginActivity : AppCompatActivity() {
                         startActivity(Intent(this@LoginActivity, ChatsActivity::class.java))
                         finishAffinity()
                     } else {
-                        Toast.makeText(this@LoginActivity, response.error ?: "Ошибка", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@LoginActivity, response.error ?: "Ошибка сервера", Toast.LENGTH_LONG).show()
                         btnLogin.isEnabled = true
                         btnLogin.alpha = 1f
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(this@LoginActivity, "Ошибка сети", Toast.LENGTH_SHORT).show()
+                    Log.e("LOGIN_DEBUG", "Exception during login", e)
+                    Toast.makeText(this@LoginActivity, "Ошибка сети: ${e.message}", Toast.LENGTH_LONG).show()
                     btnLogin.isEnabled = true
                     btnLogin.alpha = 1f
                 }
             }
         }
-    }
-
-    private fun getStatusBarHeight(): Int {
-        var result = 0
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        if (resourceId > 0) result = resources.getDimensionPixelSize(resourceId)
-        return result
     }
 }

@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.HEADERS
+        level = HttpLoggingInterceptor.Level.BODY
     }
 
     val client = OkHttpClient.Builder()
