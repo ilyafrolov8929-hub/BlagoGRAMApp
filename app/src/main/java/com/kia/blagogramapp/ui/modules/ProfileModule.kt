@@ -29,9 +29,7 @@ import com.kia.blagogramapp.utils.MusicManager
 class ProfileLayout(context: Context) : FrameLayout(context) {
 
     val profileCover: ImageView
-    val backButton: View
     val userID: TextView
-    val btnSettings: View
     val profileAvatar: ShapeableImageView
     val profileUsername: TextView
     val premiumBadge: ImageView
@@ -42,6 +40,10 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     val btnCreatePost: Button
     val postsContainer: LinearLayout
     val topBar: RelativeLayout
+    
+    // Поля, которые используются в ProfileActivity
+    val backButton: View
+    val btnSettings: View
     
     lateinit var musicBadge: LinearLayout
     lateinit var musicTrackTv: TextView
@@ -58,17 +60,14 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
     init {
         setBackgroundColor(DesignEngine.Theme.colorBackground)
 
-        // 1. Статичная обложка (на заднем плане)
+        // 1. Статичная обложка
         profileCover = ImageView(context).apply {
             id = View.generateViewId()
             scaleType = ImageView.ScaleType.CENTER_CROP
-            // Красивый градиент-заглушка по умолчанию
             background = GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(DesignEngine.Theme.colorBlue, DesignEngine.Theme.colorBackground)
-            ).apply { 
-                alpha = 180 
-            }
+            ).apply { alpha = 180 }
         }
         addView(profileCover, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 260))
 
@@ -78,8 +77,6 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         }
 
         val scrollContent = RelativeLayout(context)
-
-        // Пустой вид для отступа (чтобы контент начинался ниже обложки)
         val spacer = View(context).apply { id = View.generateViewId() }
         scrollContent.addView(spacer, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, 220))
 
@@ -102,31 +99,17 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(75), LayoutHelper.dp(16), LayoutHelper.dp(40))
         }
 
-        val nameContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
-        }
-        profileUsername = TextView(context).apply {
-            textSize = 24f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary); gravity = Gravity.CENTER
-        }
+        val nameContainer = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        profileUsername = TextView(context).apply { textSize = 24f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary); gravity = Gravity.CENTER }
         premiumBadge = DesignEngine.createPremiumBadge(context)
         nameContainer.addView(profileUsername)
         nameContainer.addView(premiumBadge, LayoutHelper.createLinear(24, 24, 0f, Gravity.CENTER_VERTICAL, 8, 0, 0, 0))
         profileCardContent.addView(nameContainer)
         
-        status = TextView(context).apply {
-            textSize = 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextSecondary); gravity = Gravity.CENTER
-            val p = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, gravity = Gravity.CENTER_HORIZONTAL)
-            p.topMargin = LayoutHelper.dp(4); layoutParams = p
-        }
+        status = TextView(context).apply { textSize = 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextSecondary); gravity = Gravity.CENTER; val p = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, gravity = Gravity.CENTER_HORIZONTAL); p.topMargin = LayoutHelper.dp(4); layoutParams = p }
         profileCardContent.addView(status)
 
-        musicBadge = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6)); visibility = View.GONE
-            background = GradientDrawable().apply { cornerRadius = LayoutHelper.dp(12).toFloat(); setColor(DesignEngine.Theme.colorBlue and 0x15FFFFFF) }
-            val outValue = TypedValue(); context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true); foreground = context.getDrawable(outValue.resourceId)
-            setOnClickListener { onMusicBadgeClick?.invoke() }
-        }
+        musicBadge = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6)); visibility = View.GONE; background = GradientDrawable().apply { cornerRadius = LayoutHelper.dp(12).toFloat(); setColor(DesignEngine.Theme.colorBlue and 0x15FFFFFF) }; val outValue = TypedValue(); context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true); foreground = context.getDrawable(outValue.resourceId); setOnClickListener { onMusicBadgeClick?.invoke() } }
         val mIcon = ImageView(context).apply { setImageResource(R.drawable.ic_music); setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN) }
         musicBadge.addView(mIcon, LayoutHelper.createLinear(14, 14))
         musicTrackTv = TextView(context).apply { textSize = 12f; setTextColor(DesignEngine.Theme.colorBlue); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL); setPadding(LayoutHelper.dp(6), 0, 0, 0); setSingleLine(true); ellipsize = TextUtils.TruncateAt.MARQUEE; marqueeRepeatLimit = -1 }
@@ -167,7 +150,6 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         profileCard.addView(profileCardContent)
         mainContainer.addView(profileCard)
 
-        // Исправленная аватарка
         profileAvatar = ShapeableImageView(context).apply {
             id = View.generateViewId()
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -177,45 +159,38 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
             elevation = LayoutHelper.dp(8).toFloat()
         }
         val avatarParams = RelativeLayout.LayoutParams(LayoutHelper.dp(130), LayoutHelper.dp(130))
-        avatarParams.addRule(RelativeLayout.CENTER_HORIZONTAL)
-        avatarParams.addRule(RelativeLayout.ALIGN_TOP, mainContainer.id)
-        avatarParams.topMargin = -LayoutHelper.dp(65)
+        avatarParams.addRule(RelativeLayout.CENTER_HORIZONTAL); avatarParams.addRule(RelativeLayout.ALIGN_TOP, mainContainer.id); avatarParams.topMargin = -LayoutHelper.dp(65)
         scrollContent.addView(profileAvatar, avatarParams)
 
         scrollView.addView(scrollContent)
         addView(scrollView)
 
-        // 2. Top Bar (поверх всего)
-        topBar = RelativeLayout(context).apply { setPadding(LayoutHelper.dp(16), 0, LayoutHelper.dp(16), LayoutHelper.dp(10)) }
-        val backContainer = LinearLayout(context).apply { id = View.generateViewId(); orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8)); background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorDivider); cornerRadius = LayoutHelper.dp(20).toFloat() }; minimumWidth = LayoutHelper.dp(46) }
-        backButton = backContainer
-        val backIcon = ImageView(context).apply { setImageResource(R.drawable.ic_back); setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN) }
-        backContainer.addView(backIcon, LayoutHelper.createLinear(20, 20))
-        val backParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
-        backParams.topMargin = LayoutHelper.dp(45); topBar.addView(backContainer, backParams)
-
-        val userContainer = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8)); background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorDivider); cornerRadius = LayoutHelper.dp(20).toFloat() }; minimumWidth = LayoutHelper.dp(46) }
-        userID = TextView(context).apply { textSize = 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary); gravity = Gravity.CENTER }
-        userContainer.addView(userID)
-        val userParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
-        userParams.addRule(RelativeLayout.CENTER_HORIZONTAL); userParams.addRule(RelativeLayout.ALIGN_TOP, backContainer.id); userParams.addRule(RelativeLayout.ALIGN_BOTTOM, backContainer.id); topBar.addView(userContainer, userParams)
-
-        val settingsContainer = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8)); background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorDivider); cornerRadius = LayoutHelper.dp(20).toFloat() }; minimumWidth = LayoutHelper.dp(46) }
-        btnSettings = settingsContainer
-        val settingsIcon = ImageView(context).apply { setImageResource(R.drawable.ic_settings); setColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN) }
-        settingsContainer.addView(settingsIcon, LayoutHelper.createLinear(20, 20))
-        val settingsParams = RelativeLayout.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT)
-        settingsParams.addRule(RelativeLayout.ALIGN_PARENT_END); settingsParams.addRule(RelativeLayout.ALIGN_TOP, backContainer.id); topBar.addView(settingsContainer, settingsParams)
-
+        // --- ТУЛБАР ---
+        val themePrefs = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+        val isDark = themePrefs.getBoolean("is_dark_theme", false)
+        
+        topBar = DesignEngine.createToolBar(
+            context = context,
+            title = "", 
+            leftButtonIconRes = R.drawable.ic_back,
+            rightButtonIconRes = R.drawable.ic_settings,
+            isDark = isDark
+        )
+        
+        val toolbarContent = topBar.getChildAt(0) as RelativeLayout
+        
+        backButton = toolbarContent.getChildAt(0)
+        
+        val titleLayout = toolbarContent.getChildAt(1) as LinearLayout
+        userID = titleLayout.getChildAt(0) as TextView
+        
+        btnSettings = toolbarContent.getChildAt(2)
+        
         addView(topBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
     }
 
     private fun switchTab(index: Int, animate: Boolean = true) {
-        tabViews.forEachIndexed { i, tv ->
-            val isSelected = i == index
-            tv.setTextColor(if (isSelected) DesignEngine.Theme.colorBlue else DesignEngine.Theme.colorTextSecondary)
-            tv.typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        }
+        tabViews.forEachIndexed { i, tv -> val isSelected = i == index; tv.setTextColor(if (isSelected) DesignEngine.Theme.colorBlue else DesignEngine.Theme.colorTextSecondary); tv.typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT }
         val currentTab = tabViews[index]
         if (currentTab.width > 0) {
             val lp = tabSelector.layoutParams; lp.width = currentTab.width; tabSelector.layoutParams = lp
@@ -227,57 +202,26 @@ class ProfileLayout(context: Context) : FrameLayout(context) {
         contentContainer.addView(content)
     }
 
-    private fun createGridContent(): View {
-        val gridCard = CardView(context).apply { setCardBackgroundColor(DesignEngine.Theme.colorSheetBackground); radius = LayoutHelper.dp(24).toFloat() }
-        val grid = GridLayout(context).apply { columnCount = 4; rowCount = 2; setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12)) }
-        for (i in 0 until 8) {
-            val cell = CardView(context).apply { setCardBackgroundColor(DesignEngine.Theme.colorDivider); radius = LayoutHelper.dp(12).toFloat() }
-            val lp = GridLayout.LayoutParams(); lp.width = 0; lp.height = LayoutHelper.dp(60); lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); lp.setMargins(LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6)); grid.addView(cell, lp)
-        }
-        gridCard.addView(grid); return gridCard
-    }
-
+    private fun createGridContent(): View { val gridCard = CardView(context).apply { setCardBackgroundColor(DesignEngine.Theme.colorSheetBackground); radius = LayoutHelper.dp(24).toFloat() }; val grid = GridLayout(context).apply { columnCount = 4; rowCount = 2; setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12)) }; for (i in 0 until 8) { val cell = CardView(context).apply { setCardBackgroundColor(DesignEngine.Theme.colorDivider); radius = LayoutHelper.dp(12).toFloat() }; val lp = GridLayout.LayoutParams(); lp.width = 0; lp.height = LayoutHelper.dp(60); lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); lp.setMargins(LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6)); grid.addView(cell, lp) }; gridCard.addView(grid); return gridCard }
     fun updateMusicList() { if (tabViews[1].currentTextColor == DesignEngine.Theme.colorBlue) { switchTab(1, animate = false) } }
     fun updateMusicBadge(track: Track?, isPlaying: Boolean) { if (track != null && isPlaying) { musicBadge.visibility = View.VISIBLE; musicTrackTv.text = "Слушает: ${track.artist} - ${track.title}"; musicTrackTv.isSelected = true } else { musicBadge.visibility = View.GONE } }
 
     private fun createMusicContent(): View {
-        val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        val btnAdd = Button(context).apply { text = "Добавить музыку"; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); background = context.getDrawable(R.drawable.bg_stat_pill); backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue); val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(15)); p.bottomMargin = LayoutHelper.dp(12); layoutParams = p; setOnClickListener { onAddMusicClicked?.invoke() } }
-        root.addView(btnAdd)
+        val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }; val btnAdd = Button(context).apply { text = "Добавить музыку"; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); background = context.getDrawable(R.drawable.bg_stat_pill); backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorBlue); val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(15)); p.bottomMargin = LayoutHelper.dp(12); layoutParams = p; setOnClickListener { onAddMusicClicked?.invoke() } }; root.addView(btnAdd)
         val tracks = MusicManager.playlist.value
         if (tracks.isEmpty()) { val emptyTv = TextView(context).apply { text = "Музыка не найдена"; setTextColor(DesignEngine.Theme.colorTextSecondary); gravity = Gravity.CENTER; setPadding(0, LayoutHelper.dp(20), 0, LayoutHelper.dp(20)) }; root.addView(emptyTv); return root }
         val recycler = object : RecyclerView(context) { override fun onMeasure(widthSpec: Int, heightSpec: Int) { val hSpec = MeasureSpec.makeMeasureSpec(LayoutHelper.dp(250), MeasureSpec.AT_MOST); super.onMeasure(widthSpec, hSpec) } }.apply {
             layoutManager = LinearLayoutManager(context); layoutParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); isNestedScrollingEnabled = true
             adapter = object : RecyclerView.Adapter<TrackViewHolder>() {
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder { val cell = MusicCell(context); cell.layoutParams = RecyclerView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(60)); return TrackViewHolder(cell) }
-                override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
-                    val track = tracks[position]; holder.cell.setData(track.title, track.artist, track.albumArtUri); holder.cell.setOnClickListener { onTrackClicked?.invoke(track) }
-                    holder.cell.moreBtn.setImageResource(R.drawable.ic_close_small); holder.cell.moreBtn.setColorFilter(DesignEngine.Theme.colorLogout, PorterDuff.Mode.SRC_IN); holder.cell.moreBtn.visibility = View.VISIBLE
-                    holder.cell.moreBtn.setOnClickListener { showCustomConfirmDialog(context, "Удаление трека", "Вы уверены, что хотите удалить трек \"${track.title}\"?") { MusicManager.deleteTrack(context, track); updateMusicList() } }
-                }
+                override fun onBindViewHolder(holder: TrackViewHolder, position: Int) { val track = tracks[position]; holder.cell.setData(track.title, track.artist, track.albumArtUri); holder.cell.setOnClickListener { onTrackClicked?.invoke(track) }; holder.cell.moreBtn.setImageResource(R.drawable.ic_close_small); holder.cell.moreBtn.setColorFilter(DesignEngine.Theme.colorLogout, PorterDuff.Mode.SRC_IN); holder.cell.moreBtn.visibility = View.VISIBLE; holder.cell.moreBtn.setOnClickListener { showCustomConfirmDialog(context, "Удаление трека", "Вы уверены, что хотите удалить трек \"${track.title}\"?") { MusicManager.deleteTrack(context, track); updateMusicList() } } }
                 override fun getItemCount() = tracks.size
             }
         }
-        val card = CardView(context).apply { setCardBackgroundColor(DesignEngine.Theme.colorSheetBackground); radius = LayoutHelper.dp(24).toFloat(); val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); layoutParams = p; addView(recycler) }
-        root.addView(card); return root
+        val card = CardView(context).apply { setCardBackgroundColor(DesignEngine.Theme.colorSheetBackground); radius = LayoutHelper.dp(24).toFloat(); val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); layoutParams = p; addView(recycler) }; root.addView(card); return root
     }
 
-    private fun showCustomConfirmDialog(context: Context, title: String, message: String, onConfirm: () -> Unit) {
-        val dialog = Dialog(context); dialog.requestWindowFeature(Window.FEATURE_NO_TITLE); dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24)); background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorCardBackground); cornerRadius = LayoutHelper.dp(28).toFloat() }; layoutParams = FrameLayout.LayoutParams(LayoutHelper.dp(300), LayoutHelper.WRAP_CONTENT) }
-        val titleTv = TextView(context).apply { text = title; textSize = 20f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary) }; root.addView(titleTv)
-        val msgTv = TextView(context).apply { text = message; textSize = 16f; setTextColor(DesignEngine.Theme.colorTextSecondary); val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); p.topMargin = LayoutHelper.dp(12); layoutParams = p }; root.addView(msgTv)
-        val buttons = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END; val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); p.topMargin = LayoutHelper.dp(24); layoutParams = p }
-        val btnCancel = Button(context).apply { text = "ОТМЕНА"; background = null; setTextColor(DesignEngine.Theme.colorBlue); setOnClickListener { dialog.dismiss() } }; buttons.addView(btnCancel)
-        val btnOk = Button(context).apply { text = "УДАЛИТЬ"; background = null; setTextColor(DesignEngine.Theme.colorLogout); setOnClickListener { onConfirm(); dialog.dismiss() } }; buttons.addView(btnOk)
-        root.addView(buttons); dialog.setContentView(root); dialog.show()
-    }
-
+    private fun showCustomConfirmDialog(context: Context, title: String, message: String, onConfirm: () -> Unit) { val dialog = Dialog(context); dialog.requestWindowFeature(Window.FEATURE_NO_TITLE); dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24)); background = GradientDrawable().apply { setColor(DesignEngine.Theme.colorCardBackground); cornerRadius = LayoutHelper.dp(28).toFloat() }; layoutParams = FrameLayout.LayoutParams(LayoutHelper.dp(300), LayoutHelper.WRAP_CONTENT) }; val titleTv = TextView(context).apply { text = title; textSize = 20f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary) }; root.addView(titleTv); val msgTv = TextView(context).apply { text = message; textSize = 16f; setTextColor(DesignEngine.Theme.colorTextSecondary); val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); p.topMargin = LayoutHelper.dp(12); layoutParams = p }; root.addView(msgTv); val buttons = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END; val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT); p.topMargin = LayoutHelper.dp(24); layoutParams = p }; val btnCancel = Button(context).apply { text = "ОТМЕНА"; background = null; setTextColor(DesignEngine.Theme.colorBlue); setOnClickListener { dialog.dismiss() } }; buttons.addView(btnCancel); val btnOk = Button(context).apply { text = "УДАЛИТЬ"; background = null; setTextColor(DesignEngine.Theme.colorLogout); setOnClickListener { onConfirm(); dialog.dismiss() } }; buttons.addView(btnOk); root.addView(buttons); dialog.setContentView(root); dialog.show() }
     class TrackViewHolder(val cell: MusicCell) : RecyclerView.ViewHolder(cell)
-
-    private fun createDocsContent(): View {
-        val container = ContainerCell(context); val docs = listOf("DesignEngine" to "...", "Theme" to "...", "LayoutHelper" to "...", "Cells" to "...", "Usage" to "...")
-        docs.forEachIndexed { index, (title, _) -> val cell = TextCell(context); cell.setData(title, R.drawable.ic_brush); cell.setIconColor(DesignEngine.Theme.colorBlue); container.addCell(cell, index == docs.size - 1) }
-        return container
-    }
+    private fun createDocsContent(): View { val container = ContainerCell(context); val docs = listOf("DesignEngine" to "...", "Theme" to "...", "LayoutHelper" to "...", "Cells" to "...", "Usage" to "..."); docs.forEachIndexed { index, (title, _) -> val cell = TextCell(context); cell.setData(title, R.drawable.ic_brush); cell.setIconColor(DesignEngine.Theme.colorBlue); container.addCell(cell, index == docs.size - 1) }; return container }
 }

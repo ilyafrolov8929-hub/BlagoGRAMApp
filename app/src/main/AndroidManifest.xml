@@ -46,6 +46,7 @@
         <activity android:name=".MusicActivity" />
         <activity android:name=".PremiumActivity" />
         <activity android:name=".ChatSettingsActivity" />
+        <activity android:name=".MenuActivity" />
         <activity android:name=".WallpaperPreviewActivity" />
         <activity android:name=".PrivaciActivity" />
         <activity android:name=".RegisterActivity" />

@@ -19,7 +19,7 @@ import com.kia.blagogramapp.R
 class BottomNavigationModule(val context: Context) {
 
     // Оставляем 3 основных раздела
-    enum class Screen { CHATS, MUSIC, SETTINGS }
+    enum class Screen { CHATS, MUSIC, SETTINGS, MENU }
 
     private lateinit var wrapper: FrameLayout
     private lateinit var rootLayout: LinearLayout
@@ -30,6 +30,7 @@ class BottomNavigationModule(val context: Context) {
         wrapper = FrameLayout(context).apply {
             setPadding(LayoutHelper.dp(24), 0, LayoutHelper.dp(24), LayoutHelper.dp(24))
             translationZ = LayoutHelper.dp(30).toFloat()
+            tag = "bottom_nav_wrapper" // Добавляем тег для поиска в активити
         }
 
         rootLayout = LinearLayout(context).apply {
@@ -48,6 +49,7 @@ class BottomNavigationModule(val context: Context) {
 
         addStandardItem(R.drawable.ic_chat, Screen.CHATS, currentScreen)
         addStandardItem(R.drawable.ic_music, Screen.MUSIC, currentScreen)
+        addStandardItem(R.drawable.ic_menu, Screen.MENU, currentScreen)
         addStandardItem(R.drawable.ic_settings, Screen.SETTINGS, currentScreen)
 
         wrapper.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 60))
@@ -66,6 +68,7 @@ class BottomNavigationModule(val context: Context) {
                 val intent = when (screen) {
                     Screen.CHATS -> Intent(context, ChatsActivity::class.java)
                     Screen.MUSIC -> Intent(context, MusicActivity::class.java)
+                    Screen.MENU -> Intent(context, MenuActivity::class.java)
                     Screen.SETTINGS -> Intent(context, SettingsActivity::class.java)
                 }
                 intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
@@ -96,5 +99,15 @@ class BottomNavigationModule(val context: Context) {
 
         itemLayout.addView(iconView, LayoutHelper.createFrame(24, 24, Gravity.CENTER))
         rootLayout.addView(itemLayout)
+    }
+
+    fun setVisibility(visible: Boolean) {
+        if (!::wrapper.isInitialized) return
+        val translationY = if (visible) 0f else LayoutHelper.dp(150).toFloat()
+        wrapper.animate()
+            .translationY(translationY)
+            .setDuration(300)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
     }
 }

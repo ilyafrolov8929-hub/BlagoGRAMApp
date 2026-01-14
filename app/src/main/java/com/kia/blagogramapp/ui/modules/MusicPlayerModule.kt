@@ -120,7 +120,6 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
     private val titleView: TextView
     private val artistView: TextView
     private val playPauseBtn: FrameLayout
-    // ВОЗВРАЩАЕМ SEEKBAR
     private val seekBar: SeekBar
     private val timeCurrent: TextView
     private val timeTotal: TextView
@@ -193,16 +192,13 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         scrollParams.addRule(RelativeLayout.ABOVE, bottomControls.id)
         addView(scroll, scrollParams)
 
-        // ИЗМЕНЕНИЕ: Создаем кастомный Drawable для SeekBar
         val cornerRadius = LayoutHelper.dp(23).toFloat()
         val progressDrawable = LayerDrawable(arrayOf(
-            // Фон (неактивная часть)
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(DesignEngine.Theme.colorHeader) // Используем серый цвет для фона
+                setColor(DesignEngine.Theme.colorHeader)
                 cornerRadii = floatArrayOf(cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius)
             },
-            // Прогресс (активная часть)
             ClipDrawable(
                 GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
@@ -216,20 +212,15 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
             setId(0, android.R.id.background)
         }
 
-        // ИЗМЕНЕНИЕ: Создаем и стилизуем SeekBar
         seekBar = SeekBar(context).apply {
             this.progressDrawable = progressDrawable
-            // Делаем "бегунок" полностью прозрачным, чтобы его не было видно
             this.thumb.alpha = 0
-            // ↓↓↓ ДОБАВЬТЕ ЭТИ ДВЕ СТРОЧКИ ↓↓↓
             this.setPadding(0, 0, 0, 0)
             this.splitTrack = false
-            // Возвращаем обработчик перемотки
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
                     if (fromUser) {
                         MusicManager.seekTo(p)
-                        // Обновляем текст текущего времени сразу при перемотке
                         timeCurrent.text = formatTime(p.toLong())
                     }
                 }
@@ -238,7 +229,6 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
             })
         }
 
-        // Добавляем SeekBar с нужной высотой и отступами, чтобы было легче нажимать
         bottomControls.addView(seekBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0))
 
         val timeBox = RelativeLayout(context)
@@ -297,34 +287,21 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
     }
 
     fun animateOpen(fromView: View) {
-        val location = IntArray(2)
-        fromView.getLocationInWindow(location)
-
         visibility = View.VISIBLE
         alpha = 0f
-
+        
         post {
-            val fromX = location[0].toFloat()
-            val fromY = location[1].toFloat()
-            val fromW = fromView.width.toFloat()
-            val fromH = fromView.height.toFloat()
-
-            val screenW = width.toFloat()
             val screenH = height.toFloat()
+            if (screenH == 0f) return@post
 
-            if (screenW == 0f || screenH == 0f) return@post
-
-            translationX = fromX + fromW / 2 - screenW / 2
-            translationY = fromY + fromH / 2 - screenH / 2
-            scaleX = fromW / screenW
-            scaleY = fromH / screenH
+            translationY = screenH
+            translationX = 0f
+            scaleX = 1f
+            scaleY = 1f
 
             animate()
                 .alpha(1f)
-                .translationX(0f)
                 .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
                 .setDuration(400)
                 .setInterpolator(DecelerateInterpolator())
                 .setListener(null)
@@ -333,23 +310,11 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
     }
 
     fun animateClose(toView: View, onEnd: () -> Unit) {
-        val location = IntArray(2)
-        toView.getLocationInWindow(location)
-
-        val toX = location[0].toFloat()
-        val toY = location[1].toFloat()
-        val toW = toView.width.toFloat()
-        val toH = toView.height.toFloat()
-
-        val screenW = width.toFloat()
         val screenH = height.toFloat()
 
         animate()
             .alpha(0f)
-            .translationX(toX + toW / 2 - screenW / 2)
-            .translationY(toY + toH / 2 - screenH / 2)
-            .scaleX(toW / screenW)
-            .scaleY(toH / screenH)
+            .translationY(screenH)
             .setDuration(350)
             .setInterpolator(AccelerateInterpolator())
             .setListener(object : AnimatorListenerAdapter() {
@@ -366,7 +331,6 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         artistView.text = track.artist
         coverView.load(track.albumArtUri) { error(R.drawable.ic_music); placeholder(R.drawable.ic_music) }
 
-        // Связываем данные с SeekBar
         seekBar.max = track.duration.toInt()
         timeTotal.text = formatTime(track.duration)
         val icon = playPauseBtn.getChildAt(1) as ImageView
@@ -379,7 +343,6 @@ class FullPlayer(context: Context) : RelativeLayout(context) {
         updateJob = CoroutineScope(Dispatchers.Main).launch {
             while (true) {
                 val pos = MusicManager.getCurrentPosition()
-                // Обновляем SeekBar
                 seekBar.progress = pos
                 timeCurrent.text = formatTime(pos.toLong())
                 delay(1000)

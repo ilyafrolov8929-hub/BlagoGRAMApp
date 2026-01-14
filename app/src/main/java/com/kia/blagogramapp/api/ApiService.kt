@@ -1,5 +1,6 @@
 package com.kia.blagogramapp.api
 
+import com.kia.blagogramapp.model.Post
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -162,4 +163,36 @@ interface ApiService {
         @Field("action") action: String = "debug.full_database_dump",
         @Field("token") token: String
     ): DatabaseDumpResponse
+
+    // --- POSTS ---
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun getPosts(
+        @Field("action") action: String = "posts.get",
+        @Field("token") token: String
+    ): PostListResponse
+
+    @Multipart
+    @POST("index.php")
+    suspend fun createPost(
+        @Part("action") action: RequestBody,
+        @Part("token") token: RequestBody,
+        @Part("content") content: RequestBody,
+        @Part image: MultipartBody.Part?
+    ): Response<Map<String, Any>>
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun likePost(
+        @Field("action") action: String = "posts.like",
+        @Field("token") token: String,
+        @Field("post_id") postId: Int
+    ): Response<Map<String, Any>>
 }
+
+data class PostListResponse(
+    val ok: Boolean,
+    val result: List<Post>?,
+    val error: String?
+)

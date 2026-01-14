@@ -3,8 +3,6 @@ package com.kia.blagogramapp.utils
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -20,10 +18,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 
 object MusicManager : AudioManager.OnAudioFocusChangeListener {
     private var mediaPlayer: MediaPlayer? = null
@@ -57,8 +55,6 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
-    fun getAudioSessionId(): Int = mediaPlayer?.audioSessionId ?: 0
-
     private fun requestAudioFocus(): Boolean {
         if (audioManager == null) return false
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -72,6 +68,7 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
                 .build()
             audioManager!!.requestAudioFocus(request)
         } else {
+            @Suppress("DEPRECATION")
             audioManager!!.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
         }
         return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
@@ -120,46 +117,55 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
     }
 
     fun scanMusic(context: Context) {
-        initPlayer(context)
-        val musicDir = File(context.filesDir, "music")
-        if (!musicDir.exists()) musicDir.mkdirs()
-        
-        val coversDir = File(context.filesDir, "music_covers")
-        if (!coversDir.exists()) coversDir.mkdirs()
+        CoroutineScope(Dispatchers.IO).launch {
+            initPlayer(context)
+            val musicDir = File(context.filesDir, "music")
+            if (!musicDir.exists()) musicDir.mkdirs()
+            
+            val coversDir = File(context.filesDir, "music_covers")
+            if (!coversDir.exists()) coversDir.mkdirs()
 
-        val tracks = mutableListOf<Track>()
-        val mmr = MediaMetadataRetriever()
-        
-        musicDir.listFiles()?.forEach { file ->
-            if (file.extension == "mp3" || file.extension == "m4a" || file.extension == "wav") {
-                try {
-                    mmr.setDataSource(file.absolutePath)
-                    val title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.nameWithoutExtension
-                    val artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Artist"
-                    val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
-                    
-                    val coverFile = File(coversDir, "${file.nameWithoutExtension}.jpg")
-                    if (!coverFile.exists()) {
-                        val art = mmr.embeddedPicture
-                        if (art != null) {
-                            FileOutputStream(coverFile).use { it.write(art) }
+            val tracks = mutableListOf<Track>()
+            val mmr = MediaMetadataRetriever()
+            
+            try {
+                musicDir.listFiles()?.forEach { file ->
+                    if (file.extension == "mp3" || file.extension == "m4a" || file.extension == "wav") {
+                        try {
+                            mmr.setDataSource(file.absolutePath)
+                            val title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.nameWithoutExtension
+                            val artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Artist"
+                            val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+                            
+                            val coverFile = File(coversDir, "${file.nameWithoutExtension}.jpg")
+                            if (!coverFile.exists()) {
+                                val art = mmr.embeddedPicture
+                                if (art != null) {
+                                    FileOutputStream(coverFile).use { it.write(art) }
+                                }
+                            }
+
+                            tracks.add(Track(
+                                id = file.hashCode().toLong(),
+                                title = title,
+                                artist = artist,
+                                data = file.absolutePath,
+                                duration = duration,
+                                albumArtUri = if (coverFile.exists()) coverFile.absolutePath else ""
+                            ))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
-
-                    tracks.add(Track(
-                        id = file.hashCode().toLong(),
-                        title = title,
-                        artist = artist,
-                        data = file.absolutePath,
-                        duration = duration,
-                        albumArtUri = if (coverFile.exists()) coverFile.absolutePath else ""
-                    ))
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
+            } finally {
+                mmr.release()
+            }
+            
+            withContext(Dispatchers.Main) {
+                _playlist.value = tracks
             }
         }
-        _playlist.value = tracks
     }
 
     fun downloadAndAddTrack(context: Context, downloadUrl: String, title: String, artist: String, imageUrl: String?, onProgress: (Int) -> Unit, onComplete: (Boolean) -> Unit) {
@@ -174,7 +180,7 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
 
                 val request = Request.Builder()
                     .url(downloadUrl)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("User-Agent", "Mozilla/5.0")
                     .build()
 
                 ApiClient.downloadClient.newCall(request).execute().use { response ->
@@ -230,7 +236,7 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
                     scanMusic(context)
                     onComplete(true)
                 } else {
-                    Toast.makeText(context, "Ошибка загрузки. Попробуйте VPN", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Ошибка загрузки", Toast.LENGTH_LONG).show()
                     onComplete(false)
                 }
             }
@@ -238,35 +244,38 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
     }
 
     fun addTrack(context: Context, uri: Uri) {
-        val musicDir = File(context.filesDir, "music")
-        if (!musicDir.exists()) musicDir.mkdirs()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val musicDir = File(context.filesDir, "music")
+                if (!musicDir.exists()) musicDir.mkdirs()
+                val fileName = "track_${System.currentTimeMillis()}.mp3"
+                val destFile = File(musicDir, fileName)
 
-        val fileName = "track_${System.currentTimeMillis()}.mp3"
-        val destFile = File(musicDir, fileName)
-
-        try {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(destFile).use { output ->
-                    input.copyTo(output)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
                 }
-            }
-            scanMusic(context)
-        } catch (e: Exception) {
-            e.printStackTrace()
+                scanMusic(context)
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     fun deleteTrack(context: Context, track: Track) {
-        val file = File(track.data)
-        if (file.exists()) {
-            if (file.delete()) {
-                val coverFile = File(track.albumArtUri)
-                if (coverFile.exists()) coverFile.delete()
+        CoroutineScope(Dispatchers.IO).launch {
+            val file = File(track.data)
+            if (file.exists() && file.delete()) {
+                track.albumArtUri?.let { uri ->
+                    val coverFile = File(uri)
+                    if (coverFile.exists()) coverFile.delete()
+                }
 
                 if (_currentTrack.value?.data == track.data) {
-                    mediaPlayer?.stop()
-                    _currentTrack.value = null
-                    _isPlaying.value = false
+                    withContext(Dispatchers.Main) {
+                        mediaPlayer?.stop()
+                        _currentTrack.value = null
+                        _isPlaying.value = false
+                    }
                 }
                 scanMusic(context)
             }
@@ -279,14 +288,16 @@ object MusicManager : AudioManager.OnAudioFocusChangeListener {
 
     fun playTrack(track: Track) {
         if (!requestAudioFocus()) return
-        mediaPlayer?.reset()
-        mediaPlayer?.setDataSource(track.data)
-        mediaPlayer?.prepare()
-        mediaPlayer?.start()
-        _currentTrack.value = track
-        _isPlaying.value = true
-        resumeOnFocusGain = false
-        updateService()
+        try {
+            mediaPlayer?.reset()
+            mediaPlayer?.setDataSource(track.data)
+            mediaPlayer?.prepare()
+            mediaPlayer?.start()
+            _currentTrack.value = track
+            _isPlaying.value = true
+            resumeOnFocusGain = false
+            updateService()
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     fun togglePlayPause() {

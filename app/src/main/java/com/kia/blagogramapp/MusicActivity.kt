@@ -50,37 +50,38 @@ class MusicActivity : AppCompatActivity() {
     private lateinit var emptyTv: TextView
     private lateinit var miniPlayer: MiniPlayer
     private var fullPlayer: FullPlayer? = null
+    private var bottomNav: BottomNavigationModule? = null
 
     private var currentMode = 0 // 0 - Популярное, 1 - Моя музыка
     private var searchJob: Job? = null
+    
+    private var currentThemeIsDark = false
+    private var currentUseBottomNav = false
 
     private val musicPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             MusicManager.addTrack(this, it)
-            if (currentMode == 1) loadMyMusic()
-            Toast.makeText(this, "Трек добавлен в вашу библиотеку", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Трек добавляется в вашу библиотеку...", Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализируем экран
+        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        currentThemeIsDark = themePrefs.getBoolean("is_dark_theme", false)
+        currentUseBottomNav = themePrefs.getBoolean("use_bottom_navigation", false)
+
         root = DesignEngine.initializeScreenWithFrameLayout(this)
         setContentView(root)
-
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
 
         val mainContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
         root.addView(mainContent)
 
-        // Автоматическая настройка навигации
-        BottomNavigationModule(this).create(root, BottomNavigationModule.Screen.MUSIC)
+        bottomNav = BottomNavigationModule(this).create(root, BottomNavigationModule.Screen.MUSIC)
 
-        // Тулбар
         val toolbar = DesignEngine.createToolBar(
             context = this,
             title = "Музыка",
@@ -88,11 +89,10 @@ class MusicActivity : AppCompatActivity() {
             leftButtonClickListener = { finish() },
             rightButtonIconRes = R.drawable.ic_music,
             rightButtonClickListener = { musicPickerLauncher.launch("audio/*") },
-            isDark = isCurrentThemeDark
+            isDark = currentThemeIsDark
         )
         mainContent.addView(toolbar)
 
-        // Tabs
         tabsLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
@@ -101,7 +101,6 @@ class MusicActivity : AppCompatActivity() {
         addTab("Моя музыка", 1)
         mainContent.addView(tabsLayout)
 
-        // Search
         searchContainer = FrameLayout(this).apply {
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
         }
@@ -119,7 +118,6 @@ class MusicActivity : AppCompatActivity() {
         searchContainer.addView(searchEdit)
         mainContent.addView(searchContainer)
 
-        // SwipeRefresh + Recycler
         swipeRefresh = SwipeRefreshLayout(this).apply {
             setProgressBackgroundColorSchemeColor(DesignEngine.Theme.colorCardBackground)
             setColorSchemeColors(DesignEngine.Theme.colorBlue)
@@ -128,7 +126,7 @@ class MusicActivity : AppCompatActivity() {
                     val query = searchEdit.text.toString()
                     if (query.isNotEmpty()) searchMusic(query) else loadPopular()
                 } else {
-                    loadMyMusic()
+                    MusicManager.scanMusic(this@MusicActivity)
                 }
             }
         }
@@ -149,7 +147,6 @@ class MusicActivity : AppCompatActivity() {
         }
         root.addView(emptyTv, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER))
 
-        // MiniPlayer
         miniPlayer = MiniPlayer(this).apply {
             tag = "mini_player"
             visibility = View.GONE
@@ -162,6 +159,7 @@ class MusicActivity : AppCompatActivity() {
         setupListeners()
         observeMusic()
         loadPopular()
+        MusicManager.scanMusic(this)
     }
 
     private fun addTab(text: String, mode: Int) {
@@ -178,71 +176,21 @@ class MusicActivity : AppCompatActivity() {
 
     private fun switchTab(mode: Int) {
         if (currentMode == mode) return
-
         currentMode = mode
-        recycler.adapter = null
-        emptyTv.visibility = View.GONE
-
+        
         for (i in 0 until tabsLayout.childCount) {
             val tv = tabsLayout.getChildAt(i) as TextView
             tv.setTextColor(if (i == mode) DesignEngine.Theme.colorBlue else DesignEngine.Theme.colorTextSecondary)
         }
 
         if (mode == 1) {
-            val initialHeight = searchContainer.height
-            val animator = ValueAnimator.ofInt(initialHeight, 0)
-            animator.addUpdateListener { valueAnimator ->
-                val lp = searchContainer.layoutParams
-                lp.height = valueAnimator.animatedValue as Int
-                searchContainer.layoutParams = lp
-            }
-            animator.duration = 250
-
-            searchContainer.animate()
-                .alpha(0f)
-                .translationY(-LayoutHelper.dp(20).toFloat())
-                .setDuration(250)
-                .withEndAction {
-                    searchContainer.visibility = View.GONE
-                    val lp = searchContainer.layoutParams
-                    lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                    searchContainer.layoutParams = lp
-                }
-                .start()
-            animator.start()
-
-            loadMyMusic()
+            searchContainer.animate().alpha(0f).setDuration(200).withEndAction { 
+                searchContainer.visibility = View.GONE 
+            }.start()
+            updateMyMusicList(MusicManager.playlist.value)
         } else {
             searchContainer.visibility = View.VISIBLE
-            searchContainer.alpha = 0f
-            searchContainer.translationY = -LayoutHelper.dp(20).toFloat()
-
-            searchContainer.measure(
-                View.MeasureSpec.makeMeasureSpec(root.width, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-            val targetHeight = searchContainer.measuredHeight
-
-            val animator = ValueAnimator.ofInt(0, targetHeight)
-            animator.addUpdateListener { valueAnimator ->
-                val lp = searchContainer.layoutParams
-                lp.height = valueAnimator.animatedValue as Int
-                searchContainer.layoutParams = lp
-            }
-            animator.duration = 250
-
-            searchContainer.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(250)
-                .withEndAction {
-                    val lp = searchContainer.layoutParams
-                    lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                    searchContainer.layoutParams = lp
-                }
-                .start()
-            animator.start()
-
+            searchContainer.animate().alpha(1f).setDuration(200).start()
             loadPopular()
         }
     }
@@ -255,7 +203,8 @@ class MusicActivity : AppCompatActivity() {
                 searchJob = lifecycleScope.launch {
                     delay(500)
                     val query = s.toString()
-                    if (query.isNotEmpty()) searchMusic(query) else if (currentMode == 0) loadPopular()
+                    if (query.isNotEmpty() && currentMode == 0) searchMusic(query) 
+                    else if (currentMode == 0) loadPopular()
                 }
             }
             override fun afterTextChanged(s: Editable?) {}
@@ -267,9 +216,10 @@ class MusicActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.jamendoApi.getPopularTracks()
-                showJamendoTracks(response.results)
+                if (currentMode == 0) showJamendoTracks(response.results)
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
                 swipeRefresh.isRefreshing = false
             }
         }
@@ -280,27 +230,26 @@ class MusicActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.jamendoApi.searchTracks(query = query)
-                showJamendoTracks(response.results)
+                if (currentMode == 0) showJamendoTracks(response.results)
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
                 swipeRefresh.isRefreshing = false
             }
         }
     }
 
-    private fun loadMyMusic() {
-        swipeRefresh.isRefreshing = true
-        MusicManager.scanMusic(this)
-        val tracks = MusicManager.playlist.value
-        recycler.adapter = MyMusicAdapter(tracks)
-        emptyTv.visibility = if (tracks.isEmpty()) View.VISIBLE else View.GONE
-        swipeRefresh.isRefreshing = false
+    private fun updateMyMusicList(tracks: List<Track>) {
+        if (currentMode == 1) {
+            recycler.adapter = MyMusicAdapter(tracks)
+            emptyTv.visibility = if (tracks.isEmpty()) View.VISIBLE else View.GONE
+            swipeRefresh.isRefreshing = false
+        }
     }
 
     private fun showJamendoTracks(tracks: List<JamendoTrack>) {
         recycler.adapter = JamendoAdapter(tracks)
         emptyTv.visibility = if (tracks.isEmpty()) View.VISIBLE else View.GONE
-        swipeRefresh.isRefreshing = false
     }
 
     private fun observeMusic() {
@@ -324,6 +273,13 @@ class MusicActivity : AppCompatActivity() {
                 }
             }
         }
+        lifecycleScope.launchWhenStarted {
+            MusicManager.playlist.collectLatest { tracks ->
+                if (currentMode == 1) {
+                    updateMyMusicList(tracks)
+                }
+            }
+        }
     }
 
     fun closeFullPlayer() {
@@ -331,6 +287,7 @@ class MusicActivity : AppCompatActivity() {
             root.removeView(fullPlayer)
             miniPlayer.visibility = View.VISIBLE
             miniPlayer.animate().alpha(1f).setDuration(200).start()
+            bottomNav?.setVisibility(true) // Показываем докбар обратно
         }
     }
 
@@ -346,6 +303,7 @@ class MusicActivity : AppCompatActivity() {
             root.addView(fullPlayer)
             fullPlayer?.animateOpen(miniPlayer)
             miniPlayer.animate().alpha(0f).setDuration(200).start()
+            bottomNav?.setVisibility(false) // Скрываем докбар
         }
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
     }
@@ -355,7 +313,7 @@ class MusicActivity : AppCompatActivity() {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        val root = LinearLayout(context).apply {
+        val dialogRoot = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24))
             background = GradientDrawable().apply {
@@ -371,7 +329,7 @@ class MusicActivity : AppCompatActivity() {
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(DesignEngine.Theme.colorTextPrimary)
         }
-        root.addView(titleTv)
+        dialogRoot.addView(titleTv)
 
         val msgTv = TextView(context).apply {
             text = message
@@ -381,7 +339,7 @@ class MusicActivity : AppCompatActivity() {
             p.topMargin = LayoutHelper.dp(12)
             layoutParams = p
         }
-        root.addView(msgTv)
+        dialogRoot.addView(msgTv)
 
         val buttons = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -410,16 +368,17 @@ class MusicActivity : AppCompatActivity() {
         }
         buttons.addView(btnOk)
 
-        root.addView(buttons)
-        dialog.setContentView(root)
+        dialogRoot.addView(buttons)
+        dialog.setContentView(dialogRoot)
         dialog.show()
     }
 
     override fun onResume() {
         super.onResume()
         val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        if (themePrefs.getBoolean("is_dark_theme", false) != (DesignEngine.Theme.colorBackground == 0xFF1A1A1A.toInt()) ||
-            themePrefs.getBoolean("use_bottom_navigation", false) != DesignEngine.useBottomNavigation) {
+        val newTheme = themePrefs.getBoolean("is_dark_theme", false)
+        val newNav = themePrefs.getBoolean("use_bottom_navigation", false)
+        if (newTheme != currentThemeIsDark || newNav != currentUseBottomNav) {
             recreate()
         }
     }
@@ -474,6 +433,9 @@ class MusicActivity : AppCompatActivity() {
                     )
                 }
             }
+            cell.setOnClickListener { 
+                Toast.makeText(this@MusicActivity, "Скачайте трек, чтобы прослушать", Toast.LENGTH_SHORT).show()
+            }
         }
         override fun getItemCount() = tracks.size
     }
@@ -496,7 +458,6 @@ class MusicActivity : AppCompatActivity() {
             cell.moreBtn.setOnClickListener {
                 showCustomConfirmDialog(this@MusicActivity, "Удаление трека", "Вы уверены, что хотите удалить трек \"${track.title}\"?") {
                     MusicManager.deleteTrack(this@MusicActivity, track)
-                    loadMyMusic()
                 }
             }
             cell.setOnClickListener { MusicManager.playTrack(track) }

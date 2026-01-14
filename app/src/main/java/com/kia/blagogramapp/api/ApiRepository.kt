@@ -7,6 +7,7 @@ import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.model.Message
 import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.model.PremiumInfo
+import com.kia.blagogramapp.model.Post
 import com.kia.blagogramapp.models.SearchUserItem
 import com.kia.blagogramapp.utils.DevModeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -473,5 +474,48 @@ class ApiRepository(private val api: BlagoApi) {
 
         if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
         return resp.result
+    }
+
+    // -------------------------------------------------
+    // POSTS
+    // -------------------------------------------------
+    suspend fun getPosts(token: String): List<Post> {
+        if (isDevMode()) return emptyList()
+
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.getPosts(token = token)
+
+        if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
+        return resp.result ?: emptyList()
+    }
+
+    suspend fun createPost(token: String, content: String, image: File?): Boolean {
+        if (isDevMode()) return true
+
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val actionBody = "posts.create".toRequestBody("text/plain".toMediaTypeOrNull())
+        val tokenBody = token.toRequestBody("text/plain".toMediaTypeOrNull())
+        val contentBody = content.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        val imagePart = image?.let {
+            val requestFile = it.asRequestBody("image/*".toMediaTypeOrNull())
+            MultipartBody.Part.createFormData("image", it.name, requestFile)
+        }
+
+        val resp = svc.createPost(actionBody, tokenBody, contentBody, imagePart)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        return true
+    }
+
+    suspend fun likePost(token: String, postId: Int): Boolean {
+        if (isDevMode()) return true
+        val svc = ApiClient.retrofit.create(ApiService::class.java)
+        val resp = svc.likePost(token = token, postId = postId)
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        return (body["result"] as? Map<*, *>)?.get("liked") as? Boolean ?: false
     }
 }

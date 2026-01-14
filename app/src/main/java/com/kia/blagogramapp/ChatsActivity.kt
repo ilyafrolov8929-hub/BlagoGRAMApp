@@ -194,6 +194,12 @@ class ChatsActivity : AppCompatActivity() {
             toggleDrawer()
         }
 
+        sm.addItem("Меню", R.drawable.ic_menu) {
+            startActivity(Intent(this, MenuActivity::class.java))
+            toggleDrawer()
+        }
+
+
         sm.addItem("Настройки", R.drawable.ic_settings) {
             startActivity(Intent(this, SettingsActivity::class.java))
             toggleDrawer()

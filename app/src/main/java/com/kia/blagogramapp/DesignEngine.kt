@@ -1067,3 +1067,124 @@ class ChatSectionHeaderCell(context: Context) : FrameLayout(context) {
         textView.text = title
     }
 }
+
+/**
+ * Ячейка поста из ленты новостей
+ */
+class PostCell(context: Context) : FrameLayout(context) {
+    val authorPill: LinearLayout
+    val avatarView: ShapeableImageView
+    val nameView: TextView
+    val timeView: TextView
+    val contentText: TextView
+    val postImage: ShapeableImageView
+    val likeButton: ImageView
+    val likesCount: TextView
+    
+    init {
+        val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE).getBoolean("is_dark_theme", false)
+        val pillColor = if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
+        
+        background = GradientDrawable().apply {
+            setColor(DesignEngine.Theme.colorCardBackground)
+            cornerRadius = LayoutHelper.dp(30).toFloat()
+        }
+        setPadding(LayoutHelper.dp(16))
+        
+        val mainContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        addView(mainContainer)
+        
+        // Header
+        authorPill = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                setColor(if (isDark) Color.parseColor("#3D3D3F") else Color.parseColor("#BCBCBC"))
+                cornerRadius = LayoutHelper.dp(25).toFloat()
+            }
+            setPadding(LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(16), LayoutHelper.dp(6))
+        }
+        
+        avatarView = ShapeableImageView(context).apply {
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(20).toFloat()).build()
+            scaleType = ImageView.ScaleType.CENTER_CROP
+        }
+        authorPill.addView(avatarView, LayoutHelper.createLinear(40, 40))
+        
+        val nameTimeBox = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        nameView = TextView(context).apply {
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        }
+        timeView = TextView(context).apply {
+            textSize = 11f
+            setTextColor(DesignEngine.Theme.colorTextSecondary)
+        }
+        nameTimeBox.addView(nameView)
+        nameTimeBox.addView(timeView)
+        authorPill.addView(nameTimeBox, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 8, 0, 0, 0))
+        
+        mainContainer.addView(authorPill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 16))
+        
+        // Content
+        contentText = TextView(context).apply {
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        }
+        mainContainer.addView(contentText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 8, 0, 8, 12))
+        
+        postImage = ShapeableImageView(context).apply {
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(12).toFloat()).build()
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            visibility = View.GONE
+        }
+        mainContainer.addView(postImage, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 180, 0f, 0, 0, 0, 0, 12))
+        
+        // Footer (Likes)
+        val footer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        likeButton = ImageView(context).apply {
+            setImageResource(R.drawable.ic_like_outline)
+            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+        }
+        likesCount = TextView(context).apply {
+            textSize = 14f
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+            visibility = View.GONE
+        }
+        footer.addView(likeButton, LayoutHelper.createLinear(24, 24))
+        footer.addView(likesCount, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 4, 0, 0, 0))
+        
+        mainContainer.addView(footer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+    }
+    
+    fun setLiked(liked: Boolean) {
+        likeButton.setImageResource(if (liked) R.drawable.ic_heart_filled else R.drawable.ic_like_outline)
+        if (liked) {
+            likeButton.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
+        } else {
+            likeButton.setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+        }
+    }
+}
+
+class ServiceItemCell(context: Context) : FrameLayout(context) {
+    init {
+        val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE).getBoolean("is_dark_theme", false)
+        background = GradientDrawable().apply {
+            setColor(if (isDark) Color.parseColor("#3D3D3F") else Color.parseColor("#BCBCBC"))
+            cornerRadius = LayoutHelper.dp(12).toFloat()
+        }
+    }
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, widthMeasureSpec)
+    }
+}
