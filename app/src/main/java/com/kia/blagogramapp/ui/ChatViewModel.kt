@@ -1,16 +1,19 @@
 package com.kia.blagogramapp.ui
 
-import android.util.Log
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.kia.blagogramapp.api.ApiRepository
+import com.kia.blagogramapp.database.AppDatabase
+import com.kia.blagogramapp.database.MessageEntity
 import com.kia.blagogramapp.model.Message
 import kotlinx.coroutines.*
 import java.io.File
 
-class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
+class ChatViewModel(application: Application, private val repo: ApiRepository) : AndroidViewModel(application) {
 
     private val _messages = MutableLiveData<List<Message>>()
     val messages: LiveData<List<Message>> = _messages
@@ -30,25 +33,48 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
     private var lastMessageId: Int = 0
     private var currentChatId: Int = -1
     private var currentToken: String = ""
+    
+    private val db = AppDatabase.getDatabase(application)
+    private val gson = Gson()
 
     fun loadMessages(token: String, chatId: Int) {
         currentToken = token
         currentChatId = chatId
+        
+        // 1. Загружаем из кэша
         viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.postValue(true)
-            try {
-                repo.markAsRead(token, chatId)
-                val result = repo.getMessages(token, chatId)
-                _messages.postValue(result)
-                if (result.isNotEmpty()) {
-                    lastMessageId = result.maxOf { it.id }
+            val cached = db.messageDao().getByChatId(chatId)
+            if (cached.isNotEmpty()) {
+                val mapped = cached.map {
+                    Message(it.id, it.chatId, it.senderId, it.content, it.sentAt, it.editedAt, it.isRead, it.displayName, it.avatar, gson.fromJson(it.images, Array<String>::class.java).toList(), it.isPremium)
                 }
-                startRealtime()
-            } catch (e: Exception) {
-                _error.postValue(e.message ?: "Unknown error")
-            } finally {
-                _isLoading.postValue(false)
+                _messages.postValue(mapped)
+                lastMessageId = mapped.maxOf { it.id }
             }
+            
+            // 2. Идем в сеть
+            fetchFromNetwork(token, chatId)
+        }
+    }
+
+    private suspend fun fetchFromNetwork(token: String, chatId: Int) {
+        try {
+            repo.markAsRead(token, chatId)
+            val result = repo.getMessages(token, chatId)
+            _messages.postValue(result)
+            
+            if (result.isNotEmpty()) {
+                lastMessageId = result.maxOf { it.id }
+                
+                // Сохраняем в кэш
+                db.messageDao().deleteByChatId(chatId)
+                db.messageDao().insertAll(result.map {
+                    MessageEntity(it.id, it.chat_id, it.sender_id, it.content, it.sent_at, it.edited_at, it.is_read, it.display_name, it.avatar, gson.toJson(it.images), it.is_premium)
+                })
+            }
+            startRealtime()
+        } catch (e: Exception) {
+            _error.postValue(e.message ?: "Unknown error")
         }
     }
 
@@ -56,7 +82,6 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
         pollingJob?.cancel()
         statusJob?.cancel()
 
-        // 1. Получение НОВЫХ сообщений (Long Polling)
         pollingJob = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
                 try {
@@ -70,6 +95,11 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
                             updatedList.sortBy { it.id }
                             _messages.postValue(updatedList)
                             lastMessageId = updatedList.maxOf { it.id }
+                            
+                            // Обновляем кэш
+                            db.messageDao().insertAll(newFiltered.map {
+                                MessageEntity(it.id, it.chat_id, it.sender_id, it.content, it.sent_at, it.edited_at, it.is_read, it.display_name, it.avatar, gson.toJson(it.images), it.is_premium)
+                            })
                         }
                     }
                 } catch (e: Exception) {
@@ -79,15 +109,13 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
             }
         }
 
-        // 2. Обновление СТАТУСОВ (Галочки)
         statusJob = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
-                delay(4000) // Проверяем статусы каждые 4 секунды
+                delay(4000)
                 try {
                     val latest = repo.getMessages(currentToken, currentChatId)
                     val current = _messages.value.orEmpty()
                     
-                    // Проверяем, изменились ли статусы is_read
                     val statusChanged = latest.size != current.size || latest.any { l -> 
                         current.find { it.id == l.id }?.is_read != l.is_read ||
                         current.find { it.id == l.id }?.content != l.content ||
@@ -96,6 +124,11 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
 
                     if (statusChanged) {
                         _messages.postValue(latest)
+                        // Обновляем кэш при изменении статусов
+                        db.messageDao().deleteByChatId(currentChatId)
+                        db.messageDao().insertAll(latest.map {
+                            MessageEntity(it.id, it.chat_id, it.sender_id, it.content, it.sent_at, it.edited_at, it.is_read, it.display_name, it.avatar, gson.toJson(it.images), it.is_premium)
+                        })
                     }
                 } catch (e: Exception) { }
             }
@@ -111,7 +144,6 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
     fun sendMessage(token: String, chatId: Int, text: String, files: List<File>?) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Перед отправкой помечаем всё как прочитанное локально, чтобы убрать хедер
                 val current = _messages.value.orEmpty().toMutableList()
                 current.forEachIndexed { index, message ->
                     if (message.is_read == 0) current[index] = message.copy(is_read = 1)
@@ -122,14 +154,9 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
                 repo.markAsRead(token, chatId)
                 _isMessageSent.postValue(true)
                 
-                val updated = repo.getMessages(token, chatId)
-                _messages.postValue(updated)
-                if (updated.isNotEmpty()) {
-                    lastMessageId = updated.maxOf { it.id }
-                }
+                fetchFromNetwork(token, chatId)
             } catch (e: Exception) {
                 _error.postValue(e.message ?: "Failed to send message")
-                // В идеале тут надо удалить временное сообщение из списка
             }
         }
     }
@@ -138,8 +165,7 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repo.editMessage(token, messageId, text)
-                val result = repo.getMessages(token, chatId)
-                _messages.postValue(result)
+                fetchFromNetwork(token, chatId)
             } catch (e: Exception) {
                 _error.postValue(e.message ?: "Failed to edit message")
             }
@@ -150,8 +176,7 @@ class ChatViewModel(private val repo: ApiRepository) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repo.deleteMessage(token, messageId)
-                val result = repo.getMessages(token, chatId)
-                _messages.postValue(result)
+                fetchFromNetwork(token, chatId)
             } catch (e: Exception) {
                 _error.postValue(e.message ?: "Failed to delete message")
             }

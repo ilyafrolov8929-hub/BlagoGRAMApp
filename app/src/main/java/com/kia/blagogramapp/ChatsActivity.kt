@@ -25,6 +25,8 @@ import com.kia.blagogramapp.network.RetrofitClient
 import com.kia.blagogramapp.ui.modules.*
 import com.kia.blagogramapp.utils.DevModeManager
 import com.kia.blagogramapp.utils.MusicManager
+import com.kia.blagogramapp.database.AppDatabase
+import com.kia.blagogramapp.database.ChatEntity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.combine
 
@@ -40,6 +42,8 @@ class ChatsActivity : AppCompatActivity() {
 
     private var pollingJob: Job? = null
     private var fullPlayer: FullPlayer? = null
+    
+    private val db by lazy { AppDatabase.getDatabase(this) }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -93,12 +97,27 @@ class ChatsActivity : AppCompatActivity() {
 
         layout.swipeRefresh.setOnRefreshListener { loadChats() }
 
+        // Сначала загружаем кэш
+        loadCachedChats()
+
         layout.swipeRefresh.post {
             layout.swipeRefresh.isRefreshing = true
             loadChats()
         }
 
         handleNotificationIntent(intent)
+    }
+
+    private fun loadCachedChats() {
+        lifecycleScope.launch {
+            val cached = withContext(Dispatchers.IO) { db.chatDao().getAll() }
+            if (cached.isNotEmpty()) {
+                val chats = cached.map {
+                    Chat(it.id, it.name, it.avatar, it.lastMsg, it.lastTime, it.unread, it.lastSenderId, it.userId, it.pinned, it.isPremium)
+                }
+                updateAdapter(chats)
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -274,34 +293,35 @@ class ChatsActivity : AppCompatActivity() {
 
     private fun loadChats() {
         val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch {
             try {
-                val chats: List<Chat> = repo.getChats(token)
-                val json = Gson().toJson(chats)
-                getSharedPreferences("app_cache", MODE_PRIVATE).edit().putString("chats_list", json).apply()
-                runOnUiThread {
-                    layout.swipeRefresh.isRefreshing = false
-                    updateAdapter(chats)
+                val chats: List<Chat> = withContext(Dispatchers.IO) { repo.getChats(token) }
+                
+                // Кэшируем в БД
+                withContext(Dispatchers.IO) {
+                    db.chatDao().deleteAll()
+                    db.chatDao().insertAll(chats.map {
+                        ChatEntity(it.id, it.name, it.avatar, it.last_msg, it.last_time, it.unread, it.last_sender_id, it.user_id, it.pinned, it.is_premium)
+                    })
                 }
+
+                layout.swipeRefresh.isRefreshing = false
+                updateAdapter(chats)
             } catch (e: Exception) {
-                runOnUiThread {
-                    layout.swipeRefresh.isRefreshing = false
-                    e.printStackTrace()
-                }
+                layout.swipeRefresh.isRefreshing = false
+                e.printStackTrace()
             }
         }
     }
 
     private fun startPolling() {
         pollingJob?.cancel()
-        pollingJob = CoroutineScope(Dispatchers.IO).launch {
+        pollingJob = lifecycleScope.launch {
             val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
             while (isActive) {
                 try {
-                    val chats: List<Chat> = repo.getChats(token)
-                    runOnUiThread {
-                        updateAdapter(chats)
-                    }
+                    val chats: List<Chat> = withContext(Dispatchers.IO) { repo.getChats(token) }
+                    updateAdapter(chats)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -386,24 +406,20 @@ class ChatsActivity : AppCompatActivity() {
                     }
                 }
 
-                CoroutineScope(Dispatchers.IO).launch {
+                lifecycleScope.launch {
                     try {
                         val success = if (chat.pinned) {
-                            repo.unpinChat(token, chat.chat_id)
+                            withContext(Dispatchers.IO) { repo.unpinChat(token, chat.chat_id) }
                         } else {
-                            repo.pinChat(token, chat.chat_id)
+                            withContext(Dispatchers.IO) { repo.pinChat(token, chat.chat_id) }
                         }
                         if (success) {
-                            runOnUiThread {
-                                val msg = if (chat.pinned) "Чат откреплен" else "Чат закреплен"
-                                Toast.makeText(this@ChatsActivity, msg, Toast.LENGTH_SHORT).show()
-                                loadChats()
-                            }
+                            val msg = if (chat.pinned) "Чат откреплен" else "Чат закреплен"
+                            Toast.makeText(this@ChatsActivity, msg, Toast.LENGTH_SHORT).show()
+                            loadChats()
                         }
                     } catch (e: Exception) {
-                        runOnUiThread {
-                            Toast.makeText(this@ChatsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
+                        Toast.makeText(this@ChatsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
             },
@@ -411,19 +427,15 @@ class ChatsActivity : AppCompatActivity() {
                 MessageOptionsSheet.showDeleteConfirm(this, chat.name, chat.avatar) { forBoth ->
                     val mode = if (forBoth) "for_everyone" else "for_me"
 
-                    CoroutineScope(Dispatchers.IO).launch {
+                    lifecycleScope.launch {
                         try {
-                            val success = repo.deleteChat(token, chat.chat_id, mode)
+                            val success = withContext(Dispatchers.IO) { repo.deleteChat(token, chat.chat_id, mode) }
                             if (success) {
-                                runOnUiThread {
-                                    Toast.makeText(this@ChatsActivity, "Чат удален", Toast.LENGTH_SHORT).show()
-                                    loadChats()
-                                }
+                                Toast.makeText(this@ChatsActivity, "Чат удален", Toast.LENGTH_SHORT).show()
+                                loadChats()
                             }
                         } catch (e: Exception) {
-                            runOnUiThread {
-                                Toast.makeText(this@ChatsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
-                            }
+                            Toast.makeText(this@ChatsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     }
                 }

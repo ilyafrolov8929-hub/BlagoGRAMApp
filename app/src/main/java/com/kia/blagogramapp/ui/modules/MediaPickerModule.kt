@@ -48,7 +48,7 @@ import java.io.FileOutputStream
 class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayout(context) {
 
     enum class Mode {
-        CHAT, AVATAR, COVER
+        CHAT, AVATAR, COVER, POST
     }
 
     val gridContainer: LinearLayout
@@ -67,11 +67,11 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
     private lateinit var editorImage: com.github.chrisbanes.photoview.PhotoView
     private lateinit var editorImageContainer: FrameLayout
     private lateinit var editorOverlay: PickerOverlayView
-    private lateinit var editorName: TextView
-    private lateinit var editorStatus: TextView
-    private lateinit var editorSmallAvatar: ShapeableImageView
-    private lateinit var editorSmallCover: ShapeableImageView
-    private lateinit var editorSmallAvatarOnCover: ShapeableImageView
+    private var editorName: TextView? = null
+    private var editorStatus: TextView? = null
+    private var editorSmallAvatar: ShapeableImageView? = null
+    private var editorSmallCover: ShapeableImageView? = null
+    private var editorSmallAvatarOnCover: ShapeableImageView? = null
 
     private val floatingBottomBar: LinearLayout
     private val categoriesLayout: LinearLayout
@@ -118,7 +118,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setOnClickListener { if (adapter.selected.isEmpty()) showAlbumPicker() }
         }
-        albumTitle = TextView(context).apply { text = if (mode != Mode.CHAT) "Выберите фото" else "Все медиа"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary) }
+        albumTitle = TextView(context).apply { text = if (mode == Mode.CHAT || mode == Mode.POST) "Все медиа" else "Выберите фото"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(DesignEngine.Theme.colorTextPrimary) }
         titleContainer.addView(albumTitle)
         albumArrow = ImageView(context).apply { setImageResource(R.drawable.ic_chevron_right); rotation = 90f; setColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN) }
         titleContainer.addView(albumArrow, LayoutHelper.createLinear(20, 20, 0f, 0, 4, 0, 0, 0))
@@ -157,7 +157,10 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             insets
         }
         previewHeader.addView(ImageView(context).apply { setImageResource(R.drawable.ic_back); setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN); setOnClickListener { showGrid() } }, LayoutHelper.createFrame(24, 24, top = 20, left = 20))
-        val previewCircle = TextView(context).apply { textSize = 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); gravity = Gravity.CENTER; setOnClickListener { togglePreviewSelection() } }
+        val previewCircle = TextView(context).apply { 
+            textSize = 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); gravity = Gravity.CENTER; 
+            setOnClickListener { togglePreviewSelection() } 
+        }
         previewHeader.addView(previewCircle, LayoutHelper.createFrame(28, 28, Gravity.END))
         previewContainer.addView(previewHeader)
         addView(previewContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -218,7 +221,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
                 if (iconRes == R.drawable.ic_edit) {
                     setOnClickListener {
                         currentPreviewUri?.let { uri ->
-                            if (mode == Mode.CHAT) openExternalEditor(uri)
+                            if (mode == Mode.CHAT || mode == Mode.POST) openExternalEditor(uri)
                         }
                     }
                 }
@@ -268,7 +271,12 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
         editorImageContainer.addView(editorImage, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         cropContainer.addView(editorImageContainer, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         
-        editorOverlay = PickerOverlayView(context, if (mode == Mode.COVER) PickerOverlayView.Type.RECT else PickerOverlayView.Type.CIRCLE).apply {
+        val overlayType = when(mode) {
+            Mode.COVER -> PickerOverlayView.Type.RECT
+            Mode.POST -> PickerOverlayView.Type.POST_RECT
+            else -> PickerOverlayView.Type.CIRCLE
+        }
+        editorOverlay = PickerOverlayView(context, overlayType).apply {
             onRectChanged = { rect ->
                 editorImageContainer.layoutParams = LayoutParams(rect.width().toInt(), rect.height().toInt(), Gravity.CENTER)
                 editorImageContainer.requestLayout()
@@ -294,7 +302,12 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             setPadding(p, p, p, p)
         }
         headerTopRow.addView(backBtn, LayoutHelper.createRelative(48, 48).apply { addRule(RelativeLayout.CENTER_VERTICAL) })
-        headerTopRow.addView(TextView(context).apply { text = if (mode == Mode.COVER) "Обложка" else "Миниатюра"; textSize = 20f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) }, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
+        val titleText = when(mode) {
+            Mode.COVER -> "Обложка"
+            Mode.POST -> "Кадрирование"
+            else -> "Миниатюра"
+        }
+        headerTopRow.addView(TextView(context).apply { text = titleText; textSize = 20f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) }, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply { addRule(RelativeLayout.CENTER_IN_PARENT) })
         headerStack.addView(headerTopRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 56))
 
         val previewRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(LayoutHelper.dp(30), 0, LayoutHelper.dp(30), LayoutHelper.dp(20)) }
@@ -314,7 +327,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
                 setBackgroundColor(Color.GRAY)
                 shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(16).toFloat()).build()
             }
-            coverContainer.addView(editorSmallCover, LayoutHelper.createFrame(140, 97))
+            coverContainer.addView(editorSmallCover!!, LayoutHelper.createFrame(140, 97))
             
             val cardOverlay = View(context).apply {
                 background = GradientDrawable().apply {
@@ -332,7 +345,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
                 setPadding(LayoutHelper.dp(2), LayoutHelper.dp(2), LayoutHelper.dp(2), LayoutHelper.dp(2))
                 load("https://blagogram.ru/avatars/${prefs.getString("avatar", "")}")
             }
-            profilePreview.addView(editorSmallAvatarOnCover, LayoutHelper.createFrame(48, 48, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 58, 0, 0))
+            profilePreview.addView(editorSmallAvatarOnCover!!, LayoutHelper.createFrame(48, 48, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 58, 0, 0))
             
             val infoContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
             editorName = TextView(context).apply { text = prefs.getString("display_name", "Пользователь"); textSize = 11f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); gravity = Gravity.CENTER }
@@ -342,14 +355,17 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             profilePreview.addView(infoContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 0, 108, 0, 0))
 
             previewRow.addView(profilePreview, LayoutHelper.createLinear(140, 140))
-        } else {
+        } else if (mode == Mode.AVATAR) {
             editorSmallAvatar = ShapeableImageView(context).apply { shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(20).toFloat()).build(); scaleType = ImageView.ScaleType.MATRIX; setBackgroundColor(Color.GRAY) }
-            previewRow.addView(editorSmallAvatar, LayoutHelper.createLinear(40, 40))
+            previewRow.addView(editorSmallAvatar!!, LayoutHelper.createLinear(40, 40))
             val nameContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(LayoutHelper.dp(12), 0, 0, 0) }
             editorName = TextView(context).apply { text = prefs.getString("display_name", "Пользователь"); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) }
-            nameContainer.addView(editorName)
+            nameContainer.addView(editorName!!)
             nameContainer.addView(TextView(context).apply { text = "пример миниатюры"; textSize = 12f; setTextColor(0x80FFFFFF.toInt()) })
             previewRow.addView(nameContainer)
+        } else {
+            // For Mode.POST we don't show special preview UI
+            previewRow.visibility = View.GONE
         }
         
         headerStack.addView(previewRow)
@@ -362,7 +378,8 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
         val bottomFixedContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         bottomFixedContainer.addView(View(context).apply { background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(DesignEngine.Theme.colorSheetBackground, Color.TRANSPARENT)) }, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 80))
         val bottomBar = FrameLayout(context).apply { setBackgroundColor(DesignEngine.Theme.colorSheetBackground); setPadding(LayoutHelper.dp(24), LayoutHelper.dp(16), LayoutHelper.dp(24), LayoutHelper.dp(32)) }
-        bottomBar.addView(FrameLayout(context).apply { background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = LayoutHelper.dp(12).toFloat() }; setOnClickListener { cropAndFinish() }; addView(TextView(context).apply { text = if (mode == Mode.COVER) "Установить обложку" else "Продолжить"; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD; textSize = 16f }, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER)) }, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 54))
+        val actionText = if (mode == Mode.COVER) "Установить обложку" else if (mode == Mode.POST) "Готово" else "Продолжить"
+        bottomBar.addView(FrameLayout(context).apply { background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = LayoutHelper.dp(12).toFloat() }; setOnClickListener { cropAndFinish() }; addView(TextView(context).apply { text = actionText; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD; textSize = 16f }, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER)) }, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 54))
         bottomFixedContainer.addView(bottomBar)
         editorRoot.addView(bottomFixedContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM))
 
@@ -375,17 +392,17 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
         val drawable = editorImage.drawable ?: return
         val matrix = Matrix(); editorImage.attacher.getDisplayMatrix(matrix)
         
-        if (mode == Mode.COVER) {
+        if (mode == Mode.COVER && editorSmallCover != null) {
             val smallCoverWidth = LayoutHelper.dp(140).toFloat()
             val scale = smallCoverWidth / editorImageContainer.width
             val finalMatrix = Matrix(matrix).apply { postScale(scale, scale) }
-            editorSmallCover.imageMatrix = finalMatrix
-            editorSmallCover.invalidate()
-        } else {
+            editorSmallCover?.imageMatrix = finalMatrix
+            editorSmallCover?.invalidate()
+        } else if (mode == Mode.AVATAR && editorSmallAvatar != null) {
             val smallPreviewSize = LayoutHelper.dp(40).toFloat()
             val scale = smallPreviewSize / editorImageContainer.width
             val finalMatrix = Matrix(matrix).apply { postScale(scale, scale) }
-            editorSmallAvatar.imageMatrix = finalMatrix; editorSmallAvatar.invalidate()
+            editorSmallAvatar?.imageMatrix = finalMatrix; editorSmallAvatar?.invalidate()
         }
     }
 
@@ -409,7 +426,11 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
                 inverse.mapRect(mappedRect)
                 
                 val cropped = Bitmap.createBitmap(originalBitmap, mappedRect.left.toInt().coerceAtLeast(0), mappedRect.top.toInt().coerceAtLeast(0), mappedRect.width().toInt().coerceAtMost(originalBitmap.width - mappedRect.left.toInt()), mappedRect.height().toInt().coerceAtMost(originalBitmap.height - mappedRect.top.toInt()))
-                val prefix = if (mode == Mode.COVER) "cover_" else "avatar_"
+                val prefix = when(mode) {
+                    Mode.COVER -> "cover_"
+                    Mode.POST -> "post_"
+                    else -> "avatar_"
+                }
                 val file = File(context.cacheDir, "${prefix}${System.currentTimeMillis()}.jpg")
                 FileOutputStream(file).use { cropped.compress(Bitmap.CompressFormat.JPEG, 90, it) }
                 (context as? Activity)?.runOnUiThread { dialog?.dismiss(); onResult?.invoke(listOf(Uri.fromFile(file)), null) }
@@ -450,8 +471,8 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             categoriesLayout.visibility = View.GONE; captionLayout.visibility = View.VISIBLE
             toolsLayout.visibility = View.GONE; floatingBottomBar.setBackgroundColor(DesignEngine.Theme.colorSheetBackground)
         } else {
-            albumTitle.text = if (mode != Mode.CHAT) "Выберите фото" else "Все медиа"; albumArrow.visibility = View.VISIBLE
-            categoriesLayout.visibility = if (mode != Mode.CHAT) View.GONE else View.VISIBLE
+            albumTitle.text = if (mode == Mode.CHAT || mode == Mode.POST) "Все медиа" else "Выберите фото"; albumArrow.visibility = View.VISIBLE
+            categoriesLayout.visibility = if (mode == Mode.AVATAR || mode == Mode.COVER || mode == Mode.POST) View.GONE else View.VISIBLE
             captionLayout.visibility = View.GONE; toolsLayout.visibility = View.GONE; floatingBottomBar.setBackgroundColor(DesignEngine.Theme.colorSheetBackground)
         }
         sendBadge.text = count.toString(); sendBadge.visibility = if (count > 0) View.VISIBLE else View.GONE
@@ -470,10 +491,10 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
     
     fun showPreview(uri: Uri) {
         currentPreviewUri = uri
-        if (mode != Mode.CHAT) {
+        if (mode == Mode.AVATAR || mode == Mode.COVER || mode == Mode.POST) {
             editorImage.load(uri) { listener(onSuccess = { _, result -> 
-                if (mode == Mode.COVER) editorSmallCover.setImageDrawable(result.drawable)
-                else editorSmallAvatar.setImageDrawable(result.drawable)
+                if (mode == Mode.COVER) editorSmallCover?.setImageDrawable(result.drawable)
+                else if (mode == Mode.AVATAR) editorSmallAvatar?.setImageDrawable(result.drawable)
                 editorImage.post { syncSmallPreview() } 
             }) }
             gridContainer.visibility = View.GONE; editorContainer.visibility = View.VISIBLE
@@ -485,10 +506,10 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
 
     fun updatePreviewUri(uri: Uri) {
         currentPreviewUri = uri
-        if (mode != Mode.CHAT) { 
+        if (mode == Mode.AVATAR || mode == Mode.COVER || mode == Mode.POST) { 
             editorImage.load(uri) { listener(onSuccess = { _, result -> 
-                if (mode == Mode.COVER) editorSmallCover.setImageDrawable(result.drawable)
-                else editorSmallAvatar.setImageDrawable(result.drawable)
+                if (mode == Mode.COVER) editorSmallCover?.setImageDrawable(result.drawable)
+                else if (mode == Mode.AVATAR) editorSmallAvatar?.setImageDrawable(result.drawable)
                 editorImage.post { syncSmallPreview() } 
             }) } 
         } 
@@ -522,7 +543,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             val previewView: PreviewView? = view.findViewWithTag("preview")
         }
 
-        override fun getItemViewType(position: Int) = if (position == 0 && mode == Mode.CHAT) 0 else 1
+        override fun getItemViewType(position: Int) = if (position == 0 && (mode == Mode.CHAT || mode == Mode.POST)) 0 else 1
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val frame = FrameLayout(context).apply { layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, LayoutHelper.dp(120)); setPadding(1, 1, 1, 1) }
@@ -551,7 +572,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
                 startTinyPreview(holder.previewView)
                 return
             }
-            val uri = items[if (mode == Mode.CHAT) position - 1 else position]
+            val uri = items[if (mode == Mode.CHAT || mode == Mode.POST) position - 1 else position]
             holder.image?.load(uri); val selIndex = selected.indexOf(uri)
             holder.checkText?.apply {
                 visibility = if (mode != Mode.CHAT) View.GONE else View.VISIBLE
@@ -574,7 +595,7 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
             }, ContextCompat.getMainExecutor(context))
         }
 
-        override fun getItemCount() = if (mode == Mode.CHAT) items.size + 1 else items.size
+        override fun getItemCount() = if (mode == Mode.CHAT || mode == Mode.POST) items.size + 1 else items.size
     }
 
     private fun showAlbumPicker() {
@@ -595,13 +616,13 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
     }
 
     class PickerOverlayView(context: Context, val type: Type = Type.CIRCLE) : View(context) {
-        enum class Type { CIRCLE, RECT }
+        enum class Type { CIRCLE, RECT, POST_RECT }
         
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCC000000.toInt(); style = Paint.Style.FILL }
         private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
         private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { 
             color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = LayoutHelper.dp(2).toFloat()
-            if (type == Type.RECT) {
+            if (type == Type.RECT || type == Type.POST_RECT) {
                 pathEffect = DashPathEffect(floatArrayOf(LayoutHelper.dp(10).toFloat(), LayoutHelper.dp(5).toFloat()), 0f)
             }
         }
@@ -616,13 +637,21 @@ class MediaPickerSheet(context: Context, val mode: Mode = Mode.CHAT) : FrameLayo
         fun getCropRect(view: View): RectF { 
             val cx = getCenterX()
             val cy = getCenterY()
-            val rect = if (type == Type.CIRCLE) {
-                val size = getSize()
-                RectF(cx - size/2, cy - size/2, cx + size/2, cy + size/2)
-            } else {
-                val w = width * 1.0f
-                val h = w * (260f / 375f) // Пропорция как в профиле
-                RectF(cx - w/2, cy - h/2, cx + w/2, cy + h/2)
+            val rect = when(type) {
+                Type.CIRCLE -> {
+                    val size = getSize()
+                    RectF(cx - size/2, cy - size/2, cx + size/2, cy + size/2)
+                }
+                Type.RECT -> {
+                    val w = width * 1.0f
+                    val h = w * (260f / 375f)
+                    RectF(cx - w/2, cy - h/2, cx + w/2, cy + h/2)
+                }
+                Type.POST_RECT -> {
+                    val w = width * 0.9f
+                    val h = w * (180f / 320f) // Ratio roughly as seen in designs
+                    RectF(cx - w/2, cy - h/2, cx + w/2, cy + h/2)
+                }
             }
             if (rect != lastRect) { lastRect = rect; onRectChanged?.invoke(rect) }
             return rect

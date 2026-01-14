@@ -393,7 +393,7 @@ class ChatActivity : AppCompatActivity(), SensorEventListener {
         val repo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
         val factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ChatViewModel(repo) as T
+                return ChatViewModel(application, repo) as T
             }
         }
         viewModel = ViewModelProvider(this, factory)[ChatViewModel::class.java]

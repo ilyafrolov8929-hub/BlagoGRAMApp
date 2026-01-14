@@ -5,9 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [AiMessage::class], version = 1, exportSchema = false)
+@Database(entities = [AiMessage::class, PostEntity::class, ChatEntity::class, MessageEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun aiMessageDao(): AiMessageDao
+    abstract fun postDao(): PostDao
+    abstract fun chatDao(): ChatDao
+    abstract fun messageDao(): MessageDao
 
     companion object {
         @Volatile
@@ -19,7 +22,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "blagogram_db"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }
