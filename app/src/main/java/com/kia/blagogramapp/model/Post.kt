@@ -9,8 +9,6 @@ data class Post(
     val title: String? = null,
     val content: String = "",
     val image: String? = null,
-    @SerializedName("is_dev")
-    val isDev: Boolean = false,
     @SerializedName("created_at")
     val createdAt: String = "",
     @SerializedName(value = "likes", alternate = ["likes_count"])

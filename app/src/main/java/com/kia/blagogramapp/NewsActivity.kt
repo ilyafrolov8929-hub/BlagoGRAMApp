@@ -110,7 +110,7 @@ class NewsActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.Main).launch {
             val cached = withContext(Dispatchers.IO) { db.postDao().getAll() }
             if (cached.isNotEmpty()) {
-                displayPosts(cached.map { Post(it.id, it.authorId, it.title, it.content, it.image, it.isDev, it.createdAt, it.likes, it.liked) })
+                displayPosts(cached.map { Post(it.id, it.authorId, it.title, it.content, it.image, it.createdAt, it.likes, it.liked) })
             }
         }
     }
@@ -191,7 +191,7 @@ class NewsActivity : AppCompatActivity() {
                 
                 withContext(Dispatchers.IO) {
                     db.postDao().deleteAll()
-                    db.postDao().insertAll(posts.map { PostEntity(it.id, it.authorId, it.title, it.content, it.image, it.isDev, it.createdAt, it.likes, it.liked) })
+                    db.postDao().insertAll(posts.map { PostEntity(it.id, it.authorId, it.title, it.content, it.image, it.createdAt, it.likes, it.liked) })
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -216,7 +216,7 @@ class NewsActivity : AppCompatActivity() {
                 updateLikesCount(cell, newLikes, liked)
                 
                 withContext(Dispatchers.IO) {
-                    val entity = PostEntity(post.id, post.authorId, post.title, post.content, post.image, post.isDev, post.createdAt, newLikes, liked)
+                    val entity = PostEntity(post.id, post.authorId, post.title, post.content, post.image, post.createdAt, newLikes, liked)
                     db.postDao().update(entity)
                 }
                 

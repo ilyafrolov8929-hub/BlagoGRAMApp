@@ -9,6 +9,36 @@ object TimeUtils {
         timeZone = TimeZone.getTimeZone("Europe/Moscow")
     }
 
+    fun normalizeRussianPhone(input: String): String? {
+        var phone = input.trim()
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("[^0-9+]", "") // убираем всё кроме цифр и +
+
+        if (phone.isEmpty()) return null
+
+        when {
+            phone.startsWith("+7") || phone.startsWith("+79") -> {
+                // Уже хорошо
+            }
+            phone.startsWith("8") && phone.length >= 11 -> {
+                phone = "+7" + phone.substring(1)
+            }
+            phone.startsWith("7") && phone.length >= 10 -> {
+                phone = "+" + phone
+            }
+            phone.startsWith("9") && phone.length == 10 -> {
+                phone = "+79" + phone
+            }
+            else -> return null // некорректный формат
+        }
+
+        // Финальная проверка: +7 и ровно 11 цифр после
+        return if (phone.matches(Regex("^\\+7\\d{10}$"))) phone else null
+    }
+
     fun formatTime(raw: String): String {
         if (raw.isBlank()) return ""
         val date = input.parse(raw) ?: return ""

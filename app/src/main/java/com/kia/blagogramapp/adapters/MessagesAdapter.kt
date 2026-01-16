@@ -333,7 +333,7 @@ class MessagesAdapter(
                 try {
                     // 1. Пытаемся взять из кэша
                     val cachedPost = withContext(Dispatchers.IO) { db.postDao().getById(postId) }
-                    var post: Post? = cachedPost?.let { Post(it.id, it.authorId, it.title, it.content, it.image, it.isDev, it.createdAt, it.likes, it.liked) }
+                    var post: Post? = cachedPost?.let { Post(it.id, it.authorId, it.title, it.content, it.image, it.createdAt, it.likes, it.liked) }
 
                     // 2. Если нет в кэше, идем в сеть
                     if (post == null) {

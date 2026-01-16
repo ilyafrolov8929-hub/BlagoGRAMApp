@@ -32,11 +32,26 @@ interface ApiService {
 
     @FormUrlEncoded
     @POST("index.php")
+    suspend fun registerPhone(
+        @Field("action") action: String = "auth.register",
+        @Field("phone") phone: String,
+        @Field("password") password: String,
+        @Field("display_name") displayName: String
+    ): LoginResponse
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun checkVerification(
+        @Field("action") action: String = "auth.verify.check",
+        @Field("token") token: String
+    ): Response<LoginResponse>
+
+    @FormUrlEncoded
+    @POST("index.php")
     suspend fun getChats(
         @Field("action") action: String = "chats.get",
         @Field("token") token: String
     ): ChatListResponse
-
 
     @FormUrlEncoded
     @POST("index.php")

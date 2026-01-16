@@ -14,11 +14,22 @@ data class LoginResponse(
 data class LoginResult(
     val user_id: Int?,
     val username: String?,
+    val phone: String?,
     val display_name: String?,
     val avatar: String?,
     val cover: String?,
     val token: String?,
-    val status: String?
+    val status: String?,
+    val deep_link: String?,
+    val verify_token: String?
+)
+
+data class VerificationResponse(
+    val ok: Boolean,
+    val status: String? = null,    // pending / success / error
+    val result: LoginResult? = null,
+    val error: String? = null,
+    val message: String? = null
 )
 
 data class ChatsResponse(

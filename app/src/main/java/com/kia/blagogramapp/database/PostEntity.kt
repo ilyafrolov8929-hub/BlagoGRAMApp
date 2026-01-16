@@ -11,7 +11,6 @@ data class PostEntity(
     val title: String?,
     val content: String,
     val image: String?,
-    @ColumnInfo(name = "is_dev") val isDev: Boolean,
     @ColumnInfo(name = "created_at") val createdAt: String,
     val likes: Int,
     val liked: Boolean

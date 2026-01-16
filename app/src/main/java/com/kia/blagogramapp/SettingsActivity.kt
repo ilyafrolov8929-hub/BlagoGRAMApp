@@ -1,24 +1,16 @@
 package com.kia.blagogramapp
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RelativeLayout
 import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import com.kia.blagogramapp.ui.modules.BottomNavigationModule
 import com.kia.blagogramapp.utils.DevModeManager
 
@@ -46,6 +38,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
         val displayName = prefs.getString("display_name", "Пользователь") ?: "Пользователь"
         val status = prefs.getString("status", "") ?: "Нет статуса"
+        val phone = prefs.getString("phone", "") ?: "Не известно"
         val avatar = prefs.getString("avatar", "") ?: ""
 
         val profileHeader = ProfileHeaderCell(this)

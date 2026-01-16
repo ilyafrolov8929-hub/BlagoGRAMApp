@@ -6,6 +6,7 @@ data class ApiRequest(
 
     val login: String? = null,
     val password: String? = null,
+    val phone: String? = null,
 
     val chat_id: Int? = null,
     val post_id: Int? = null,

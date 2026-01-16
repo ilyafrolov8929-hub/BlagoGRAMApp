@@ -131,7 +131,7 @@ class LoginActivity : AppCompatActivity() {
             return container to input
         }
 
-        val (loginBox, loginInp) = createModernInput("Логин", R.drawable.ic_user)
+        val (loginBox, loginInp) = createModernInput("Логин или номер телефона", R.drawable.ic_user)
         centerLayout.addView(loginBox, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 16))
 
         val (passBox, passInp) = createModernInput("Пароль", R.drawable.ic_edit, true)
@@ -204,6 +204,7 @@ class LoginActivity : AppCompatActivity() {
                             putInt("user_id", response.result.user_id ?: 0)
                             putString("avatar", response.result.avatar)
                             putString("login", response.result.username)
+                            putString("phone", response.result.phone)
                             putString("display_name", response.result.display_name)
                             putString("status", response.result.status)
                             putString("cover", response.result.cover)
