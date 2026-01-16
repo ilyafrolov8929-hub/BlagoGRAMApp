@@ -25,6 +25,7 @@ import com.kia.blagogramapp.model.Post
 import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.models.Track
 import com.kia.blagogramapp.ui.modules.FullPlayer
+import com.kia.blagogramapp.ui.modules.PostCreationModule
 import com.kia.blagogramapp.ui.modules.ProfileLayout
 import com.kia.blagogramapp.ui.modules.ShareModule
 import com.kia.blagogramapp.utils.MusicManager
@@ -105,7 +106,9 @@ class ProfileActivity : AppCompatActivity() {
 
         layout.backButton.setOnClickListener { finish() }
         layout.btnCreatePost.setOnClickListener { 
-            startActivity(Intent(this, NewsActivity::class.java).apply { putExtra("action", "create_post") })
+            PostCreationModule.show(this) {
+                loadUserPosts(effectiveUserId)
+            }
         }
         
         layout.onTrackClicked = { track ->

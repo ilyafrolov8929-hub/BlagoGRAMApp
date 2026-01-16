@@ -1,5 +1,6 @@
 package com.kia.blagogramapp.api
 
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.logging.HttpLoggingInterceptor
@@ -8,6 +9,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
+
+    val gson = GsonBuilder()
+        .registerTypeAdapter(Boolean::class.java, FlexibleBooleanAdapter())
+        .registerTypeAdapter(Boolean::class.javaPrimitiveType, FlexibleBooleanAdapter())
+        .create()
 
     val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -20,15 +26,13 @@ object ApiClient {
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    // Клиент для Long Polling (длительное ожидание ответа)
     val longPollingClient = OkHttpClient.Builder()
         .addInterceptor(logging)
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(90, TimeUnit.SECONDS) // Ждем ответа от сервера до 90 секунд
+        .readTimeout(90, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    // Специальный клиент для скачивания: добавляем логи только для заголовков
     val downloadClient = OkHttpClient.Builder()
         .addInterceptor(logging) 
         .protocols(listOf(Protocol.HTTP_1_1))
@@ -39,13 +43,13 @@ object ApiClient {
     val retrofit = Retrofit.Builder()
         .baseUrl("https://blagogram.ru/api/v1/")
         .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
     val longPollingRetrofit = Retrofit.Builder()
         .baseUrl("https://blagogram.ru/api/v1/")
         .client(longPollingClient)
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
     val api: ApiService = retrofit.create(ApiService::class.java)
@@ -54,7 +58,7 @@ object ApiClient {
     val jamendoRetrofit = Retrofit.Builder()
         .baseUrl("https://api.jamendo.com/v3.0/")
         .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
     val jamendoApi: JamendoApi = jamendoRetrofit.create(JamendoApi::class.java)
