@@ -8,6 +8,7 @@ data class ApiRequest(
     val password: String? = null,
 
     val chat_id: Int? = null,
+    val post_id: Int? = null,
     val limit: Int? = null,
     val before_id: Int? = null,
 

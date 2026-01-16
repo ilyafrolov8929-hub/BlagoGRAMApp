@@ -480,13 +480,70 @@ class ApiRepository(private val api: BlagoApi) {
     // POSTS
     // -------------------------------------------------
     suspend fun getPosts(token: String): List<Post> {
-        if (isDevMode()) return emptyList()
+        val resp = api.call(
+            ApiRequest(
+                action = "posts.get",
+                token = token
+            )
+        )
 
-        val svc = ApiClient.retrofit.create(ApiService::class.java)
-        val resp = svc.getPosts(token = token)
+        if (!resp.isSuccessful) throw Exception("API Error")
+        val body = resp.body() ?: throw Exception("Empty")
+        if (body["ok"] != true) throw Exception(body["error"].toString())
+        
+        val gson = com.google.gson.Gson()
+        val resultJson = gson.toJson(body["result"])
+        val type = object : com.google.gson.reflect.TypeToken<List<Post>>() {}.type
+        return gson.fromJson(resultJson, type)
+    }
 
-        if (!resp.ok) throw Exception(resp.error ?: "Unknown error")
-        return resp.result ?: emptyList()
+    suspend fun getUserPosts(token: String, userId: Int): List<Post> {
+
+        val resp = api.call(
+            ApiRequest(
+                action = "posts.get.user",
+                token = token,
+                user_id = userId
+            )
+        )
+
+        if (!resp.isSuccessful) {
+            val errorText = resp.errorBody()?.string() ?: "нет текста ошибки"
+            Log.e(TAG, "HTTP ${resp.code()} ошибка → $errorText")
+            throw Exception("HTTP ${resp.code()}")
+        }
+
+        val body = resp.body() ?: throw Exception("Empty response")
+        Log.d(TAG, "getUserPosts Response JSON: $body")
+
+
+        if (body["ok"] != true) {
+            Log.e(TAG, "getUserPosts API error: ${body["error"]}")
+            throw Exception(body["error"].toString())
+        }
+
+        val result = body["result"] as? Map<String, Any>
+        val postsData = result?.get("posts") ?: return emptyList()
+
+        val gson = com.google.gson.Gson()
+        val postsJson = gson.toJson(postsData)
+        val type = object : com.google.gson.reflect.TypeToken<List<Post>>() {}.type
+        val posts: List<Post> = gson.fromJson(postsJson, type)
+        Log.d(TAG, "Successfully parsed ${posts.size} posts")
+        return posts
+    }
+
+    suspend fun deletePost(token: String, postId: Int): Boolean {
+        val resp = api.call(
+            ApiRequest(
+                action = "posts.delete",
+                token = token,
+                post_id = postId
+            )
+        )
+        if (!resp.isSuccessful) return false
+        val body = resp.body() ?: return false
+        return body["ok"] == true
     }
 
     suspend fun createPost(token: String, content: String, image: File?): Boolean {
@@ -510,12 +567,16 @@ class ApiRepository(private val api: BlagoApi) {
     }
 
     suspend fun likePost(token: String, postId: Int): Boolean {
-        if (isDevMode()) return true
-        val svc = ApiClient.retrofit.create(ApiService::class.java)
-        val resp = svc.likePost(token = token, postId = postId)
-        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
-        val body = resp.body() ?: throw Exception("Empty response")
-        if (body["ok"] != true) throw Exception(body["error"]?.toString() ?: "Unknown error")
+        val resp = api.call(
+            ApiRequest(
+                action = "posts.like",
+                token = token,
+                post_id = postId
+            )
+        )
+        if (!resp.isSuccessful) return false
+        val body = resp.body() ?: return false
+        if (body["ok"] != true) return false
         return (body["result"] as? Map<*, *>)?.get("liked") as? Boolean ?: false
     }
 }

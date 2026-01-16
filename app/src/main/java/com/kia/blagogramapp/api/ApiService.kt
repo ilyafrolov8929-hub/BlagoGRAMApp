@@ -173,6 +173,24 @@ interface ApiService {
         @Field("token") token: String
     ): PostListResponse
 
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun getUserPosts(
+        @Field("action") action: String = "posts.get.user",
+        @Field("token") token: String,
+        @Field("user_id") userId: Int,
+        @Field("limit") limit: Int = 20,
+        @Field("offset") offset: Int = 0
+    ): UserPostsResponse
+
+    @FormUrlEncoded
+    @POST("index.php")
+    suspend fun deletePost(
+        @Field("action") action: String = "posts.delete",
+        @Field("token") token: String,
+        @Field("post_id") postId: Int
+    ): Response<Map<String, Any>>
+
     @Multipart
     @POST("index.php")
     suspend fun createPost(
@@ -190,9 +208,3 @@ interface ApiService {
         @Field("post_id") postId: Int
     ): Response<Map<String, Any>>
 }
-
-data class PostListResponse(
-    val ok: Boolean,
-    val result: List<Post>?,
-    val error: String?
-)

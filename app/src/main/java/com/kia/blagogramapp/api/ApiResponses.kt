@@ -1,6 +1,7 @@
 package com.kia.blagogramapp.api
 
 import com.kia.blagogramapp.model.Chat
+import com.kia.blagogramapp.model.Post
 import com.kia.blagogramapp.models.SearchUserItem
 
 
@@ -91,6 +92,10 @@ data class SearchUsersResponse(
     val error: String?
 )
 
+data class SearchUsersResult(
+    val users: List<SearchUserItem>
+)
+
 data class SubscriptionCheckResponse(
     val ok: Boolean,
     val result: SubscriptionCheckResult?,
@@ -126,4 +131,22 @@ data class DatabaseDumpResult(
     val tables_count: Int,
     val generated_at: String,
     val warning: String
+)
+
+data class PostListResponse(
+    val ok: Boolean,
+    val result: List<Post>?,
+    val error: String?
+)
+
+data class UserPostsResponse(
+    val ok: Boolean,
+    val result: UserPostsResult?,
+    val error: String?
+)
+
+data class UserPostsResult(
+    val posts: List<Post>?,
+    val total_count: Int,
+    val has_more: Boolean
 )

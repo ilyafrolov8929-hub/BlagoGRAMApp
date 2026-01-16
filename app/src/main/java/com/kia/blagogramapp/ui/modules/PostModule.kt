@@ -6,12 +6,14 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.widget.PopupMenu
 import androidx.cardview.widget.CardView
 import coil.load
 import com.google.android.material.imageview.ShapeableImageView
@@ -25,149 +27,191 @@ class PostCell(context: Context) : CardView(context) {
     private val nameView: TextView
     private val timeView: TextView
     private val postText: TextView
-    private val postImage: ImageView
-    private val likesCount: TextView
-    private val commentsCount: TextView
-    private val viewsCount: TextView
+    val postImage: ImageView
+    val likesCount: TextView
+    private val expandBtn: LinearLayout
+    val moreBtn: ImageView
+    
+    val likeButton: View
+    val sharePill: View
+    private val likeIcon: ImageView
+
+    var onDeleteClick: (() -> Unit)? = null
 
     init {
-        radius = LayoutHelper.dp(16).toFloat()
+        radius = LayoutHelper.dp(32).toFloat()
         cardElevation = 0f
-        setCardBackgroundColor(DesignEngine.Theme.colorCardBackground)
+        setCardBackgroundColor(DesignEngine.Theme.colorDivider) 
         val params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
         params.setMargins(0, LayoutHelper.dp(8), 0, LayoutHelper.dp(8))
         layoutParams = params
 
         val contentLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, LayoutHelper.dp(12))
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16))
         }
 
-        // Header
-        val headerLayout = LinearLayout(context).apply {
+        // Header Pill
+        val headerPill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
+            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))
+            background = GradientDrawable().apply {
+                setColor(0x33000000) 
+                cornerRadius = LayoutHelper.dp(20).toFloat()
+            }
         }
 
         avatarView = ShapeableImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setAllCornerSizes(LayoutHelper.dp(20).toFloat())
+                .setAllCornerSizes(LayoutHelper.dp(16).toFloat())
                 .build()
         }
-        headerLayout.addView(avatarView, LayoutHelper.createLinear(40, 40))
+        headerPill.addView(avatarView, LayoutHelper.createLinear(32, 32))
 
         val nameContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
         nameView = TextView(context).apply {
-            textSize = 15f
+            textSize = 13f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(DesignEngine.Theme.colorTextPrimary)
         }
         timeView = TextView(context).apply {
-            textSize = 12f
+            textSize = 10f
             setTextColor(DesignEngine.Theme.colorTextSecondary)
         }
         nameContainer.addView(nameView)
         nameContainer.addView(timeView)
-        headerLayout.addView(nameContainer, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 0, 12, 0, 0, 0))
+        headerPill.addView(nameContainer, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 0, 8, 0, 0, 0))
 
-        val moreBtn = ImageView(context).apply {
+        moreBtn = ImageView(context).apply {
             setImageResource(R.drawable.ic_more)
-            colorFilter = PorterDuffColorFilter(DesignEngine.Theme.colorChevron, PorterDuff.Mode.SRC_IN)
+            colorFilter = PorterDuffColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
+            setPadding(LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4), LayoutHelper.dp(4))
+            setOnClickListener { showPopupMenu(it) }
         }
-        headerLayout.addView(moreBtn, LayoutHelper.createLinear(24, 24))
+        headerPill.addView(moreBtn, LayoutHelper.createLinear(24, 24))
 
-        contentLayout.addView(headerLayout)
+        contentLayout.addView(headerPill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
 
         // Text
         postText = TextView(context).apply {
-            textSize = 15f
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
             setTextColor(DesignEngine.Theme.colorTextPrimary)
-            setPadding(LayoutHelper.dp(12), 0, LayoutHelper.dp(12), LayoutHelper.dp(8))
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
+            p.topMargin = LayoutHelper.dp(12)
+            layoutParams = p
         }
         contentLayout.addView(postText)
+
+        // Expand Button
+        expandBtn = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
+            p.topMargin = LayoutHelper.dp(4)
+            layoutParams = p
+            
+            val tv = TextView(context).apply {
+                text = "Развернуть"
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(DesignEngine.Theme.colorTextPrimary)
+            }
+            val icon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_back) 
+                rotation = -90f
+                colorFilter = PorterDuffColorFilter(DesignEngine.Theme.colorTextPrimary, PorterDuff.Mode.SRC_IN)
+            }
+            addView(tv)
+            addView(icon, LayoutHelper.createLinear(20, 20, 0f, 0, 4, 0, 0, 0))
+        }
+        contentLayout.addView(expandBtn)
 
         // Image
         postImage = ImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
+            val shapeDrawable = GradientDrawable().apply {
+                cornerRadius = LayoutHelper.dp(16).toFloat()
+            }
+            clipToOutline = true
+            background = shapeDrawable
         }
-        contentLayout.addView(postImage, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 250))
+        val imgParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 200)
+        imgParams.topMargin = LayoutHelper.dp(12)
+        contentLayout.addView(postImage, imgParams)
 
         // Actions
         val actionsLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), 0)
+            val p = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT)
+            p.topMargin = LayoutHelper.dp(12)
+            layoutParams = p
         }
 
-        fun createStatPill(iconRes: Int): Pair<LinearLayout, TextView> {
-            val pill = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
-                setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
-                background = GradientDrawable().apply {
-                    setColor(DesignEngine.Theme.colorDivider) // Using divider color for pill bg
-                    cornerRadius = LayoutHelper.dp(20).toFloat()
-                }
+        likeButton = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+            background = GradientDrawable().apply {
+                setColor(0x33000000)
+                cornerRadius = LayoutHelper.dp(20).toFloat()
             }
-            val icon = ImageView(context).apply {
-                setImageResource(iconRes)
-                colorFilter = PorterDuffColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN)
+            
+            likeIcon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_heart_filled)
+                colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
             }
-            val text = TextView(context).apply {
-                textSize = 13f
+            likesCount = TextView(context).apply {
+                textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(DesignEngine.Theme.colorTextSecondary)
+                setTextColor(Color.WHITE)
                 setPadding(LayoutHelper.dp(6), 0, 0, 0)
             }
-            pill.addView(icon, LayoutHelper.createLinear(20, 20))
-            pill.addView(text)
-            return pill to text
+            addView(likeIcon, LayoutHelper.createLinear(20, 20))
+            addView(likesCount)
         }
+        actionsLayout.addView(likeButton)
 
-        val (likePill, likesTv) = createStatPill(R.drawable.ic_like_outline)
-        likesCount = likesTv
-        actionsLayout.addView(likePill)
-
-        val (commentPill, commentsTv) = createStatPill(R.drawable.ic_chat)
-        commentsCount = commentsTv
-        actionsLayout.addView(commentPill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 12, 0, 0, 0))
-
-        val (sharePill, _) = createStatPill(R.drawable.ic_send)
-        actionsLayout.addView(sharePill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 12, 0, 0, 0))
-
-        actionsLayout.addView(View(context), LayoutHelper.createLinear(0, 0, 1f))
-
-        val viewsLayout = LinearLayout(context).apply {
-            gravity = Gravity.CENTER_VERTICAL
+        sharePill = ImageView(context).apply {
+            setImageResource(R.drawable.ic_send) 
+            setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
+            background = GradientDrawable().apply {
+                setColor(0x33000000)
+                cornerRadius = LayoutHelper.dp(20).toFloat()
+            }
+            colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
         }
-        val viewsIcon = ImageView(context).apply {
-            setImageResource(R.drawable.ic_user)
-            colorFilter = PorterDuffColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN)
-        }
-        viewsCount = TextView(context).apply {
-            textSize = 12f
-            setTextColor(DesignEngine.Theme.colorTextSecondary)
-            setPadding(LayoutHelper.dp(4), 0, 0, 0)
-        }
-        viewsLayout.addView(viewsIcon, LayoutHelper.createLinear(18, 18))
-        viewsLayout.addView(viewsCount)
-        actionsLayout.addView(viewsLayout)
+        val shareParams = LayoutHelper.createLinear(36, 36)
+        shareParams.leftMargin = LayoutHelper.dp(8)
+        actionsLayout.addView(sharePill, shareParams)
 
         contentLayout.addView(actionsLayout)
         addView(contentLayout)
     }
 
-    fun setData(name: String, time: String, text: String, imageUrl: String?, likes: Int, comments: Int, views: String, avatarUrl: String?) {
+    private fun showPopupMenu(view: View) {
+        val themeWrapper = ContextThemeWrapper(context, R.style.CustomPopupMenu)
+        val popup = PopupMenu(themeWrapper, view)
+        
+        popup.menu.add("Удалить").setOnMenuItemClickListener {
+            onDeleteClick?.invoke()
+            true
+        }
+        
+        popup.show()
+    }
+
+    fun setData(name: String, time: String, text: String, imageUrl: String?, likes: Int, comments: Int, views: String, avatarUrl: String?, isMyPost: Boolean = false) {
         nameView.text = name
         timeView.text = time
         postText.text = text
         likesCount.text = likes.toString()
-        commentsCount.text = comments.toString()
-        viewsCount.text = views
+        moreBtn.visibility = if (isMyPost) View.VISIBLE else View.GONE
         
         avatarView.load(avatarUrl) {
             placeholder(R.drawable.ic_user_placeholder)
@@ -179,6 +223,14 @@ class PostCell(context: Context) : CardView(context) {
             postImage.load(imageUrl)
         } else {
             postImage.visibility = View.GONE
+        }
+    }
+
+    fun setLiked(liked: Boolean) {
+        if (liked) {
+            likeIcon.colorFilter = PorterDuffColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
+        } else {
+            likeIcon.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
         }
     }
 }

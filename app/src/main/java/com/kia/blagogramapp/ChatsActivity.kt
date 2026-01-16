@@ -214,7 +214,7 @@ class ChatsActivity : AppCompatActivity() {
         }
 
         sm.addItem("Меню", R.drawable.ic_menu) {
-            startActivity(Intent(this, MenuActivity::class.java))
+            startActivity(Intent(this, NewsActivity::class.java))
             toggleDrawer()
         }
 

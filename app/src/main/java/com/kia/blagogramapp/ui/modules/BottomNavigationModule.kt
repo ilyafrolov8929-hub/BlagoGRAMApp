@@ -68,7 +68,7 @@ class BottomNavigationModule(val context: Context) {
                 val intent = when (screen) {
                     Screen.CHATS -> Intent(context, ChatsActivity::class.java)
                     Screen.MUSIC -> Intent(context, MusicActivity::class.java)
-                    Screen.MENU -> Intent(context, MenuActivity::class.java)
+                    Screen.MENU -> Intent(context, NewsActivity::class.java)
                     Screen.SETTINGS -> Intent(context, SettingsActivity::class.java)
                 }
                 intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT

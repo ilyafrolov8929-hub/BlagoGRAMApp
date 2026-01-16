@@ -1078,8 +1078,10 @@ class PostCell(context: Context) : FrameLayout(context) {
     val timeView: TextView
     val contentText: TextView
     val postImage: ShapeableImageView
+    val likePill: LinearLayout
     val likeButton: ImageView
     val likesCount: TextView
+    val sharePill: LinearLayout
     
     init {
         val isDark = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE).getBoolean("is_dark_theme", false)
@@ -1138,34 +1140,76 @@ class PostCell(context: Context) : FrameLayout(context) {
             setTextColor(DesignEngine.Theme.colorTextPrimary)
         }
         mainContainer.addView(contentText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 8, 0, 8, 12))
-        
+
         postImage = ShapeableImageView(context).apply {
             shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(12).toFloat()).build()
             scaleType = ImageView.ScaleType.CENTER_CROP
             visibility = View.GONE
         }
         mainContainer.addView(postImage, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 180, 0f, 0, 0, 0, 0, 12))
-        
-        // Footer (Likes)
+
+        // --- ФУТЕР (Like & Share Pills) ---
         val footer = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        likeButton = ImageView(context).apply {
-            setImageResource(R.drawable.ic_like_outline)
-            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+
+        likePill = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                setColor(pillColor)
+                cornerRadius = LayoutHelper.dp(20).toFloat()
+            }
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+
+            likeButton = ImageView(context).apply {
+                setImageResource(R.drawable.ic_heart_filled)
+                setColorFilter(Color.BLACK, PorterDuff.Mode.SRC_IN)
+            }
+            likesCount = TextView(context).apply {
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.BLACK)
+            }
+            addView(likeButton, LayoutHelper.createLinear(20, 20))
+            addView(likesCount, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 8, 0, 0, 0))
         }
-        likesCount = TextView(context).apply {
-            textSize = 14f
-            setTextColor(DesignEngine.Theme.colorTextPrimary)
-            visibility = View.GONE
+        footer.addView(likePill)
+
+        sharePill = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(pillColor)
+                cornerRadius = LayoutHelper.dp(20).toFloat()
+            }
+            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+
+            val shareIcon = ImageView(context).apply {
+                setImageResource(R.drawable.ic_send)
+                setColorFilter(Color.BLACK, PorterDuff.Mode.SRC_IN)
+            }
+            addView(shareIcon, LayoutHelper.createLinear(20, 20))
         }
-        footer.addView(likeButton, LayoutHelper.createLinear(24, 24))
-        footer.addView(likesCount, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 4, 0, 0, 0))
-        
+        footer.addView(sharePill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 8, 0, 0, 0))
+
         mainContainer.addView(footer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
     }
     
+    fun setUserInfo(name: String, avatar: String?) {
+        nameView.text = name
+        if (!avatar.isNullOrEmpty()) {
+            avatarView.load("https://blagogram.ru/avatars/$avatar") {
+                placeholder(R.drawable.ic_user_placeholder)
+                error(R.drawable.ic_user_placeholder)
+                transformations(CircleCropTransformation())
+            }
+        } else {
+            avatarView.setImageResource(R.drawable.ic_user_placeholder)
+        }
+    }
+
     fun setLiked(liked: Boolean) {
         likeButton.setImageResource(if (liked) R.drawable.ic_heart_filled else R.drawable.ic_like_outline)
         if (liked) {

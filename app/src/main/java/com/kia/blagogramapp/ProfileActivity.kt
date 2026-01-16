@@ -7,33 +7,36 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.WindowCompat
-import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.google.gson.Gson
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
+import com.kia.blagogramapp.model.Post
 import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.models.Track
 import com.kia.blagogramapp.ui.modules.FullPlayer
-import com.kia.blagogramapp.ui.modules.PostCell
 import com.kia.blagogramapp.ui.modules.ProfileLayout
+import com.kia.blagogramapp.ui.modules.ShareModule
 import com.kia.blagogramapp.utils.MusicManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ProfileActivity : AppCompatActivity() {
 
+    private val TAG = "ProfileActivity"
     private lateinit var layout: ProfileLayout
     private lateinit var repo: ApiRepository
     
@@ -41,6 +44,9 @@ class ProfileActivity : AppCompatActivity() {
 
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
+
+    private var currentProfileAvatar: String? = null
+    private var currentProfileName: String? = null
 
     private val musicPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -77,6 +83,7 @@ class ProfileActivity : AppCompatActivity() {
         val targetUserId = intent.getIntExtra("user_id", 0)
         val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val isMyProfile = (targetUserId == 0 || targetUserId == myId)
+        val effectiveUserId = if (targetUserId == 0) myId else targetUserId
 
         layout.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -84,16 +91,22 @@ class ProfileActivity : AppCompatActivity() {
 
         if (isMyProfile) {
             layout.btnSettings.visibility = View.VISIBLE
+            layout.btnCreatePost.visibility = View.VISIBLE
             loadMyProfile()
             checkPermissions()
         } else {
             layout.btnSettings.visibility = View.GONE
+            layout.btnCreatePost.visibility = View.GONE
             loadUserProfileFromCache(targetUserId)
             loadUserProfile(targetUserId)
         }
+        
+        // Посты загрузим из updateUI, когда будет инфо о пользователе
 
         layout.backButton.setOnClickListener { finish() }
-        layout.btnCreatePost.setOnClickListener { createTestPost() }
+        layout.btnCreatePost.setOnClickListener { 
+            startActivity(Intent(this, NewsActivity::class.java).apply { putExtra("action", "create_post") })
+        }
         
         layout.onTrackClicked = { track ->
             MusicManager.playTrack(track)
@@ -164,23 +177,114 @@ class ProfileActivity : AppCompatActivity() {
         fullPlayer?.bind(track, MusicManager.isPlaying.value)
     }
 
-    private fun createTestPost(text: String = "Новый тестовый пост создан через DesignEngine!") {
-        val postCell = PostCell(this)
-        val prefs = getSharedPreferences("app", MODE_PRIVATE)
-        val name = prefs.getString("display_name", "Пользователь") ?: "Пользователь"
-        val avatar = prefs.getString("avatar", "") ?: ""
-        
-        postCell.setData(
-            name = name,
-            time = "только что",
-            text = text,
-            imageUrl = "https://blagogram.ru/avatars/$avatar",
-            likes = (0..100).random(),
-            comments = (0..50).random(),
-            views = "${(1..10).random()}K",
-            avatarUrl = "https://blagogram.ru/avatars/$avatar"
-        )
-        layout.postsContainer.addView(postCell, 0)
+    private fun loadUserPosts(userId: Int) {
+        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        Log.d(TAG, "loadUserPosts for ID: $userId")
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val posts = withContext(Dispatchers.IO) { repo.getUserPosts(token, userId) }
+                Log.d(TAG, "Loaded ${posts.size} posts")
+                displayPosts(posts)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading posts: ${e.message}")
+            }
+        }
+    }
+
+    private fun displayPosts(posts: List<Post>) {
+        layout.postsContainer.removeAllViews()
+        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        // ← Вот этого может не быть ↓
+        val postsContainer = layout.postsContainer // или findViewById<LinearLayout>(R.id.posts_container)
+        if (postsContainer.parent == null) {
+            Log.e("PROFILE", "postsContainer НЕ добавлен в layout!!!")
+        }
+        if (posts.isEmpty()) {
+            val emptyTv = android.widget.TextView(this).apply {
+                text = "Нет записей"
+                setTextColor(DesignEngine.Theme.colorTextSecondary)
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, LayoutHelper.dp(20), 0, LayoutHelper.dp(20))
+            }
+            layout.postsContainer.addView(emptyTv)
+            return
+        }
+
+        posts.forEach { post ->
+            val cell = PostCell(this)
+            
+            // Заполняем данные из поста
+            cell.contentText.text = post.content
+            cell.timeView.text = post.createdAt.split(" ").lastOrNull()?.take(5) ?: ""
+            
+            // Картинка поста
+            if (!post.image.isNullOrEmpty()) {
+                cell.postImage.visibility = View.VISIBLE
+                cell.postImage.load("https://blagogram.ru/posts/${post.image}")
+            } else {
+                cell.postImage.visibility = View.GONE
+            }
+
+            // Лайки
+            cell.setLiked(post.liked)
+            updateLikesCount(cell, post.likes)
+
+            cell.likePill.setOnClickListener {
+                toggleLike(post, cell)
+            }
+
+            cell.sharePill.setOnClickListener {
+                ShareModule.show(this, post)
+            }
+
+            // Информация об авторе
+            cell.setUserInfo(currentProfileName ?: "", currentProfileAvatar)
+
+            // Удаление
+            if (post.authorId == myId) {
+                cell.setOnLongClickListener {
+                    deletePost(post, cell)
+                    true
+                }
+            }
+
+            layout.postsContainer.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 12))
+        }
+    }
+
+    private fun toggleLike(post: Post, cell: PostCell) {
+        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val isLikedNow = withContext(Dispatchers.IO) { repo.likePost(token, post.id) }
+                cell.setLiked(isLikedNow)
+                
+                // Визуальное обновление счетчика
+                val currentCount = try { cell.likesCount.text.toString().toInt() } catch (e: Exception) { 0 }
+                val newCount = if (isLikedNow) currentCount + 1 else (currentCount - 1).coerceAtLeast(0)
+                updateLikesCount(cell, newCount)
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    private fun updateLikesCount(cell: PostCell, count: Int) {
+        cell.likesCount.text = if (count > 0) count.toString() else ""
+        cell.likesCount.visibility = if (count > 0) View.VISIBLE else View.GONE
+    }
+
+    private fun deletePost(post: Post, cell: View) {
+        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val success = withContext(Dispatchers.IO) { repo.deletePost(token, post.id) }
+                if (success) {
+                    layout.postsContainer.removeView(cell)
+                    Toast.makeText(this@ProfileActivity, "Пост удален", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ProfileActivity, "Ошибка удаления", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun loadMyProfile() {
@@ -194,7 +298,7 @@ class ProfileActivity : AppCompatActivity() {
         
         loadUserProfileFromCache(myId)
         if (layout.userID.text.isNullOrEmpty() || layout.userID.text == "@") {
-             updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(this), cover)
+             updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(this), cover, myId)
         }
         if (myId != 0) loadUserProfile(myId)
     }
@@ -205,7 +309,7 @@ class ProfileActivity : AppCompatActivity() {
         if (!json.isNullOrEmpty()) {
             try {
                 val profile = Gson().fromJson(json, UserProfile::class.java)
-                updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover)
+                updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover, profile.id)
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
@@ -218,20 +322,22 @@ class ProfileActivity : AppCompatActivity() {
                 val json = Gson().toJson(profile)
                 getSharedPreferences("app_cache", MODE_PRIVATE).edit().putString("profile_$userId", json).apply()
                 runOnUiThread {
-                    updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover)
+                    updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover, profile.id)
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int, isPremium: Boolean, cover: String?) {
+    private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int, isPremium: Boolean, cover: String?, userId: Int) {
+        currentProfileName = displayName
+        currentProfileAvatar = avatar
+        
         layout.userID.text = "@$login"
         layout.profileUsername.text = displayName
         layout.status.text = statusText
         layout.friendsCount.text = friends.toString()
         layout.subsCount.text = followers.toString()
         
-        // Проверка премиум статуса через DesignEngine
         val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
         if (myLogin == login) {
             DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(this))
@@ -278,10 +384,12 @@ class ProfileActivity : AppCompatActivity() {
                 })
             }
         } else {
-            // Если обложки нет, убираем изображение и оставляем градиент из ProfileLayout
             layout.profileCover.setImageDrawable(null)
             applyTopBarStyle(false)
         }
+
+        // Загружаем посты только когда UI обновлен базовой инфой
+        loadUserPosts(userId)
     }
 
     private fun applyTopBarStyle(isLight: Boolean) {
@@ -302,7 +410,6 @@ class ProfileActivity : AppCompatActivity() {
             recreate()
             return
         }
-        // Обновляем бейдж при возвращении из PremiumActivity
         val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
         if (layout.userID.text == "@$myLogin") {
             DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(this))
