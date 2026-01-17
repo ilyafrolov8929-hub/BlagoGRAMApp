@@ -539,6 +539,7 @@ class RegisterActivity : AppCompatActivity() {
         getSharedPreferences("app", MODE_PRIVATE).edit {
             putString("token", result.token)
             putInt("user_id", result.user_id ?: 0)
+            putString("phone", result.phone)
             putString("avatar", result.avatar)
             putString("login", result.username)
             putString("display_name", result.display_name)

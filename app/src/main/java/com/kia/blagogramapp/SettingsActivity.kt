@@ -40,16 +40,9 @@ class SettingsActivity : AppCompatActivity() {
         val status = prefs.getString("status", "") ?: "Нет статуса"
         val phone = prefs.getString("phone", "") ?: "Не известно"
         val avatar = prefs.getString("avatar", "") ?: ""
+        val username = prefs.getString("login", "")
+        val isPremium = prefs.getBoolean("is_premium", false)
 
-        val profileHeader = ProfileHeaderCell(this)
-        profileHeader.setData(displayName, status, "https://blagogram.ru/avatars/$avatar")
-        rootLayout.addView(profileHeader, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
-
-        val dimView = View(this).apply {
-            setBackgroundColor(Color.BLACK)
-            alpha = 0f
-        }
-        rootLayout.addView(dimView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.dp(220)))
 
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
@@ -63,21 +56,50 @@ class SettingsActivity : AppCompatActivity() {
         val contentLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
+        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(35)))
 
-        val headerVisibleHeight = LayoutHelper.dp(63)
-        contentLayout.addView(SpacerCell(this, headerVisibleHeight + 10))
-
-        val sheetContainer = LinearLayout(this).apply {
+        // Обертка для шапки профиля, чтобы были такие же отступы по бокам как у карточек ниже
+        val profileContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.bg_sheet_top_rounded)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(DesignEngine.Theme.colorSheetBackground)
-            setPadding(LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(40))
+            setPadding(LayoutHelper.dp(20), 0, LayoutHelper.dp(20), 0)
         }
 
-        sheetContainer.addView(HeaderCell(this).apply { text = "АККАУНТ" })
+        val profileHeader = ProfileHeaderCell(this)
+        profileHeader.setData(displayName, status, "https://blagogram.ru/avatars/$avatar", isPremium)
+        profileContainer.addView(profileHeader)
+
+        contentLayout.addView(profileContainer)
+        val sheetContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            // Убран фон и наложение, теперь элементы просто идут друг за другом
+            setPadding(LayoutHelper.dp(20), LayoutHelper.dp(10), LayoutHelper.dp(20), LayoutHelper.dp(40))
+        }
+
+        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(10)))
+
+        sheetContainer.addView(HeaderCell(this).apply { text = "Аккаунт" })
+        val infoUserCard = ContainerCell(this)
+
+        infoUserCard.addCell(TextDetailCell(this).apply {
+            setData(phone, "Нажмите, чтобы изменить номер телефона")
+            // Здесь можно добавить переход на смену номера, если нужно
+        })
+
+        infoUserCard.addCell(TextDetailCell(this).apply {
+            setData("@$username", "Ваш юзернейм")
+        })
+
+        infoUserCard.addCell(TextDetailCell(this).apply {
+            setData(status, "О себе")
+        }, isLast = true)
+
+        sheetContainer.addView(infoUserCard)
+        sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
+
+        sheetContainer.addView(HeaderCell(this).apply { text = "Настройки" })
         val accountCard = ContainerCell(this)
         accountCard.addCell(TextCell(this).apply {
-            setData("Профиль", R.drawable.ic_edit)
+            setData("Редактировать профиль", R.drawable.ic_edit)
             setOnClickListener { startActivity(Intent(context, ProfileEditActivity::class.java)) }
         })
         accountCard.addCell(TextCell(this).apply {
@@ -89,25 +111,21 @@ class SettingsActivity : AppCompatActivity() {
             setData("Приватность", R.drawable.ic_user)
             setOnClickListener { startActivity(Intent(context, PrivaciActivity::class.java)) }
         }, isLast = true)
-        sheetContainer.addView(accountCard)
-        sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
-
-        sheetContainer.addView(HeaderCell(this).apply { text = "НАСТРОЙКИ" })
-        val settingsCard = ContainerCell(this)
-        settingsCard.addCell(TextCell(this).apply {
+        accountCard.addCell(TextCell(this).apply {
             setData("Настройки чатов", R.drawable.ic_chat)
             setOnClickListener { startActivity(Intent(context, ChatSettingsActivity::class.java)) }
         })
-        settingsCard.addCell(TextCell(this).apply { setData("Уведомления и звуки", R.drawable.ic_music) })
-        settingsCard.addCell(TextCell(this).apply {
+        accountCard.addCell(TextCell(this).apply {
+            setData("Уведомления и звуки", R.drawable.ic_music) })
+        accountCard.addCell(TextCell(this).apply {
             setData("Кастомизация", R.drawable.ic_brush)
             setOnClickListener { startActivity(Intent(context, ThemeSelectionActivity::class.java)) }
         })
-        settingsCard.addCell(TextCell(this).apply {
+        accountCard.addCell(TextCell(this).apply {
             setData("AI Настройки", R.drawable.ic_ai)
             setOnClickListener { startActivity(Intent(context, AiSettingsActivity::class.java)) }
         }, isLast = true)
-        sheetContainer.addView(settingsCard)
+        sheetContainer.addView(accountCard)
         sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(10)))
 
         sheetContainer.addView(HeaderCell(this).apply { text = "ИНФОРМАЦИЯ" })
@@ -164,13 +182,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         )
         rootLayout.addView(toolbar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
-
-        scrollView.viewTreeObserver.addOnScrollChangedListener {
-            val scrollY = scrollView.scrollY
-            val progress = (scrollY.toFloat() / headerVisibleHeight).coerceIn(0f, 1f)
-            dimView.alpha = progress * 0.6f
-            dimView.translationY = profileHeader.translationY
-        }
     }
 
     override fun onResume() {

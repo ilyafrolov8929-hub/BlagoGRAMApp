@@ -74,14 +74,14 @@ object DesignEngine {
     var chatWallpaper: String? = null
     var wallpaperBlur: Boolean = false
     var wallpaperMotion: Boolean = false
-    
+
     // Навигация
     var useBottomNavigation: Boolean = false
 
     fun init(ctx: Context) {
         density = ctx.resources.displayMetrics.density
         context = ctx.applicationContext
-        
+
         val prefs = ctx.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
         fontSize = prefs.getInt("font_size", 16)
         bubbleRadius = prefs.getInt("bubble_radius", 17)
@@ -186,12 +186,12 @@ object DesignEngine {
         val infoContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
-        
+
         val nameRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        
+
         val nameView = TextView(context).apply {
             textSize = 18f
             typeface = Typeface.DEFAULT_BOLD
@@ -199,16 +199,16 @@ object DesignEngine {
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
         }
-        
+
         val premiumBadge = createPremiumBadge(context).apply {
             val p = LayoutHelper.createLinear(16, 16)
             p.marginStart = LayoutHelper.dp(4)
             layoutParams = p
         }
-        
+
         nameRow.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 0))
         nameRow.addView(premiumBadge)
-        
+
         val statusView = TextView(context).apply {
             text = "был(а) недавно" // Placeholder
             textSize = 10f
@@ -549,7 +549,7 @@ object DesignEngine {
 
         fun apply(isDark: Boolean, isMonet: Boolean = false) {
             val ctx = DesignEngine.context
-            
+
             val prefs = ctx?.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
             val pThemeStr = prefs?.getString("player_theme", "DEFAULT") ?: "DEFAULT"
             playerTheme = try { PlayerTheme.valueOf(pThemeStr) } catch (e: Exception) { PlayerTheme.DEFAULT }
@@ -569,7 +569,7 @@ object DesignEngine {
                     colorIconPrimary = ContextCompat.getColor(ctx, android.R.color.system_accent1_100)
                     colorChevron = ContextCompat.getColor(ctx, android.R.color.system_neutral2_500)
                     colorDivider = ContextCompat.getColor(ctx, android.R.color.system_neutral1_700)
-                    colorLogout = 0xFFFF453A.toInt() 
+                    colorLogout = 0xFFFF453A.toInt()
                     colorBlue = ContextCompat.getColor(ctx, android.R.color.system_accent1_300) // Яркий акцент
                 } else {
                     // --- MONET LIGHT ---
@@ -650,7 +650,7 @@ class MusicCell(context: Context) : FrameLayout(context) {
         context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
         foreground = context.getDrawable(outValue.resourceId)
         isClickable = true
-        
+
         setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
 
         coverView = ShapeableImageView(context).apply {
@@ -695,7 +695,7 @@ class MusicCell(context: Context) : FrameLayout(context) {
             gravity = Gravity.CENTER
             visibility = View.GONE
         }
-        
+
         progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             progressDrawable.setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
             max = 100
@@ -707,7 +707,7 @@ class MusicCell(context: Context) : FrameLayout(context) {
         }
         loadingContainer.addView(progressBar, LayoutHelper.createLinear(60, 4))
         loadingContainer.addView(progressText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 2, 0, 0))
-        
+
         addView(loadingContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 8, 0))
     }
 
@@ -721,6 +721,7 @@ class MusicCell(context: Context) : FrameLayout(context) {
     }
 }
 
+// В файле DesignEngine.kt
 class ProfileHeaderCell(context: Context) : FrameLayout(context) {
     val avatarView: ShapeableImageView
     val nameView: TextView
@@ -728,55 +729,59 @@ class ProfileHeaderCell(context: Context) : FrameLayout(context) {
     val statusView: TextView
 
     init {
-        val linearLayout = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        background = GradientDrawable().apply {
+            setColor(DesignEngine.Theme.colorCardBackground)
+            cornerRadius = LayoutHelper.dp(12).toFloat()
         }
 
-        avatarView = ShapeableImageView(context).apply {
-            setShapeAppearanceModel(
-                this.shapeAppearanceModel.toBuilder()
-                    .setAllCornerSizes(LayoutHelper.dp(32).toFloat())
-                    .build()
-            )
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            setBackgroundColor(Color.GRAY)
-        }
-        linearLayout.addView(avatarView, LayoutHelper.createLinear(64, 64))
-
-        val textContainer = LinearLayout(context).apply {
+        val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24), LayoutHelper.dp(24))
         }
-        
+
+        // Большой круглый аватар по центру
+        avatarView = ShapeableImageView(context).apply {
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                .setAllCornerSizes(LayoutHelper.dp(50).toFloat())
+                .build()
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(Color.LTGRAY)
+        }
+        container.addView(avatarView, LayoutHelper.createLinear(100, 100, 0f, Gravity.CENTER_HORIZONTAL, 0, 0, 0))
+
+        // Имя и значок премиума
         val nameRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        
+
         nameView = TextView(context).apply {
-            textSize = 18f
+            textSize = 22f
             setTextColor(DesignEngine.COLOR_PROFILE_NAME)
             typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
         }
-        
+
         premiumBadge = DesignEngine.createPremiumBadge(context).apply {
-            val p = LayoutHelper.createLinear(18, 18)
+            val p = LayoutHelper.createLinear(20, 20)
             p.marginStart = LayoutHelper.dp(6)
             layoutParams = p
         }
-        
+
         nameRow.addView(nameView)
         nameRow.addView(premiumBadge)
-        
-        statusView = TextView(context).apply {
-            textSize = 14f
-            setTextColor(DesignEngine.COLOR_PROFILE_STATUS)
-        }
-        textContainer.addView(nameRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
-        textContainer.addView(statusView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT))
-        linearLayout.addView(textContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 16, 0, 0, 0))
+        container.addView(nameRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 12, 0, 0))
 
-        addView(linearLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP or Gravity.START, 24, 100, 24, 0))
+        // Статус по центру
+        statusView = TextView(context).apply {
+            textSize = 15f
+            setTextColor(DesignEngine.COLOR_PROFILE_STATUS)
+            gravity = Gravity.CENTER
+        }
+        container.addView(statusView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 4, 0, 0))
+
+        addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
     }
 
     fun setData(name: String, status: String, avatarUrl: String, isPremium: Boolean = false) {
@@ -815,7 +820,7 @@ class ContainerCell(context: Context) : LinearLayout(context) {
         if (!isLast) {
             val divider = View(context)
             divider.setBackgroundColor(DesignEngine.COLOR_DIVIDER)
-            addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0f, 0, 56, 0, 0, 0))
+            addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0f, 0, 16, 0, 0, 0))
         }
     }
 }
@@ -825,7 +830,7 @@ class TextCell(context: Context) : FrameLayout(context) {
     val textView: TextView = TextView(context)
     val chevronView: ImageView = ImageView(context)
     val deleteView: ImageView = ImageView(context)
-    
+
     init {
         val outValue = TypedValue()
         context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
@@ -842,7 +847,7 @@ class TextCell(context: Context) : FrameLayout(context) {
         textView.ellipsize = TextUtils.TruncateAt.END
         textView.gravity = Gravity.CENTER_VERTICAL or Gravity.START
         addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP or Gravity.START, 56, 0, 80, 0))
-        
+
         chevronView.setImageResource(R.drawable.ic_chevron_right)
         chevronView.colorFilter = PorterDuffColorFilter(DesignEngine.COLOR_CHEVRON, PorterDuff.Mode.SRC_IN)
         addView(chevronView, LayoutHelper.createFrame(24, 24, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 16, 0))
@@ -855,9 +860,24 @@ class TextCell(context: Context) : FrameLayout(context) {
         addView(deleteView, deleteParams)
     }
 
-    fun setData(text: String, iconResId: Int) {
+    // Обновленный метод setData
+    fun setData(text: String, iconResId: Int = 0) {
         textView.text = text
-        imageView.setImageResource(iconResId)
+        val params = textView.layoutParams as FrameLayout.LayoutParams
+        if (iconResId != 0) {
+            imageView.visibility = View.VISIBLE
+            imageView.setImageResource(iconResId)
+            params.leftMargin = LayoutHelper.dp(56) // Отступ для текста при наличии иконки
+        } else {
+            imageView.visibility = View.GONE
+            params.leftMargin = LayoutHelper.dp(16) // Уменьшенный отступ, если иконки нет
+        }
+        textView.layoutParams = params
+    }
+
+    // Дополнительно можно добавить метод для скрытия стрелочки
+    fun setChevronVisible(visible: Boolean) {
+        chevronView.visibility = if (visible) View.VISIBLE else View.GONE
     }
     
     fun setTextColor(color: Int) {
@@ -870,6 +890,39 @@ class TextCell(context: Context) : FrameLayout(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(LayoutHelper.dp(50), MeasureSpec.EXACTLY))
+    }
+}
+
+class TextDetailCell(context: Context) : FrameLayout(context) {
+    val textView: TextView = TextView(context)
+    val valueView: TextView = TextView(context)
+
+    init {
+        val outValue = TypedValue()
+        context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+        foreground = context.getDrawable(outValue.resourceId)
+        isClickable = true
+
+        val linearLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
+        }
+
+        textView.textSize = 16f
+        textView.typeface = Typeface.DEFAULT_BOLD
+        textView.setTextColor(DesignEngine.COLOR_TEXT_PRIMARY)
+        linearLayout.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
+
+        valueView.textSize = 13f
+        valueView.setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
+        linearLayout.addView(valueView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 2, 0, 0))
+
+        addView(linearLayout)
+    }
+
+    fun setData(text: String, value: String) {
+        textView.text = text
+        valueView.text = value
     }
 }
 
