@@ -391,7 +391,7 @@ object DesignEngine {
 
     fun createToolBar(
         context: Context,
-        title: String,
+        title: String? = null,
         leftButtonIconRes: Int? = null,
         rightButtonIconRes: Int? = null,
         isDark: Boolean = false,
@@ -444,28 +444,30 @@ object DesignEngine {
             toolbarContent.addView(leftButton, leftParams)
         }
 
-        // Заголовок по центру
-        val titleLayout = LinearLayout(context).apply {
-            val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
-            drawable.setColor(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
-            drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
-            background = drawable
-            setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
-            gravity = Gravity.CENTER // Центрируем текст внутри
+        if (title != null){
+            // Заголовок по центру
+            val titleLayout = LinearLayout(context).apply {
+                val drawable = ContextCompat.getDrawable(context, R.drawable.bg_stat_pill) as GradientDrawable
+                drawable.setColor(if (isDark) Color.parseColor("#333333") else Color.parseColor("#E0E0E0"))
+                drawable.setStroke(LayoutHelper.dp(strokeWidth), strokeColor)
+                background = drawable
+                setPadding(LayoutHelper.dp(12), LayoutHelper.dp(6), LayoutHelper.dp(12), LayoutHelper.dp(6))
+                gravity = Gravity.CENTER // Центрируем текст внутри
 
-            addView(TextView(context).apply {
-                text = title
-                typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
-                textSize = 20f
-                // Используем цвет текста из темы
-                setTextColor(Theme.colorTextPrimary)
-            })
-        }
+                addView(TextView(context).apply {
+                    text = title
+                    typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+                    textSize = 20f
+                    // Используем цвет текста из темы
+                    setTextColor(Theme.colorTextPrimary)
+                })
+            }
 
-        val titleParams = LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
+            val titleParams = LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT).apply {
+                addRule(RelativeLayout.CENTER_IN_PARENT)
+            }
+            toolbarContent.addView(titleLayout, titleParams)
         }
-        toolbarContent.addView(titleLayout, titleParams)
 
         // Правая кнопка (например, "Сохранить")
         if (rightButtonIconRes != null) {
@@ -1283,5 +1285,76 @@ class ServiceItemCell(context: Context) : FrameLayout(context) {
     }
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, widthMeasureSpec)
+    }
+}
+
+// Добавьте эти классы в конец файла DesignEngine.kt
+
+class ProfileActionButton(context: Context) : LinearLayout(context) {
+    val iconView: ImageView
+    val textView: TextView
+
+    init {
+        orientation = VERTICAL
+        gravity = Gravity.CENTER
+        val padding = LayoutHelper.dp(8)
+        setPadding(0, padding, 0, padding)
+
+        background = GradientDrawable().apply {
+            setColor(DesignEngine.Theme.colorCardBackground)
+            cornerRadius = LayoutHelper.dp(12).toFloat()
+        }
+
+        val outValue = TypedValue()
+        context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+        foreground = ContextCompat.getDrawable(context, outValue.resourceId)
+        isClickable = true
+
+        iconView = ImageView(context).apply {
+            setColorFilter(DesignEngine.Theme.colorIconPrimary, PorterDuff.Mode.SRC_IN)
+        }
+        addView(iconView, LayoutHelper.createLinear(28, 28, 0f, Gravity.CENTER, 0, 4, 0, 0))
+
+        textView = TextView(context).apply {
+            textSize = 10f
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 2, 4, 2, 4))
+    }
+
+    fun setData(text: String, iconRes: Int) {
+        textView.text = text
+        iconView.setImageResource(iconRes)
+    }
+}
+
+class ProfileInfoItem(context: Context) : LinearLayout(context) {
+    val valueView: TextView
+    val labelView: TextView
+
+    init {
+        orientation = VERTICAL
+        setPadding(LayoutHelper.dp(16), LayoutHelper.dp(10), LayoutHelper.dp(16), LayoutHelper.dp(10))
+
+        valueView = TextView(context).apply {
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(DesignEngine.Theme.colorTextPrimary)
+        }
+        addView(valueView)
+
+        labelView = TextView(context).apply {
+            textSize = 12f
+            setTextColor(DesignEngine.Theme.colorTextSecondary)
+        }
+        addView(labelView)
+    }
+
+    fun setData(value: String, label: String) {
+        valueView.text = value
+        labelView.text = label
     }
 }

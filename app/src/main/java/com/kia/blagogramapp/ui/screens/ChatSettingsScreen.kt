@@ -1,7 +1,8 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
 import android.app.Activity
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -10,65 +11,82 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
-import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.*
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.SeekBar
+import android.widget.Switch
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
+import com.kia.blagogramapp.BaseScreen
+import com.kia.blagogramapp.ContainerCell
+import com.kia.blagogramapp.DesignEngine
+import com.kia.blagogramapp.HeaderCell
+import com.kia.blagogramapp.LayoutHelper
+import com.kia.blagogramapp.R
+import com.kia.blagogramapp.SpacerCell
+import com.kia.blagogramapp.TextCell
+import com.kia.blagogramapp.WallpaperPreviewActivity
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import kotlin.random.Random
 
-class ChatSettingsActivity : AppCompatActivity() {
+class ChatSettingsScreen(context: Context) : BaseScreen(context) {
+    val activity = context as? AppCompatActivity
+
+    // Константы для кодов запроса
+    private val RC_PICK_IMAGE = 101
+    private val RC_WALLPAPER_PREVIEW = 102
+
+    private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
 
     private lateinit var bubbleLeft: View
     private lateinit var bubbleRight: View
     private lateinit var wallpaperPreview: ImageView
 
-    private val selectImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { openWallpaperPreview(it.toString()) }
-    }
-
-    private val wallpaperPreviewLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
+    // Переопределяем метод для получения результата
+    override fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == RC_PICK_IMAGE && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { openWallpaperPreview(it.toString()) }
+        } else if (requestCode == RC_WALLPAPER_PREVIEW && resultCode == Activity.RESULT_OK) {
             updateWallpaper()
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun createView(): View {
+        val rootLayout = FrameLayout(context).apply {
+            setBackgroundColor(DesignEngine.COLOR_BACKGROUND)
+        }
 
-        // 1. Инициализируем экран и сразу получаем готовый корневой layout
-        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
-        setContentView(rootLayout)
-
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
         val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val cameraPrefs = getSharedPreferences("camera_settings", Context.MODE_PRIVATE)
+        val cameraPrefs = context.getSharedPreferences("camera_settings", Context.MODE_PRIVATE)
 
-        val scrollView = ScrollView(this)
+        val scrollView = ScrollView(context)
         scrollView.isFillViewport = true
         scrollView.clipToPadding = false
         scrollView.overScrollMode = View.OVER_SCROLL_NEVER
 
-        val contentLayout = LinearLayout(this)
+        val contentLayout = LinearLayout(context)
         contentLayout.orientation = LinearLayout.VERTICAL
         scrollView.addView(contentLayout)
 
         // Toolbar height spacer
-        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(32)))
+        contentLayout.addView(SpacerCell(context, LayoutHelper.dp(32)))
 
-        val sheetContainer = LinearLayout(this)
+        val sheetContainer = LinearLayout(context)
         sheetContainer.orientation = LinearLayout.VERTICAL
         sheetContainer.setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(50))
         contentLayout.addView(sheetContainer)
 
         // --- 1. РАЗМЕР ТЕКСТА СООБЩЕНИЙ ---
-        sheetContainer.addView(HeaderCell(this).apply {
+        sheetContainer.addView(HeaderCell(context).apply {
             text = "Размер текста сообщений"
             setTextColor(DesignEngine.Theme.colorBlue)
             isAllCaps = false
@@ -76,20 +94,20 @@ class ChatSettingsActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
         })
 
-        val fontSizeCard = ContainerCell(this)
+        val fontSizeCard = ContainerCell(context)
 
         // Slider row
-        val sliderLayout = LinearLayout(this).apply {
+        val sliderLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(8))
         }
-        val fontSizeSeek = SeekBar(this).apply {
+        val fontSizeSeek = SeekBar(context).apply {
             max = 14
             progress = DesignEngine.fontSize - 12
             layoutParams = LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f)
         }
-        val fontSizeValue = TextView(this).apply {
+        val fontSizeValue = TextView(context).apply {
             text = DesignEngine.fontSize.toString()
             textSize = 16f
             setTextColor(DesignEngine.Theme.colorBlue)
@@ -101,16 +119,16 @@ class ChatSettingsActivity : AppCompatActivity() {
         fontSizeCard.addView(sliderLayout)
 
         // Preview area
-        val previewFrame = FrameLayout(this).apply {
+        val previewFrame = FrameLayout(context).apply {
             layoutParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 180, 0f, 0, 16, 8, 16, 16)
             clipToOutline = true
             background = GradientDrawable().apply { cornerRadius = LayoutHelper.dp(12).toFloat() }
         }
-        wallpaperPreview = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+        wallpaperPreview = ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         updateWallpaper()
         previewFrame.addView(wallpaperPreview, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
 
-        val bubblesContainer = LinearLayout(this).apply {
+        val bubblesContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12), LayoutHelper.dp(12))
         }
@@ -122,7 +140,7 @@ class ChatSettingsActivity : AppCompatActivity() {
         fontSizeCard.addView(previewFrame)
 
         // Actions
-        fontSizeCard.addCell(TextCell(this).apply {
+        fontSizeCard.addCell(TextCell(context).apply {
             setData("Изменить обои", R.drawable.ic_photo)
             setTextColor(DesignEngine.Theme.colorBlue)
             setIconColor(DesignEngine.Theme.colorBlue)
@@ -130,10 +148,10 @@ class ChatSettingsActivity : AppCompatActivity() {
         }, isLast = true)
 
         sheetContainer.addView(fontSizeCard)
-        sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(5)))
+        sheetContainer.addView(SpacerCell(context, LayoutHelper.dp(5)))
 
         // --- 2. УГЛЫ БЛОКОВ С СООБЩЕНИЯМИ ---
-        sheetContainer.addView(HeaderCell(this).apply {
+        sheetContainer.addView(HeaderCell(context).apply {
             text = "Углы блоков с сообщениями"
             setTextColor(DesignEngine.Theme.colorBlue)
             isAllCaps = false
@@ -141,18 +159,18 @@ class ChatSettingsActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
         })
 
-        val radiusCard = ContainerCell(this)
-        val radiusLayout = LinearLayout(this).apply {
+        val radiusCard = ContainerCell(context)
+        val radiusLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
         }
-        val radiusSeek = SeekBar(this).apply {
+        val radiusSeek = SeekBar(context).apply {
             max = 24
             progress = DesignEngine.bubbleRadius
             layoutParams = LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f)
         }
-        val radiusValue = TextView(this).apply {
+        val radiusValue = TextView(context).apply {
             text = DesignEngine.bubbleRadius.toString()
             textSize = 16f
             setTextColor(DesignEngine.Theme.colorBlue)
@@ -163,21 +181,21 @@ class ChatSettingsActivity : AppCompatActivity() {
         radiusLayout.addView(radiusValue)
         radiusCard.addView(radiusLayout)
         sheetContainer.addView(radiusCard)
-        sheetContainer.addView(SpacerCell(this, LayoutHelper.dp(16)))
+        sheetContainer.addView(SpacerCell(context, LayoutHelper.dp(16)))
 
         // --- 3. НАСТРОЙКИ КАМЕРЫ ---
-        sheetContainer.addView(HeaderCell(this).apply { 
-            text = "Настройки камеры" 
+        sheetContainer.addView(HeaderCell(context).apply {
+            text = "Настройки камеры"
             setTextColor(DesignEngine.Theme.colorBlue)
             isAllCaps = false
             textSize = 14f
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(8), LayoutHelper.dp(16), LayoutHelper.dp(8))
         })
 
-        val cameraCard = ContainerCell(this)
+        val cameraCard = ContainerCell(context)
 
         // Тип камеры
-        val typeCell = TextCell(this).apply {
+        val typeCell = TextCell(context).apply {
             val type = cameraPrefs.getString("camera_type", "Camera 2")
             setData("Тип камеры", R.drawable.ic_camera)
             val valueText = TextView(context).apply {
@@ -188,7 +206,7 @@ class ChatSettingsActivity : AppCompatActivity() {
             addView(valueText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END, 0, 0, 48, 0))
             setOnClickListener {
                 val types = arrayOf("Camera 1", "Camera 2", "Camera X")
-                AlertDialog.Builder(this@ChatSettingsActivity)
+                AlertDialog.Builder(context)
                     .setTitle("Тип камеры")
                     .setItems(types) { _, which ->
                         cameraPrefs.edit().putString("camera_type", types[which]).apply()
@@ -224,10 +242,10 @@ class ChatSettingsActivity : AppCompatActivity() {
         rootLayout.addView(scrollView)
 
         val toolbar = DesignEngine.createToolBar(
-            context = this,
+            context = context,
             title = "Кастомизация",
             leftButtonIconRes = R.drawable.ic_back,
-            leftButtonClickListener = { finish() },
+            leftButtonClickListener = { finishFragment() },
             isDark = isDarkTheme
         )
         rootLayout.addView(toolbar)
@@ -238,7 +256,7 @@ class ChatSettingsActivity : AppCompatActivity() {
                 DesignEngine.fontSize = p + 12
                 fontSizeValue.text = DesignEngine.fontSize.toString()
                 updateBubbles()
-                DesignEngine.saveChatSettings(this@ChatSettingsActivity)
+                DesignEngine.saveChatSettings(context)
             }
             override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
@@ -249,34 +267,35 @@ class ChatSettingsActivity : AppCompatActivity() {
                 DesignEngine.bubbleRadius = p
                 radiusValue.text = p.toString()
                 updateBubbles()
-                DesignEngine.saveChatSettings(this@ChatSettingsActivity)
+                DesignEngine.saveChatSettings(context)
             }
             override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
         updateBubbles()
+        return  rootLayout
     }
 
     private fun createSwitchCell(title: String, isChecked: Boolean, description: String? = null, onCheckedChange: (Boolean) -> Unit): LinearLayout {
-        val container = LinearLayout(this).apply {
+        val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
         }
 
-        val topLayout = LinearLayout(this).apply {
+        val topLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        val textView = TextView(this).apply {
+        val textView = TextView(context).apply {
             text = title
             textSize = 16f
             setTextColor(DesignEngine.Theme.colorTextPrimary)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
-        val switch = Switch(this).apply {
+        val switch = Switch(context).apply {
             this.isChecked = isChecked
             setOnCheckedChangeListener { _, checked -> onCheckedChange(checked) }
         }
@@ -286,7 +305,7 @@ class ChatSettingsActivity : AppCompatActivity() {
         container.addView(topLayout)
 
         if (description != null) {
-            val descView = TextView(this).apply {
+            val descView = TextView(context).apply {
                 text = description
                 textSize = 13f
                 setTextColor(DesignEngine.Theme.colorTextSecondary)
@@ -300,19 +319,22 @@ class ChatSettingsActivity : AppCompatActivity() {
 
     private fun showWallpaperDialog() {
         val items = arrayOf<CharSequence>("Выбрать из галереи", "Сгенерировать обои", "Сбросить обои", "Отмена")
-
-        val builder = AlertDialog.Builder(this)
+        val builder = AlertDialog.Builder(context)
         builder.setTitle("Изменить обои")
         builder.setItems(items) { dialog, item ->
             when (item) {
-                0 -> selectImageLauncher.launch("image/*")
+                0 -> {
+                    // Вместо лаунчера вызываем через активность
+                    val intent = Intent(Intent.ACTION_GET_CONTENT).setType("image/*")
+                    activity?.startActivityForResult(intent, RC_PICK_IMAGE)
+                }
                 1 -> createPatternedWallpaper()
                 2 -> {
                     DesignEngine.chatWallpaper = "chat_bg_default"
                     DesignEngine.wallpaperBlur = false
                     DesignEngine.wallpaperMotion = false
                     updateWallpaper()
-                    DesignEngine.saveChatSettings(this)
+                    DesignEngine.saveChatSettings(context)
                 }
                 3 -> dialog.dismiss()
             }
@@ -321,16 +343,17 @@ class ChatSettingsActivity : AppCompatActivity() {
     }
 
     private fun openWallpaperPreview(uri: String, isGenerated: Boolean = false) {
-        val intent = Intent(this, WallpaperPreviewActivity::class.java)
-        intent.putExtra("wallpaper_uri", uri)
-        intent.putExtra("is_generated", isGenerated)
-        wallpaperPreviewLauncher.launch(intent)
+        val intent = Intent(context, WallpaperPreviewActivity::class.java).apply {
+            putExtra("wallpaper_uri", uri)
+            putExtra("is_generated", isGenerated)
+        }
+        activity?.startActivityForResult(intent, RC_WALLPAPER_PREVIEW)
     }
 
     private fun saveWallpaperFromUri(uri: Uri): String? {
         return try {
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val file = File(filesDir, "wallpaper_${System.currentTimeMillis()}.jpg")
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val file = File(context.filesDir, "wallpaper_${System.currentTimeMillis()}.jpg")
             val outputStream = FileOutputStream(file)
             inputStream.use { input ->
                 outputStream.use { output ->
@@ -367,7 +390,7 @@ class ChatSettingsActivity : AppCompatActivity() {
             canvas.drawCircle(x, y, radius, patternPaint)
         }
 
-        val file = File(filesDir, "pattern_wallpaper_${System.currentTimeMillis()}.png")
+        val file = File(context.filesDir, "pattern_wallpaper_${System.currentTimeMillis()}.png")
         try {
             val fOut = FileOutputStream(file)
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut)
@@ -381,8 +404,8 @@ class ChatSettingsActivity : AppCompatActivity() {
     }
 
     private fun getStatusBarHeight(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
+        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
     }
 
     private fun updateWallpaper() {
@@ -391,18 +414,18 @@ class ChatSettingsActivity : AppCompatActivity() {
             val newPath = saveWallpaperFromUri(Uri.parse(wallpaper))
             if (newPath != null) {
                 DesignEngine.chatWallpaper = newPath
-                DesignEngine.saveChatSettings(this)
+                DesignEngine.saveChatSettings(context)
                 wallpaperPreview.setImageURI(Uri.fromFile(File(newPath)))
             } else {
                 DesignEngine.chatWallpaper = "chat_bg_default"
-                DesignEngine.saveChatSettings(this)
+                DesignEngine.saveChatSettings(context)
                 updateWallpaper()
             }
-        } else if (wallpaper != null && (wallpaper.startsWith("/") || wallpaper.startsWith("file://"))) { 
+        } else if (wallpaper != null && (wallpaper.startsWith("/") || wallpaper.startsWith("file://"))) {
             val uri = if (wallpaper.startsWith("file://")) Uri.parse(wallpaper) else Uri.fromFile(File(wallpaper))
             wallpaperPreview.setImageURI(uri)
         } else { // Drawable resource
-            val resId = resources.getIdentifier(wallpaper ?: "chat_bg_default", "drawable", packageName)
+            val resId = context.resources.getIdentifier(wallpaper ?: "chat_bg_default", "drawable", context.packageName)
             if (resId != 0) {
                 wallpaperPreview.setImageResource(resId)
             } else {
@@ -412,7 +435,7 @@ class ChatSettingsActivity : AppCompatActivity() {
     }
 
     private fun createBubble(text: String, isOutgoing: Boolean): View {
-        val bubble = TextView(this).apply {
+        val bubble = TextView(context).apply {
             this.text = text
             textSize = DesignEngine.fontSize.toFloat()
             setPadding(LayoutHelper.dp(12), LayoutHelper.dp(8), LayoutHelper.dp(12), LayoutHelper.dp(8))

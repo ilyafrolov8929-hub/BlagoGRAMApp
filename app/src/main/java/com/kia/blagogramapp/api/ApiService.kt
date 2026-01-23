@@ -86,6 +86,7 @@ interface ApiService {
         @Part("token") token: RequestBody,
         @Part("chat_id") chatId: RequestBody,
         @Part("text") text: RequestBody?,
+        @Part("reply_to_id") replyToId: RequestBody?,
         @Part image: List<MultipartBody.Part>?
     ): SendMessageResponse
 

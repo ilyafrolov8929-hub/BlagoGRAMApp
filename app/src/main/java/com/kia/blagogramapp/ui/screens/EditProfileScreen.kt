@@ -1,6 +1,7 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
-import android.app.Activity
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -8,34 +9,41 @@ import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
-import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.*
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.google.android.material.imageview.ShapeableImageView
+import com.kia.blagogramapp.BaseScreen
+import com.kia.blagogramapp.DesignEngine
+import com.kia.blagogramapp.LayoutHelper
+import com.kia.blagogramapp.R
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.network.RetrofitClient
+import com.kia.blagogramapp.ui.modules.ChatListLayout
 import com.kia.blagogramapp.ui.modules.MediaPickerSheet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
 
-class ProfileEditActivity : AppCompatActivity() {
-
+class EditProfileScreen(context: Context) : BaseScreen(context) {
+    val activity = context as? AppCompatActivity
     private lateinit var inputName: EditText
     private lateinit var inputStatus: EditText
-    private var isCurrentThemeDark: Boolean = false
-    private var isCurrentUseMonet: Boolean = false
     private lateinit var avatarView: ShapeableImageView
     private lateinit var coverView: ShapeableImageView
 
@@ -44,79 +52,57 @@ class ProfileEditActivity : AppCompatActivity() {
 
     private var repo = ApiRepository(RetrofitClient.api)
 
-    private fun getStatusBarHeight(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
-    }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
-        val statusBarHeight = getStatusBarHeight()
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDarkTheme
-        controller.isAppearanceLightNavigationBars = !isDarkTheme
-
-        val rootLayout = LinearLayout(this).apply {
+    override fun createView(): View {
+        val rootLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(DesignEngine.Theme.colorBackground)
         }
-        setContentView(rootLayout)
+
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
+        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
+
 
         val toolbar = DesignEngine.createToolBar(
-            context = this,
+            context = context,
             title = "Редактирование",
             leftButtonIconRes = R.drawable.ic_back,
             isDark = isDarkTheme,
-            leftButtonClickListener = { finish() },
+            leftButtonClickListener = { finishFragment() },
             rightButtonIconRes = R.drawable.ic_check,
             rightButtonClickListener = { saveProfile() }
         )
         rootLayout.addView(toolbar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
 
 
-        val scrollView = ScrollView(this).apply {
+        val scrollView = ScrollView(context).apply {
             isFillViewport = true
             clipToPadding = false
         }
-        
-        val scrollContainer = LinearLayout(this).apply {
+
+        val scrollContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(LayoutHelper.dp(20), LayoutHelper.dp(16), LayoutHelper.dp(20), LayoutHelper.dp(24))
         }
 
-        val headerContainer = FrameLayout(this)
-        
-        coverView = ShapeableImageView(this).apply {
+        val headerContainer = FrameLayout(context)
+
+        coverView = ShapeableImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             setBackgroundColor(DesignEngine.Theme.colorDivider)
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
                 .setAllCornerSizes(LayoutHelper.dp(16).toFloat())
                 .build()
             setOnClickListener {
-                MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.COVER) { uris, _ ->
+                MediaPickerSheet.show(context, MediaPickerSheet.Mode.COVER) { uris, _ ->
                     if (uris.isNotEmpty()) handleSelectedCover(uris[0])
                 }
             }
         }
         headerContainer.addView(coverView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 160))
 
-        val editCoverBtn = ImageView(this).apply {
+        val editCoverBtn = ImageView(context).apply {
             setImageResource(R.drawable.ic_camera)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
             setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
@@ -125,14 +111,14 @@ class ProfileEditActivity : AppCompatActivity() {
                 shape = GradientDrawable.OVAL
             }
             setOnClickListener {
-                MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.COVER) { uris, _ ->
+                MediaPickerSheet.show(context, MediaPickerSheet.Mode.COVER) { uris, _ ->
                     if (uris.isNotEmpty()) handleSelectedCover(uris[0])
                 }
             }
         }
         headerContainer.addView(editCoverBtn, LayoutHelper.createFrame(36, 36, Gravity.TOP or Gravity.END, 0, 12, 12, 0))
 
-        avatarView = ShapeableImageView(this).apply {
+        avatarView = ShapeableImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             setBackgroundColor(Color.LTGRAY)
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
@@ -143,7 +129,7 @@ class ProfileEditActivity : AppCompatActivity() {
         }
         headerContainer.addView(avatarView, LayoutHelper.createFrame(100, 100, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
 
-        val editAvatarBtn = ImageView(this).apply {
+        val editAvatarBtn = ImageView(context).apply {
             setImageResource(R.drawable.ic_edit)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
             setPadding(LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6), LayoutHelper.dp(6))
@@ -152,7 +138,7 @@ class ProfileEditActivity : AppCompatActivity() {
                 shape = GradientDrawable.OVAL
             }
             setOnClickListener {
-                MediaPickerSheet.show(this@ProfileEditActivity, MediaPickerSheet.Mode.AVATAR) { uris, _ ->
+                MediaPickerSheet.show(context, MediaPickerSheet.Mode.AVATAR) { uris, _ ->
                     if (uris.isNotEmpty()) handleSelectedAvatar(uris[0])
                 }
             }
@@ -161,26 +147,26 @@ class ProfileEditActivity : AppCompatActivity() {
 
         scrollContainer.addView(headerContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 200, 0f, 0, 0, 0, 0, 24))
 
-        val card = LinearLayout(this).apply {
+        val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(DesignEngine.Theme.colorCardBackground)
                 cornerRadius = LayoutHelper.dp(16).toFloat()
             }
             setPadding(LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(20), LayoutHelper.dp(20))
-            elevation = 0f 
+            elevation = 0f
         }
 
-        card.addView(TextView(this).apply {
+        card.addView(TextView(context).apply {
             text = "ИМЯ"
             textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(DesignEngine.Theme.colorTextSecondary)
         }, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 0, 0, 8))
 
-        inputName = EditText(this).apply {
+        inputName = EditText(context).apply {
             background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorDivider) 
+                setColor(DesignEngine.Theme.colorDivider)
                 cornerRadius = LayoutHelper.dp(24).toFloat()
             }
             hint = "Ваше имя"
@@ -191,14 +177,14 @@ class ProfileEditActivity : AppCompatActivity() {
         }
         card.addView(inputName, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
-        card.addView(TextView(this).apply {
+        card.addView(TextView(context).apply {
             text = "СТАТУС"
             textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(DesignEngine.Theme.colorTextSecondary)
         }, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 20, 0, 8))
 
-        inputStatus = EditText(this).apply {
+        inputStatus = EditText(context).apply {
             background = GradientDrawable().apply {
                 setColor(DesignEngine.Theme.colorDivider)
                 cornerRadius = LayoutHelper.dp(24).toFloat()
@@ -213,7 +199,7 @@ class ProfileEditActivity : AppCompatActivity() {
 
         scrollContainer.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
-        val infoText = TextView(this).apply {
+        val infoText = TextView(context).apply {
             text = "Имя и статус будут видны другим пользователям."
             gravity = Gravity.CENTER
             setTextColor(DesignEngine.Theme.colorTextSecondary)
@@ -224,18 +210,20 @@ class ProfileEditActivity : AppCompatActivity() {
         scrollView.addView(scrollContainer)
         rootLayout.addView(scrollView)
 
-        val prefs = getSharedPreferences("app", MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("app", MODE_PRIVATE)
         inputName.setText(prefs.getString("display_name", ""))
         inputStatus.setText(prefs.getString("status", ""))
-        
+
         avatarView.load("https://blagogram.ru/avatars/${prefs.getString("avatar", "")}") {
             placeholder(R.drawable.ic_user_placeholder)
             error(R.drawable.ic_user_placeholder)
         }
-        
+
         coverView.load("https://blagogram.ru/covers/${prefs.getString("cover", "")}") {
             error(Color.LTGRAY)
         }
+
+        return rootLayout
     }
 
     private fun handleSelectedAvatar(uri: Uri) {
@@ -267,7 +255,7 @@ class ProfileEditActivity : AppCompatActivity() {
         }
 
         val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
-        
+
         val maxSize = 1200
         val ratio = rotated.width.toFloat() / rotated.height.toFloat()
         val newWidth: Int
@@ -279,9 +267,9 @@ class ProfileEditActivity : AppCompatActivity() {
             newHeight = maxSize
             newWidth = (maxSize * ratio).toInt()
         }
-        
+
         val resized = Bitmap.createScaledBitmap(rotated, newWidth, newHeight, true)
-        val compressedFile = File(cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+        val compressedFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.jpg")
         FileOutputStream(compressedFile).use { out ->
             resized.compress(Bitmap.CompressFormat.JPEG, 85, out)
         }
@@ -289,12 +277,12 @@ class ProfileEditActivity : AppCompatActivity() {
     }
 
     private fun saveProfile() {
-        val prefs = getSharedPreferences("app", MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("app", MODE_PRIVATE)
         val token = prefs.getString("token", "") ?: ""
         val name = inputName.text.toString().trim()
         val status = inputStatus.text.toString().trim()
 
-        CoroutineScope(Dispatchers.IO).launch {
+        activity?.lifecycleScope?.launch(Dispatchers.IO) {
             try {
                 val avatarPart = avatarFile?.let {
                     val req = it.asRequestBody("image/jpeg".toMediaType())
@@ -316,27 +304,16 @@ class ProfileEditActivity : AppCompatActivity() {
                         (result["cover"] as? String)?.let { putString("cover", it) }
                         apply()
                     }
-                    runOnUiThread {
-                        Toast.makeText(this@ProfileEditActivity, "Сохранено!", Toast.LENGTH_SHORT).show()
-                        finish()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Сохранено!", Toast.LENGTH_SHORT).show()
+                        finishFragment()
                     }
                 }
             } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this@ProfileEditActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
-        val isNowMonet = themePrefs.getBoolean("use_monet", false)
-        if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
-            recreate()
-            return
         }
     }
 }

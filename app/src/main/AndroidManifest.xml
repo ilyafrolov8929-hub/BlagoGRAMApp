@@ -22,6 +22,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App.NoActionBar">
 
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -52,6 +53,9 @@
         <activity android:name=".PrivaciActivity" />
         <activity android:name=".RegisterActivity" />
         <activity android:name=".DatabaseDumpActivity" />
+        <activity android:name=".ChangeUsernameActivity" />
+        <activity android:name=".StartActivity" />
+        <activity android:name=".ProfilePreviewActivity"/>
         <activity android:name=".CameraActivity" 
             android:theme="@style/Theme.App.NoActionBar" />
 
@@ -59,7 +63,7 @@
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.App.NoActionBar" />
 
-        <activity android:name=".StartActivity"
+        <activity android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

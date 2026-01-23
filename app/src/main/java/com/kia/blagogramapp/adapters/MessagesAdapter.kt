@@ -22,7 +22,6 @@ import com.google.android.material.imageview.ShapeableImageView
 import com.kia.blagogramapp.*
 import android.view.LayoutInflater
 import android.widget.Toast
-import com.kia.blagogramapp.DesignEngine.context
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.database.AppDatabase
@@ -39,11 +38,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
+import android.view.animation.Animation
+import android.view.animation.LinearInterpolator
+import android.view.animation.RotateAnimation
 
 class MessagesAdapter(
     private val myId: Int,
     private val onImageClick: (String, Message) -> Unit,
-    private val onLongClick: (Message) -> Unit
+    private val onLongClick: (Message) -> Unit,
+    private val onReplyClick: (Message) -> Unit
 ) : ListAdapter<ChatListItem, RecyclerView.ViewHolder>(DiffCallback()) {
 
     private val typeHeader = 0
@@ -81,7 +84,7 @@ class MessagesAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
             is ChatListItem.Header -> (holder as HeaderHolder).bind(item.title)
-            is ChatListItem.Msg -> (holder as MsgHolder).bind(item, onImageClick, onLongClick, userCache)
+            is ChatListItem.Msg -> (holder as MsgHolder).bind(item, onImageClick, onLongClick, onReplyClick, userCache)
             else -> {}
         }
     }
@@ -122,6 +125,7 @@ class MessagesAdapter(
             val nextMsg = if (i < messages.size - 1) messages[i+1] else null
             val nextTime = if (nextMsg != null) try { sdf.parse(nextMsg.sent_at)?.time ?: 0L } catch (e: Exception) { 0L } else 0L
 
+            // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: группируем по sender_id, а не по ID сообщения
             val isPrevSame = prevMsg?.sender_id == m.sender_id && (currentTime - (try { sdf.parse(prevMsg!!.sent_at)?.time ?: 0L } catch (e: Exception) { 0L }) <= 5 * 60 * 1000)
             val isNextSame = nextMsg?.sender_id == m.sender_id && (nextTime - currentTime <= 5 * 60 * 1000)
 
@@ -140,7 +144,11 @@ class MessagesAdapter(
         val statusIcon: ImageView? = v.findViewById(R.id.msgStatusIcon)
         val bubble: View = if (isOutgoing) v.findViewById(R.id.bubbleRight) else v.findViewById(R.id.bubbleLeft)
 
-        // --- Shared Post View Components ---
+        val replyContainer: View = v.findViewById(R.id.replyContainer)
+        val replyName: TextView = v.findViewById(R.id.replyName)
+        val replyText: TextView = v.findViewById(R.id.replyText)
+        val replyImage: ImageView = v.findViewById(R.id.replyImage)
+
         private var sharedPostRoot: LinearLayout? = null
         private var sharedPostHeaderPill: LinearLayout? = null
         private var sharedPostAvatar: ShapeableImageView? = null
@@ -149,13 +157,46 @@ class MessagesAdapter(
         private var sharedPostImage: ShapeableImageView? = null
         private var sharedPostContent: TextView? = null
 
-        fun bind(item: ChatListItem.Msg, onImageClick: (String, Message) -> Unit, onLongClick: (Message) -> Unit, userCache: MutableMap<Int, UserEntity>) {
+        private fun setStatusIcon(msg: Message, isOnlyEmoji: Boolean = false) {
+            val icon = statusIcon ?: return
+            icon.clearAnimation()
+            if (msg.id < 0) {
+                icon.setImageResource(R.drawable.ic_clock)
+                val rotate = RotateAnimation(0f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
+                    duration = 1000
+                    repeatCount = Animation.INFINITE
+                    interpolator = LinearInterpolator()
+                }
+                icon.startAnimation(rotate)
+            } else {
+                icon.setImageResource(if (msg.is_read == 1) R.drawable.ic_double_check else R.drawable.ic_check)
+            }
+            val iconColor = if (isOnlyEmoji) 0xFFFFFFFF.toInt() else 0xCCFFFFFF.toInt()
+            icon.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
+        }
+
+        fun bind(item: ChatListItem.Msg, onImageClick: (String, Message) -> Unit, onLongClick: (Message) -> Unit, onReplyClick: (Message) -> Unit, userCache: MutableMap<Int, UserEntity>) {
             val msg = item.message
 
             sharedPostRoot?.visibility = View.GONE
             text.visibility = View.GONE
             text.typeface = Typeface.DEFAULT
             imagesRecycler.visibility = View.GONE
+
+            if (msg.reply != null) {
+                replyContainer.visibility = View.VISIBLE
+                replyName.text = msg.reply.display_name
+                replyText.text = if (msg.reply.content.isNotEmpty()) msg.reply.content else "Фотография"
+                if (msg.reply.images.isNotEmpty()) {
+                    replyImage.visibility = View.VISIBLE
+                    replyImage.load("https://blagogram.ru/uploads/${msg.chat_id}/${msg.reply.images[0]}")
+                } else {
+                    replyImage.visibility = View.GONE
+                }
+                replyContainer.setOnClickListener { onReplyClick(msg) }
+            } else {
+                replyContainer.visibility = View.GONE
+            }
 
             var sharedPostId: Int? = null
             var comment: String? = null
@@ -166,12 +207,9 @@ class MessagesAdapter(
                     sharedPostId = json.optInt("post_id", 0).takeIf { it > 0 }
                     comment = json.optString("comment", null)?.takeIf { it.isNotBlank() }
                 }
-            } catch (_: Exception) {
-                // не JSON → обычное сообщение
-            }
+            } catch (_: Exception) { }
 
             if (sharedPostId != null) {
-                // Это пересланный пост
                 if (comment != null) {
                     text.visibility = View.VISIBLE
                     markwon.setMarkdown(text, comment)
@@ -187,24 +225,18 @@ class MessagesAdapter(
                 sharedPostRoot?.visibility = View.VISIBLE
                 loadAndDisplaySharedPost(sharedPostId, userCache)
 
-                // Восстанавливаем время и статус для пересланного поста
                 timeContainer.visibility = View.VISIBLE
                 time.visibility = View.VISIBLE
                 time.text = TimeUtils.formatTime(msg.sent_at)
                 timeContainer.background = null
                 editedIcon.visibility = if (msg.edited_at != null) View.VISIBLE else View.GONE
 
-                // Чтобы время было поверх контента поста
                 timeContainer.bringToFront()
                 statusIcon?.bringToFront()
 
                 if (isOutgoing) {
-                    statusIcon?.apply {
-                        visibility = View.VISIBLE
-                        setImageResource(if (msg.is_read == 1) R.drawable.ic_double_check else R.drawable.ic_check)
-                        val iconColor = 0xCCFFFFFF.toInt()
-                        setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
-                    }
+                    statusIcon?.visibility = View.VISIBLE
+                    setStatusIcon(msg)
                 } else {
                     statusIcon?.visibility = View.GONE
                 }
@@ -222,9 +254,13 @@ class MessagesAdapter(
                     bubbleDrawable.cornerRadii = floatArrayOf(tl, tl, radius, radius, radius, radius, bl, bl)
                 }
             } else {
-                // Обычное сообщение
                 text.typeface = Typeface.DEFAULT
                 bindNormalMessage(item, onImageClick, onLongClick)
+            }
+            
+            bubble.setOnLongClickListener { 
+                onLongClick(msg)
+                true
             }
         }
 
@@ -232,17 +268,10 @@ class MessagesAdapter(
             if (sharedPostRoot == null) {
                 val container = bubble as ViewGroup
                 val context = itemView.context
-
-                // Основной контейнер поста (ВЕРТИКАЛЬНЫЙ)
                 sharedPostRoot = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LayoutHelper.dp(280), // Фиксированная ширина как на макете
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
+                    layoutParams = LinearLayout.LayoutParams(LayoutHelper.dp(280), ViewGroup.LayoutParams.WRAP_CONTENT)
                 }
-
-                // 1. Серая линия-разделитель (Divider)
                 val divider = View(context).apply {
                     background = GradientDrawable().apply {
                         setColor(if (isOutgoing) 0x40FFFFFF else 0x20000000)
@@ -250,8 +279,6 @@ class MessagesAdapter(
                     }
                 }
                 sharedPostRoot?.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 4, 0f, 8, 0, 30))
-
-                // 2. Плашка (Pill) с Именем и Временем
                 sharedPostHeaderPill = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -261,13 +288,11 @@ class MessagesAdapter(
                     }
                     setPadding(LayoutHelper.dp(8), LayoutHelper.dp(6), LayoutHelper.dp(16), LayoutHelper.dp(6))
                 }
-
                 sharedPostAvatar = ShapeableImageView(context).apply {
                     shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(LayoutHelper.dp(16).toFloat()).build()
                     scaleType = ImageView.ScaleType.CENTER_CROP
                 }
                 sharedPostHeaderPill?.addView(sharedPostAvatar, LayoutHelper.createLinear(32, 32))
-
                 val nameBox = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(LayoutHelper.dp(8), 0, 0, 0)
@@ -283,19 +308,13 @@ class MessagesAdapter(
                 nameBox.addView(sharedPostName)
                 nameBox.addView(sharedPostTime)
                 sharedPostHeaderPill?.addView(nameBox)
-
-                // Добавляем плашку с отступом
                 sharedPostRoot?.addView(sharedPostHeaderPill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 10))
-
-                // 3. Текст поста (Bold)
                 sharedPostContent = TextView(context).apply {
                     textSize = DesignEngine.fontSize.toFloat()
                     setTextColor(if (isOutgoing) Color.WHITE else DesignEngine.Theme.colorTextPrimary)
                     setPadding(LayoutHelper.dp(14), 0, LayoutHelper.dp(14), LayoutHelper.dp(8))
                 }
                 sharedPostRoot?.addView(sharedPostContent)
-
-                // 4. Картинка поста (С закруглением 20dp как на макете)
                 sharedPostImage = ShapeableImageView(context).apply {
                     visibility = View.GONE
                     adjustViewBounds = true
@@ -304,14 +323,10 @@ class MessagesAdapter(
                         .setAllCornerSizes(LayoutHelper.dp(DesignEngine.bubbleRadius).toFloat())
                         .build()
                 }
-                // Добавляем отступ снизу 24dp, чтобы время (12:12) не перекрывало картинку
                 sharedPostRoot?.addView(sharedPostImage, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 24))
-
-                // Добавляем всё это в бабл
                 container.addView(sharedPostRoot)
             }
         }
-
 
         private fun loadAndDisplaySharedPost(postId: Int, userCache: MutableMap<Int, UserEntity>) {
             val context = itemView.context
@@ -319,7 +334,6 @@ class MessagesAdapter(
             val apiRepo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
             val db = AppDatabase.getDatabase(context)
 
-            // Apply Theme colors from DesignEngine
             val bubbleDrawable = (bubble.background as GradientDrawable).mutate() as GradientDrawable
             if (isOutgoing) {
                 bubbleDrawable.setColor(DesignEngine.Theme.colorBlue)
@@ -331,28 +345,20 @@ class MessagesAdapter(
 
             CoroutineScope(Dispatchers.Main).launch {
                 try {
-                    // 1. Пытаемся взять из кэша
                     val cachedPost = withContext(Dispatchers.IO) { db.postDao().getById(postId) }
                     var post: Post? = cachedPost?.let { Post(it.id, it.authorId, it.title, it.content, it.image, it.createdAt, it.likes, it.liked) }
-
-                    // 2. Если нет в кэше, идем в сеть
                     if (post == null) {
                         val posts = withContext(Dispatchers.IO) { apiRepo.getPosts(token) }
                         post = posts.find { it.id == postId }
                     }
-
                     if (post != null) {
-                        val params = sharedPostRoot?.layoutParams as? ConstraintLayout.LayoutParams
+                        val params = sharedPostRoot?.layoutParams
                         params?.width = LayoutHelper.dp(280)
                         sharedPostHeaderPill?.visibility = View.VISIBLE
-                        
-                        // Загружаем инфо об авторе поста
                         loadAuthorInfo(post.authorId, userCache, token, apiRepo, db)
-                        
                         sharedPostTime?.text = formatPostDate(post.createdAt)
                         sharedPostContent?.text = post.content
                         sharedPostContent?.setTextColor(if (isOutgoing) Color.WHITE else DesignEngine.Theme.colorTextPrimary)
-
                         if (!post.image.isNullOrEmpty()) {
                             sharedPostImage?.visibility = View.VISIBLE
                             sharedPostImage?.load("https://blagogram.ru/posts/${post.image}")
@@ -360,9 +366,8 @@ class MessagesAdapter(
                             sharedPostImage?.visibility = View.GONE
                         }
                     } else {
-                        val params = sharedPostRoot?.layoutParams as? ConstraintLayout.LayoutParams
+                        val params = sharedPostRoot?.layoutParams
                         params?.width = LayoutHelper.dp(200)
-                        // POST NOT FOUND
                         sharedPostHeaderPill?.visibility = View.GONE
                         sharedPostImage?.visibility = View.GONE
                         sharedPostContent?.text = "Пост не найден"
@@ -377,7 +382,6 @@ class MessagesAdapter(
         }
 
         private suspend fun loadAuthorInfo(userId: Int, userCache: MutableMap<Int, UserEntity>, token: String, apiRepo: ApiRepository, db: AppDatabase) {
-            // 1. RAM Cache
             userCache[userId]?.let {
                 sharedPostName?.text = it.displayName ?: it.username
                 sharedPostAvatar?.load(if (!it.avatar.isNullOrEmpty()) "https://blagogram.ru/avatars/${it.avatar}" else null) {
@@ -387,8 +391,6 @@ class MessagesAdapter(
                 }
                 return
             }
-
-            // 2. DB Cache
             val cachedUser = withContext(Dispatchers.IO) { db.userDao().getById(userId) }
             if (cachedUser != null && (System.currentTimeMillis() - cachedUser.lastUpdated < 3600000)) {
                 userCache[userId] = cachedUser
@@ -399,17 +401,9 @@ class MessagesAdapter(
                     transformations(CircleCropTransformation())
                 }
             } else {
-                // 3. Network
                 try {
                     val profile = apiRepo.getUserProfile(token, userId)
-                    val userEntity = UserEntity(
-                        id = profile.id,
-                        username = profile.username,
-                        displayName = profile.display_name,
-                        avatar = profile.avatar,
-                        lastUpdated = System.currentTimeMillis()
-                    )
-                    Toast.makeText(context, "Пользователь загружен из сети", Toast.LENGTH_SHORT).show()
+                    val userEntity = UserEntity(profile.id, profile.username, profile.display_name, profile.avatar, System.currentTimeMillis())
                     withContext(Dispatchers.IO) { db.userDao().insert(userEntity) }
                     userCache[userId] = userEntity
                     sharedPostName?.text = userEntity.displayName ?: userEntity.username
@@ -444,11 +438,7 @@ class MessagesAdapter(
 
             if (msg.content.isEmpty()) text.visibility = View.GONE else {
                 text.visibility = View.VISIBLE
-                if (isOnlyEmoji) {
-                    text.text = msg.content
-                } else {
-                    markwon.setMarkdown(text, msg.content)
-                }
+                if (isOnlyEmoji) text.text = msg.content else markwon.setMarkdown(text, msg.content)
             }
             
             if (isOnlyEmoji) {
@@ -473,22 +463,18 @@ class MessagesAdapter(
             
             time.text = TimeUtils.formatTime(msg.sent_at)
             editedIcon.visibility = if (msg.edited_at != null) View.VISIBLE else View.GONE
-            
             val bubbleDrawable = (bubble.background as GradientDrawable).mutate() as GradientDrawable
-            
             val radius = LayoutHelper.dp(DesignEngine.bubbleRadius).toFloat()
             val smallRadius = LayoutHelper.dp(4).toFloat()
 
             if (isOnlyEmoji) {
                 bubbleDrawable.setColor(Color.TRANSPARENT)
                 bubbleDrawable.setStroke(0, Color.TRANSPARENT)
-                
                 val timeBg = GradientDrawable().apply {
                     setColor(0x40000000)
                     cornerRadius = LayoutHelper.dp(10).toFloat()
                 }
                 timeContainer.background = timeBg
-                
                 text.setTextColor(DesignEngine.Theme.colorTextPrimary)
                 time.setTextColor(0xFFFFFFFF.toInt())
                 editedIcon.setColorFilter(0xFFFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
@@ -500,6 +486,7 @@ class MessagesAdapter(
                     time.setTextColor(0xCCFFFFFF.toInt())
                     editedIcon.setColorFilter(0xCCFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
                     
+                    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: группируем баблы правильно
                     val tr = if (item.isPrevSame) smallRadius else radius
                     val br = if (item.isNextSame) smallRadius else radius
                     bubbleDrawable.cornerRadii = floatArrayOf(radius, radius, tr, tr, br, br, radius, radius)
@@ -508,7 +495,6 @@ class MessagesAdapter(
                     text.setTextColor(DesignEngine.Theme.colorTextPrimary)
                     time.setTextColor(DesignEngine.Theme.colorTextSecondary)
                     editedIcon.setColorFilter(DesignEngine.Theme.colorTextSecondary, PorterDuff.Mode.SRC_IN)
-                    
                     val tl = if (item.isPrevSame) smallRadius else radius
                     val bl = if (item.isNextSame) smallRadius else radius
                     bubbleDrawable.cornerRadii = floatArrayOf(tl, tl, radius, radius, radius, radius, bl, bl)
@@ -516,27 +502,21 @@ class MessagesAdapter(
             }
 
             if (isOutgoing) {
-                statusIcon?.apply {
-                    visibility = View.VISIBLE
-                    setImageResource(if (msg.is_read == 1) R.drawable.ic_double_check else R.drawable.ic_check)
-                    val iconColor = if (isOnlyEmoji) 0xFFFFFFFF.toInt() else 0xCCFFFFFF.toInt()
-                    setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
-                }
+                statusIcon?.visibility = View.VISIBLE
+                setStatusIcon(msg, isOnlyEmoji)
             } else {
                 statusIcon?.visibility = View.GONE
             }
 
             if (msg.images.isNotEmpty()) {
                 imagesRecycler.visibility = View.VISIBLE
-                val urls = msg.images.map { if (it.startsWith("content:") || it.startsWith("file:")) it else "https://blagogram.ru/uploads/${msg.sender_id}/$it" }
-                
+                val urls = msg.images.map { if (it.startsWith("content:") || it.startsWith("file:")) it else "https://blagogram.ru/uploads/${msg.chat_id}/$it" }
                 val currentAdapter = imagesRecycler.adapter as? MessageImagesAdapter
                 if (currentAdapter == null || currentAdapter.imageUrls != urls) {
                     val spanCount = if (msg.images.size >= 3) 3 else if (msg.images.size == 2) 2 else 1
                     imagesRecycler.layoutManager = GridLayoutManager(itemView.context, spanCount)
                     imagesRecycler.adapter = MessageImagesAdapter(urls, msg.images.size > 1) { onImageClick(it, msg) }
                 }
-
                 val params = imagesRecycler.layoutParams
                 params.width = LayoutHelper.dp(250)
                 imagesRecycler.layoutParams = params
@@ -568,14 +548,7 @@ class MessagesAdapter(
         }
 
         private fun isEmoji(codePoint: Int): Boolean {
-            return (codePoint in 0x1F600..0x1F64F) || // Emoticons
-                   (codePoint in 0x1F300..0x1F5FF) || // Misc Symbols and Pictographs
-                   (codePoint in 0x1F680..0x1F6FF) || // Transport and Map
-                   (codePoint in 0x2600..0x26FF)   || // Misc Symbols
-                   (codePoint in 0x2700..0x27BF)   || // Dingbats
-                   (codePoint in 0xFE00..0xFE0F)   || // Variation Selectors
-                   (codePoint in 0x1F900..0x1F9FF) || // Supplemental Symbols and Pictographs
-                   (codePoint in 0x1F1E6..0x1F1FF)    // Flags
+            return (codePoint in 0x1F600..0x1F64F) || (codePoint in 0x1F300..0x1F5FF) || (codePoint in 0x1F680..0x1F6FF) || (codePoint in 0x2600..0x26FF) || (codePoint in 0x2700..0x27BF) || (codePoint in 0xFE00..0xFE0F) || (codePoint in 0x1F900..0x1F9FF) || (codePoint in 0x1F1E6..0x1F1FF)
         }
     }
 
@@ -599,7 +572,13 @@ class MessagesAdapter(
 
     class DiffCallback : DiffUtil.ItemCallback<ChatListItem>() {
         override fun areItemsTheSame(oldItem: ChatListItem, newItem: ChatListItem): Boolean {
-            if (oldItem is ChatListItem.Msg && newItem is ChatListItem.Msg) return oldItem.message.id == newItem.message.id
+            if (oldItem is ChatListItem.Msg && newItem is ChatListItem.Msg) {
+                val m1 = oldItem.message
+                val m2 = newItem.message
+                if (m1.id == m2.id) return true
+                if ((m1.id < 0 || m2.id < 0) && m1.sender_id == m2.sender_id && m1.content == m2.content) return true
+                return false
+            }
             if (oldItem is ChatListItem.Header && newItem is ChatListItem.Header) return oldItem.title == newItem.title
             return oldItem == newItem
         }

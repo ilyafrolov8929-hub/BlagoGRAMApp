@@ -2,7 +2,6 @@ package com.kia.blagogramapp.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
 
 @Entity(tableName = "messages")
 data class MessageEntity(
@@ -16,5 +15,12 @@ data class MessageEntity(
     val displayName: String,
     val avatar: String,
     val images: String, // Храним как JSON строку или разделитель
-    val isPremium: Boolean
+    val isPremium: Boolean,
+    
+    // Reply data
+    val replyId: Int? = null,
+    val replySenderId: Int? = null,
+    val replyDisplayName: String? = null,
+    val replyContent: String? = null,
+    val replyImages: String? = null
 )

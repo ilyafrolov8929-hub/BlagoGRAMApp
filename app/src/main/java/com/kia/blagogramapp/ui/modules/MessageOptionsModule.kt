@@ -24,9 +24,11 @@ import coil.load
 
 class MessageOptionsSheet(context: Context) : LinearLayout(context) {
 
-    private val editRow: LinearLayout
-    private val deleteRow: LinearLayout
+    private var replyRow: LinearLayout? = null
+    private var editRow: LinearLayout? = null
+    private var deleteRow: LinearLayout? = null
 
+    var onReplyClick: (() -> Unit)? = null
     var onEditClick: (() -> Unit)? = null
     var onDeleteClick: (() -> Unit)? = null
 
@@ -48,13 +50,22 @@ class MessageOptionsSheet(context: Context) : LinearLayout(context) {
         }
         addView(handle, LayoutHelper.createLinear(40, 4, 0f, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16))
 
+        // Reply option
+        replyRow = createOptionRow(
+            iconRes = R.drawable.ic_chevron_right, // Make sure this icon exists or use a placeholder
+            text = "Ответить",
+            color = DesignEngine.Theme.colorTextPrimary
+        )
+        replyRow?.setOnClickListener { onReplyClick?.invoke() }
+        addView(replyRow)
+
         // Edit option
         editRow = createOptionRow(
             iconRes = R.drawable.ic_edit,
             text = "Редактировать",
             color = DesignEngine.Theme.colorTextPrimary
         )
-        editRow.setOnClickListener { onEditClick?.invoke() }
+        editRow?.setOnClickListener { onEditClick?.invoke() }
         addView(editRow)
 
         // Delete option
@@ -63,7 +74,7 @@ class MessageOptionsSheet(context: Context) : LinearLayout(context) {
             text = "Удалить",
             color = Color.RED
         )
-        deleteRow.setOnClickListener { onDeleteClick?.invoke() }
+        deleteRow?.setOnClickListener { onDeleteClick?.invoke() }
         addView(deleteRow)
     }
 
@@ -99,9 +110,13 @@ class MessageOptionsSheet(context: Context) : LinearLayout(context) {
     }
 
     companion object {
-        fun show(context: Context, onEdit: () -> Unit, onDelete: () -> Unit) {
+        fun show(context: Context, onReply: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
             val dialog = BottomSheetDialog(context, R.style.BottomSheetDialogTheme)
             val sheet = MessageOptionsSheet(context)
+            sheet.onReplyClick = {
+                dialog.dismiss()
+                onReply()
+            }
             sheet.onEditClick = {
                 dialog.dismiss()
                 onEdit()
@@ -113,7 +128,8 @@ class MessageOptionsSheet(context: Context) : LinearLayout(context) {
             dialog.setContentView(sheet)
             dialog.show()
         }
-
+        
+        // Keep other methods if they are used elsewhere
         fun showForChat(context: Context, pinned: Boolean, onPinToggle: () -> Unit, onDelete: () -> Unit) {
             val dialog = BottomSheetDialog(context, R.style.BottomSheetDialogTheme)
             val sheet = MessageOptionsSheet(context)

@@ -1,29 +1,33 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
 import android.Manifest
-import android.content.Intent
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
-import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.google.gson.Gson
+import com.kia.blagogramapp.BaseScreen
+import com.kia.blagogramapp.BlagoApi
+import com.kia.blagogramapp.DesignEngine
+import com.kia.blagogramapp.LayoutHelper
+import com.kia.blagogramapp.MainActivity
+import com.kia.blagogramapp.PostCell
+import com.kia.blagogramapp.R
+import com.kia.blagogramapp.SubscriptionManager
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.model.Post
 import com.kia.blagogramapp.model.UserProfile
-import com.kia.blagogramapp.models.Track
 import com.kia.blagogramapp.ui.modules.FullPlayer
 import com.kia.blagogramapp.ui.modules.PostCreationModule
 import com.kia.blagogramapp.ui.modules.ProfileLayout
@@ -34,13 +38,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.collections.forEach
 
-class ProfileActivity : AppCompatActivity() {
+// Добавляем параметр в конструктор
+class ProfileScreen(context: Context, private val targetUserId: Int = 0) : BaseScreen(context) {
+    val activity = context as? AppCompatActivity
 
-    private val TAG = "ProfileActivity"
     private lateinit var layout: ProfileLayout
     private lateinit var repo: ApiRepository
-    
     private var fullPlayer: FullPlayer? = null
 
     private var isCurrentThemeDark: Boolean = false
@@ -49,45 +54,19 @@ class ProfileActivity : AppCompatActivity() {
     private var currentProfileAvatar: String? = null
     private var currentProfileName: String? = null
 
-    private val musicPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            MusicManager.addTrack(this, it)
-            layout.updateMusicList()
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        val isDarkTheme = themePrefs.getBoolean("is_dark_theme", false)
-        val useMonet = themePrefs.getBoolean("use_monet", false)
-
-        isCurrentThemeDark = isDarkTheme
-        isCurrentUseMonet = useMonet
-        DesignEngine.Theme.apply(isDarkTheme, useMonet)
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-        }
-
-        super.onCreate(savedInstanceState)
-        
-        layout = ProfileLayout(this)
-        setContentView(layout)
+    override fun createView(): View {
+        layout = ProfileLayout(context)
 
         repo = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
 
-        val targetUserId = intent.getIntExtra("user_id", 0)
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        // Теперь используем значение из конструктора, а не из intent
+        val myId = context.getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         val isMyProfile = (targetUserId == 0 || targetUserId == myId)
         val effectiveUserId = if (targetUserId == 0) myId else targetUserId
 
         layout.btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            // Переход на экран настроек (теперь это тоже Screen)
+            // presentFragment(SettingsScreen(context))
         }
 
         if (isMyProfile) {
@@ -101,22 +80,22 @@ class ProfileActivity : AppCompatActivity() {
             loadUserProfileFromCache(targetUserId)
             loadUserProfile(targetUserId)
         }
-        
-        // Посты загрузим из updateUI, когда будет инфо о пользователе
 
-        layout.backButton.setOnClickListener { finish() }
-        layout.btnCreatePost.setOnClickListener { 
-            PostCreationModule.show(this) {
-                loadUserPosts(effectiveUserId)
+        layout.backButton.setOnClickListener { finishFragment() }
+        layout.btnCreatePost.setOnClickListener {
+            activity?.let { act ->
+                PostCreationModule.show(act) {
+                    loadUserPosts(effectiveUserId)
+                }
             }
         }
-        
+
         layout.onTrackClicked = { track ->
             MusicManager.playTrack(track)
         }
-        
+
         layout.onAddMusicClicked = {
-            musicPickerLauncher.launch("audio/*")
+            (context as? MainActivity)?.musicPicker?.launch("audio/*")
         }
 
         layout.onMusicBadgeClick = {
@@ -124,28 +103,31 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         observeMusic()
+
+        return layout
     }
 
     private fun checkPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                // ИСПРАВЛЕНО: Вызываем через activity
+                activity?.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
-        MusicManager.scanMusic(this)
+        MusicManager.scanMusic(context)
         layout.updateMusicList()
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    // ВНИМАНИЕ: Чтобы этот метод работал, его нужно вызвать из MainActivity.onRequestPermissionsResult
+    fun handlePermissionsResult(requestCode: Int, grantResults: IntArray) {
         if (requestCode == 101) {
-            MusicManager.scanMusic(this)
+            MusicManager.scanMusic(context)
             layout.updateMusicList()
         }
     }
 
     private fun observeMusic() {
-        lifecycleScope.launchWhenStarted {
+        activity?.lifecycleScope?.launchWhenStarted {
             combine(MusicManager.currentTrack, MusicManager.isPlaying) { track, playing ->
                 track to playing
             }.collect { (track, playing) ->
@@ -167,7 +149,7 @@ class ProfileActivity : AppCompatActivity() {
     private fun showFullPlayer() {
         val track = MusicManager.currentTrack.value ?: return
         if (fullPlayer == null) {
-            fullPlayer = FullPlayer(this).apply {
+            fullPlayer = FullPlayer(context).apply {
                 layoutParams = FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT)
                 onCloseListener = { closeFullPlayer() }
             }
@@ -181,29 +163,26 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun loadUserPosts(userId: Int) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
-        Log.d(TAG, "loadUserPosts for ID: $userId")
+        val token = context.getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val posts = withContext(Dispatchers.IO) { repo.getUserPosts(token, userId) }
-                Log.d(TAG, "Loaded ${posts.size} posts")
                 displayPosts(posts)
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading posts: ${e.message}")
             }
         }
     }
 
     private fun displayPosts(posts: List<Post>) {
         layout.postsContainer.removeAllViews()
-        val myId = getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
+        val myId = context.getSharedPreferences("app", MODE_PRIVATE).getInt("user_id", 0)
         // ← Вот этого может не быть ↓
         val postsContainer = layout.postsContainer // или findViewById<LinearLayout>(R.id.posts_container)
         if (postsContainer.parent == null) {
             Log.e("PROFILE", "postsContainer НЕ добавлен в layout!!!")
         }
         if (posts.isEmpty()) {
-            val emptyTv = android.widget.TextView(this).apply {
+            val emptyTv = android.widget.TextView(context).apply {
                 text = "Нет записей"
                 setTextColor(DesignEngine.Theme.colorTextSecondary)
                 gravity = android.view.Gravity.CENTER
@@ -214,12 +193,12 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         posts.forEach { post ->
-            val cell = PostCell(this)
-            
+            val cell = PostCell(context)
+
             // Заполняем данные из поста
             cell.contentText.text = post.content
             cell.timeView.text = post.createdAt.split(" ").lastOrNull()?.take(5) ?: ""
-            
+
             // Картинка поста
             if (!post.image.isNullOrEmpty()) {
                 cell.postImage.visibility = View.VISIBLE
@@ -237,7 +216,7 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             cell.sharePill.setOnClickListener {
-                ShareModule.show(this, post)
+                ShareModule.show(context, post)
             }
 
             // Информация об авторе
@@ -256,12 +235,12 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun toggleLike(post: Post, cell: PostCell) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        val token = context.getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val isLikedNow = withContext(Dispatchers.IO) { repo.likePost(token, post.id) }
                 cell.setLiked(isLikedNow)
-                
+
                 // Визуальное обновление счетчика
                 val currentCount = try { cell.likesCount.text.toString().toInt() } catch (e: Exception) { 0 }
                 val newCount = if (isLikedNow) currentCount + 1 else (currentCount - 1).coerceAtLeast(0)
@@ -276,38 +255,38 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun deletePost(post: Post, cell: View) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        val token = context.getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val success = withContext(Dispatchers.IO) { repo.deletePost(token, post.id) }
                 if (success) {
                     layout.postsContainer.removeView(cell)
-                    Toast.makeText(this@ProfileActivity, "Пост удален", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Пост удален", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@ProfileActivity, "Ошибка удаления", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Ошибка удаления", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun loadMyProfile() {
-        val prefs = getSharedPreferences("app", MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("app", MODE_PRIVATE)
         val login = prefs.getString("login", "")
         val displayName = prefs.getString("display_name", "")
         val statusText = prefs.getString("status", "")
         val avatar = prefs.getString("avatar", "")
         val myId = prefs.getInt("user_id", 0)
         val cover = prefs.getString("cover", "")
-        
+
         loadUserProfileFromCache(myId)
         if (layout.userID.text.isNullOrEmpty() || layout.userID.text == "@") {
-             updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(this), cover, myId)
+            updateUI(login, displayName, statusText, avatar, 0, 0, SubscriptionManager.isPremium(context), cover, myId)
         }
         if (myId != 0) loadUserProfile(myId)
     }
 
     private fun loadUserProfileFromCache(userId: Int) {
-        val prefs = getSharedPreferences("app_cache", MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("app_cache", MODE_PRIVATE)
         val json = prefs.getString("profile_$userId", null)
         if (!json.isNullOrEmpty()) {
             try {
@@ -318,13 +297,13 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun loadUserProfile(userId: Int) {
-        val token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        val token = context.getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val profile = repo.getUserProfile(token, userId)
                 val json = Gson().toJson(profile)
-                getSharedPreferences("app_cache", MODE_PRIVATE).edit().putString("profile_$userId", json).apply()
-                runOnUiThread {
+                context.getSharedPreferences("app_cache", MODE_PRIVATE).edit().putString("profile_$userId", json).apply()
+                withContext(Dispatchers.Main) {
                     updateUI(profile.username, profile.display_name, profile.status, profile.avatar, profile.friends_count, profile.followers_count, profile.is_premium, profile.cover, profile.id)
                 }
             } catch (e: Exception) { e.printStackTrace() }
@@ -334,16 +313,16 @@ class ProfileActivity : AppCompatActivity() {
     private fun updateUI(login: String?, displayName: String?, statusText: String?, avatar: String?, friends: Int, followers: Int, isPremium: Boolean, cover: String?, userId: Int) {
         currentProfileName = displayName
         currentProfileAvatar = avatar
-        
+
         layout.userID.text = "@$login"
         layout.profileUsername.text = displayName
         layout.status.text = statusText
         layout.friendsCount.text = friends.toString()
         layout.subsCount.text = followers.toString()
-        
-        val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
+
+        val myLogin = context.getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
         if (myLogin == login) {
-            DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(this))
+            DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(context))
         } else {
             DesignEngine.setPremiumStatus(layout.premiumBadge, isPremium)
         }
@@ -403,27 +382,5 @@ class ProfileActivity : AppCompatActivity() {
             layout.userID.setTextColor(Color.WHITE)
             layout.userID.setShadowLayer(2f, 1f, 1f, Color.BLACK)
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        if (themePrefs.getBoolean("is_dark_theme", false) != isCurrentThemeDark ||
-            themePrefs.getBoolean("use_monet", false) != isCurrentUseMonet) {
-            recreate()
-            return
-        }
-        val myLogin = getSharedPreferences("app", MODE_PRIVATE).getString("login", "")
-        if (layout.userID.text == "@$myLogin") {
-            DesignEngine.setPremiumStatus(layout.premiumBadge, SubscriptionManager.isPremium(this))
-        }
-    }
-
-    override fun onBackPressed() {
-        if (fullPlayer?.parent != null) {
-            closeFullPlayer()
-            return
-        }
-        super.onBackPressed()
     }
 }

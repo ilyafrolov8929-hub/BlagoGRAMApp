@@ -1,12 +1,12 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
@@ -14,25 +14,35 @@ import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
-import android.widget.*
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
+import com.kia.blagogramapp.BaseScreen
+import com.kia.blagogramapp.BlagoApi
+import com.kia.blagogramapp.DesignEngine
+import com.kia.blagogramapp.LayoutHelper
+import com.kia.blagogramapp.PremiumActivity.PriceCardView
+import com.kia.blagogramapp.PremiumActivity.PriceOption
+import com.kia.blagogramapp.R
 import com.kia.blagogramapp.api.ApiClient
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.api.SubscriptionCheckResult
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 import kotlin.math.abs
 
-class PremiumActivity : AppCompatActivity() {
-
+class LumePremiumScreen(context: Context) : BaseScreen(context) {
+    val activity = context as? AppCompatActivity
     private lateinit var viewPager: ViewPager2
     private var selectedPriceIndex = 1
     private lateinit var apiRepository: ApiRepository
@@ -46,27 +56,17 @@ class PremiumActivity : AppCompatActivity() {
     private lateinit var dotsContainer: LinearLayout
     private lateinit var featuresContainer: LinearLayout
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        DesignEngine.init(this)
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
-        DesignEngine.Theme.apply(themePrefs.getBoolean("is_dark_theme", false), themePrefs.getBoolean("use_monet", false))
-
-        token = getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+    override fun createView(): View {
+        token = context.getSharedPreferences("app", MODE_PRIVATE).getString("token", "") ?: ""
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
         apiRepository = ApiRepository(ApiClient.retrofit.create(BlagoApi::class.java))
 
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
-
-        val root = FrameLayout(this).apply {
+        val root = FrameLayout(context).apply {
             setBackgroundColor(DesignEngine.COLOR_BACKGROUND)
         }
 
         // Фоновое свечение
-        val bgGlow = View(this).apply {
+        val bgGlow = View(context).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 colors = intArrayOf(DesignEngine.Theme.colorBlue and 0x30FFFFFF, 0x00000000)
@@ -89,26 +89,26 @@ class PremiumActivity : AppCompatActivity() {
             start()
         }
 
-        val scrollView = ScrollView(this).apply {
+        val scrollView = ScrollView(context).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
         }
 
-        val content = LinearLayout(this).apply {
+        val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(0, LayoutHelper.dp(80), 0, LayoutHelper.dp(110))
         }
 
         // Иконка
-        content.addView(ImageView(this).apply {
+        content.addView(ImageView(context).apply {
             setImageResource(R.drawable.infinity)
             setColorFilter(DesignEngine.Theme.colorBlue, PorterDuff.Mode.SRC_IN)
             LayoutHelper.createLinear(110, 110, 0f, Gravity.CENTER_HORIZONTAL, 0, 20, 0, 0)
         }, LayoutHelper.createLinear(110, 110, 0f, Gravity.CENTER_HORIZONTAL, 0, 20, 0, 0))
 
         // Заголовки
-        content.addView(TextView(this).apply {
+        content.addView(TextView(context).apply {
             text = "Lume Premium"
             textSize = 26f
             typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
@@ -116,7 +116,7 @@ class PremiumActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
         }, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 12, 0, 0))
 
-        content.addView(TextView(this).apply {
+        content.addView(TextView(context).apply {
             text = "Больше свободы и десятки эксклюзивных\nфункций с подпиской Lume Premium"
             textSize = 14f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -126,13 +126,13 @@ class PremiumActivity : AppCompatActivity() {
         }, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 24, 8, 24, 24))
 
         // Индикатор загрузки
-        progressBar = ProgressBar(this).apply {
+        progressBar = ProgressBar(context).apply {
             visibility = View.VISIBLE
         }
         content.addView(progressBar, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 20, 0, 20))
 
         // --- PRICING SECTION ---
-        pricingContainer = LinearLayout(this).apply {
+        pricingContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
         }
@@ -145,7 +145,7 @@ class PremiumActivity : AppCompatActivity() {
 
         val priceViews = mutableListOf<PriceCardView>()
         priceOptions.forEachIndexed { index, option ->
-            val card = PriceCardView(this, option, index == selectedPriceIndex).apply {
+            val card = PriceCardView(context, option, index == selectedPriceIndex).apply {
                 setOnClickListener {
                     selectedPriceIndex = index
                     priceViews.forEachIndexed { i, view -> view.setChecked(i == index) }
@@ -158,13 +158,13 @@ class PremiumActivity : AppCompatActivity() {
         content.addView(pricingContainer)
 
         // --- FEATURES SECTION (Drum) ---
-        featuresContainer = LinearLayout(this).apply {
+        featuresContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
             setPadding(0, LayoutHelper.dp(20), 0, 0)
         }
 
-        viewPager = ViewPager2(this).apply {
+        viewPager = ViewPager2(context).apply {
             adapter = FeaturesAdapter(getFeatures())
             offscreenPageLimit = 1
             clipToPadding = true // Возвращаем обрезку, но настраиваем паддинги
@@ -188,13 +188,13 @@ class PremiumActivity : AppCompatActivity() {
         featuresContainer.addView(viewPager, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 190)) // Увеличил высоту, чтобы текст не обрезался
 
         // Точки
-        dotsContainer = LinearLayout(this).apply {
+        dotsContainer = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
         val featuresSize = getFeatures().size
         for (i in 0 until featuresSize) {
-            dotsContainer.addView(View(this).apply {
+            dotsContainer.addView(View(context).apply {
                 background = GradientDrawable().apply {
                     cornerRadius = LayoutHelper.dp(3).toFloat()
                     setColor(if (i == 0) DesignEngine.COLOR_BLUE else DesignEngine.COLOR_DIVIDER)
@@ -205,7 +205,7 @@ class PremiumActivity : AppCompatActivity() {
         content.addView(featuresContainer)
 
         // --- STATUS SECTION ---
-        statusContainer = LinearLayout(this).apply {
+        statusContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             visibility = View.GONE
@@ -215,13 +215,13 @@ class PremiumActivity : AppCompatActivity() {
                 cornerRadius = LayoutHelper.dp(24).toFloat()
             }
         }
-        statusContainer.addView(TextView(this).apply {
+        statusContainer.addView(TextView(context).apply {
             text = "💎"
             textSize = 54f
             gravity = Gravity.CENTER
         }, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL))
 
-        statusText = TextView(this).apply {
+        statusText = TextView(context).apply {
             textSize = 16f
             setTextColor(DesignEngine.COLOR_TEXT_PRIMARY)
             gravity = Gravity.CENTER
@@ -230,7 +230,7 @@ class PremiumActivity : AppCompatActivity() {
         statusContainer.addView(statusText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 0, 20, 0, 0))
         content.addView(statusContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0f, 0, 20, 20, 20, 20))
 
-        content.addView(TextView(this).apply {
+        content.addView(TextView(context).apply {
             text = "Подписка продлевается автоматически. Отмена в любой момент."
             textSize = 11f
             setTextColor(DesignEngine.COLOR_TEXT_SECONDARY)
@@ -242,7 +242,7 @@ class PremiumActivity : AppCompatActivity() {
         root.addView(scrollView)
 
         // Кнопка подписки
-        subscribeBtn = FrameLayout(this).apply {
+        subscribeBtn = FrameLayout(context).apply {
             visibility = View.GONE
             val bg = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
@@ -270,17 +270,18 @@ class PremiumActivity : AppCompatActivity() {
 
         // Toolbar from DesignEngine
         val toolbar = DesignEngine.createToolBar(
-            context = this,
+            context = context,
             title = "Lume Infinity",
             leftButtonIconRes = R.drawable.ic_back,
-            leftButtonClickListener = { finish() },
+            leftButtonClickListener = { finishFragment() },
             isDark = isDarkThemeNow
         )
         root.addView(toolbar)
 
-        setContentView(root)
         checkSubscription()
         updateSubscribeButtonText(priceOptions[selectedPriceIndex])
+
+        return root
     }
 
     private fun updateDots(position: Int) {
@@ -299,7 +300,7 @@ class PremiumActivity : AppCompatActivity() {
     }
 
     private fun checkSubscription() {
-        lifecycleScope.launch {
+        activity?.lifecycleScope?.launch {
             progressBar.visibility = View.VISIBLE
             pricingContainer.visibility = View.GONE
             featuresContainer.visibility = View.GONE
@@ -317,15 +318,15 @@ class PremiumActivity : AppCompatActivity() {
     }
 
     private fun performPurchase(plan: String) {
-        lifecycleScope.launch {
+        activity?.lifecycleScope?.launch {
             try {
                 val result = apiRepository.buySubscription(token, plan)
                 if (result != null) {
-                    Toast.makeText(this@PremiumActivity, "Успешно: ${result.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Успешно: ${result.message}", Toast.LENGTH_SHORT).show()
                     updateUI(SubscriptionCheckResult(active = 1, plan = result.plan, expires_at = result.expires_at))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@PremiumActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -350,7 +351,7 @@ class PremiumActivity : AppCompatActivity() {
             else -> false
         }
 
-        getSharedPreferences("app", MODE_PRIVATE).edit()
+        context.getSharedPreferences("app", MODE_PRIVATE).edit()
             .putBoolean("is_premium", isActive)
             .apply()
 
@@ -481,7 +482,7 @@ class PremiumActivity : AppCompatActivity() {
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(14), LayoutHelper.dp(16), LayoutHelper.dp(14))
 
             val content = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            
+
             val checkContainer = FrameLayout(context)
             checkContainer.addView(checkView, LayoutHelper.createFrame(22, 22))
             checkContainer.addView(checkIcon, LayoutHelper.createFrame(22, 22))

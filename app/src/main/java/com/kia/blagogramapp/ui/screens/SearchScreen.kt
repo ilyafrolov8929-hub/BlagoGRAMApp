@@ -1,9 +1,8 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
-import android.content.Intent
-import android.graphics.Color
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
@@ -15,54 +14,56 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.kia.blagogramapp.BaseScreen
+import com.kia.blagogramapp.DesignEngine
+import com.kia.blagogramapp.LayoutHelper
+import com.kia.blagogramapp.R
 import com.kia.blagogramapp.adapters.SearchUsersAdapter
 import com.kia.blagogramapp.api.ApiRepository
 import com.kia.blagogramapp.models.SearchUserItem
 import com.kia.blagogramapp.network.RetrofitClient
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class SearchUserActivity : AppCompatActivity() {
-
+class SearchScreen(context: Context) : BaseScreen(context) {
+    val activity = context as? AppCompatActivity
+    private var isCurrentThemeDark: Boolean = false
+    private var isCurrentUseMonet: Boolean = false
     private val repo = ApiRepository(RetrofitClient.api)
     private var searchJob: Job? = null
 
     private lateinit var input: EditText
     private lateinit var recycler: RecyclerView
     private lateinit var progress: ProgressBar
-    private var isCurrentThemeDark: Boolean = false
-    private var isCurrentUseMonet: Boolean = false
 
+    override fun createView(): View {
+        val rootLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(DesignEngine.Theme.colorBackground)
+        }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // 1. Инициализируем экран и сразу получаем готовый корневой layout
-        val rootLayout = DesignEngine.initializeScreen(this)
-        setContentView(rootLayout)
-
-        // 2. Обновляем локальные переменные темы, так как они нужны для тулбара
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
         isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
         isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
-        // Toolbar from DesignEngine
         val toolbar = DesignEngine.createToolBar(
-            context = this,
+            context = context,
             title = "Поиск",
             leftButtonIconRes = R.drawable.ic_back,
-            leftButtonClickListener = { finish() },
+            leftButtonClickListener = { finishFragment() },
             isDark = isCurrentThemeDark
         )
         rootLayout.addView(toolbar)
 
-
-        // Search Input
-        val searchContainer = FrameLayout(this)
-        input = EditText(this).apply {
+        val searchContainer = FrameLayout(context)
+        input = EditText(context).apply {
             background = GradientDrawable().apply {
                 setColor(DesignEngine.Theme.colorCardBackground)
                 cornerRadius = LayoutHelper.dp(18).toFloat()
@@ -75,10 +76,9 @@ class SearchUserActivity : AppCompatActivity() {
             maxLines = 1
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(12), LayoutHelper.dp(16), LayoutHelper.dp(12))
 
-            // Search Icon
             val outValue = TypedValue()
-            theme.resolveAttribute(android.R.attr.actionModeWebSearchDrawable, outValue, true)
-            val searchDrawable = getDrawable(outValue.resourceId)?.mutate()
+            context.theme.resolveAttribute(android.R.attr.actionModeWebSearchDrawable, outValue, true)
+            val searchDrawable = context.getDrawable(outValue.resourceId)?.mutate()
             searchDrawable?.setTint(DesignEngine.Theme.colorTextSecondary)
             setCompoundDrawablesWithIntrinsicBounds(searchDrawable, null, null, null)
             compoundDrawablePadding = LayoutHelper.dp(12)
@@ -86,29 +86,23 @@ class SearchUserActivity : AppCompatActivity() {
         searchContainer.addView(input, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 16, 8, 16, 8))
         rootLayout.addView(searchContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT))
 
-        // ProgressBar
-        progress = ProgressBar(this).apply {
+        progress = ProgressBar(context).apply {
             visibility = View.GONE
         }
         rootLayout.addView(progress, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0f, Gravity.CENTER_HORIZONTAL, 0, 8, 0, 0))
 
-        // RecyclerView
-        recycler = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(this@SearchUserActivity)
+        recycler = RecyclerView(context).apply {
+            layoutManager = LinearLayoutManager(context)
             clipToPadding = false
             setPadding(0, LayoutHelper.dp(8), 0, LayoutHelper.dp(8))
         }
-        rootLayout.addView(recycler, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT))
+        rootLayout.addView(recycler, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 0, 1f))
 
-        // Listeners
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
-
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
             override fun onTextChanged(t: CharSequence?, start: Int, before: Int, count: Int) {
                 val q = t.toString().trim()
-
                 if (q.isNotEmpty()) {
                     progress.visibility = View.VISIBLE
                     search(q)
@@ -120,40 +114,30 @@ class SearchUserActivity : AppCompatActivity() {
             }
         })
 
-        // Handle Window Insets
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            
-            // Apply bottom padding to root (navigation bar)
-            view.setPadding(
-                view.paddingLeft,
-                view.paddingTop,
-                view.paddingRight,
-                insets.bottom
-            )
-
+            view.setPadding(0, 0, 0, insets.bottom)
             WindowInsetsCompat.CONSUMED
         }
+
+        return rootLayout
     }
 
     private fun search(query: String) {
-        val token = getSharedPreferences("app", MODE_PRIVATE)
+        val token = context.getSharedPreferences("app", MODE_PRIVATE)
             .getString("token", "") ?: ""
 
         searchJob?.cancel()
-
         searchJob = CoroutineScope(Dispatchers.IO).launch {
-            delay(300) // небольшая задержка для более плавного поиска
+            delay(300)
             try {
                 val users: List<SearchUserItem> = repo.searchUsers(token, query)
-
                 withContext(Dispatchers.Main) {
                     progress.visibility = View.GONE
                     recycler.adapter = SearchUsersAdapter(users) { user ->
                         createChat(user)
                     }
                 }
-
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     progress.visibility = View.GONE
@@ -164,37 +148,27 @@ class SearchUserActivity : AppCompatActivity() {
     }
 
     private fun createChat(user: SearchUserItem) {
-        val token = getSharedPreferences("app", MODE_PRIVATE)
+        val token = context.getSharedPreferences("app", MODE_PRIVATE)
             .getString("token", "") ?: ""
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val chatId = repo.createChat(token, user.id)
-
-                val i = Intent(this@SearchUserActivity, ChatActivity::class.java)
-                i.putExtra("chat_id", chatId)
-                i.putExtra("chat_name", user.display_name)
-                i.putExtra("chat_avatar", user.avatar)
-                i.putExtra("user_id", user.id) // Передаем ID пользователя явно
-                i.putExtra("is_premium", user.is_premium) // Передаем статус премиума
-                startActivity(i)
-                finish()
-
+                // ПЕРЕХОД ДОЛЖЕН БЫТЬ В ГЛАВНОМ ПОТОКЕ
+                withContext(Dispatchers.Main) {
+                    presentFragment(ChatScreen(context, chatId, user.id, user.display_name, user.avatar.toString(), user.is_premium))
+                }
             } catch (_: Exception) {}
         }
     }
 
     override fun onResume() {
         super.onResume()
-
-        // Проверяем смену темы
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
         val isNowDark = themePrefs.getBoolean("is_dark_theme", false)
         val isNowMonet = themePrefs.getBoolean("use_monet", false)
-
         if (isNowDark != isCurrentThemeDark || isNowMonet != isCurrentUseMonet) {
-            recreate()
-            return
+            // Очищаем и пересоздаем UI если нужно
         }
     }
 }

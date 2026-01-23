@@ -1,59 +1,62 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
+import com.kia.blagogramapp.BaseScreen
+import com.kia.blagogramapp.DesignEngine
+import com.kia.blagogramapp.HeaderCell
+import com.kia.blagogramapp.LayoutHelper
+import com.kia.blagogramapp.R
 
-class PrivaciActivity : AppCompatActivity() {
+class PrivaciScreen(context: Context) : BaseScreen(context) {
+    val activity = context as? AppCompatActivity
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // 1. Инициализируем экран и сразу получаем готовый корневой layout
-        val root = DesignEngine.initializeScreenWithFrameLayout(this)
-        setContentView(root)
+    override fun createView(): View {
+        val root = FrameLayout(context).apply {
+            setBackgroundColor(DesignEngine.COLOR_BACKGROUND)
+        }
 
         // 2. Получаем тему, так как она нужна для логики тулбара и кнопки "Разработчик"
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
         isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
         isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
         // Тулбар
         val toolbar = DesignEngine.createToolBar(
-            context = this,
+            context = context,
             title = "Приватность",
             leftButtonIconRes = R.drawable.ic_back,
-            leftButtonClickListener = { finish() },
+            leftButtonClickListener = { finishFragment() },
             isDark = isCurrentThemeDark
         )
         root.addView(toolbar)
 
-        val scroll = ScrollView(this)
-        val content = LinearLayout(this).apply {
+        val scroll = ScrollView(context)
+        val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16))
         }
         scroll.addView(content)
         root.addView(scroll)
 
-        content.addView(HeaderCell(this).apply {
+        content.addView(HeaderCell(context).apply {
             text = "Кто может отправлять мне сообщения?"
         })
 
         // Контейнер для настроек
-        val container = LinearLayout(this).apply {
+        val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(DesignEngine.Theme.colorCardBackground)
@@ -75,7 +78,7 @@ class PrivaciActivity : AppCompatActivity() {
             lateinit var radioButton: RadioButton
 
             // Создаем горизонтальный контейнер для текста и кнопки
-            val optionLayout = LinearLayout(this).apply {
+            val optionLayout = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 layoutParams = LinearLayout.LayoutParams(
@@ -95,7 +98,7 @@ class PrivaciActivity : AppCompatActivity() {
             }
 
             // Текст опции
-            val textView = TextView(this).apply {
+            val textView = TextView(context).apply {
                 text = optionText
                 setTextColor(DesignEngine.Theme.colorTextPrimary)
                 textSize = 16f
@@ -104,7 +107,7 @@ class PrivaciActivity : AppCompatActivity() {
             }
 
             // Сама радио-кнопка (без текста)
-            radioButton = RadioButton(this).apply {
+            radioButton = RadioButton(context).apply {
                 // Клик обрабатывается родительским LinearLayout, поэтому на самой кнопке его отключаем
                 isClickable = false
                 // Стилизация кружка
@@ -139,12 +142,14 @@ class PrivaciActivity : AppCompatActivity() {
 
 
         // Текст с описанием под контейнером
-        val descriptionText = TextView(this).apply {
+        val descriptionText = TextView(context).apply {
             text = "Вы можете запретить входящие сообщения от пользователей, которых нет в Вашем списке контактов."
             textSize = 14f
             setTextColor(DesignEngine.Theme.colorTextSecondary)
             setPadding(LayoutHelper.dp(20), LayoutHelper.dp(8), LayoutHelper.dp(20), LayoutHelper.dp(8))
         }
         content.addView(descriptionText)
+
+        return root
     }
 }

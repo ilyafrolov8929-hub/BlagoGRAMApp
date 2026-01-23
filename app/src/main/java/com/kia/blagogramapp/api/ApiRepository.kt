@@ -1,13 +1,16 @@
 package com.kia.blagogramapp.api
 
 import android.util.Log
+import com.google.gson.Gson
 import com.kia.blagogramapp.BlagoApi
 import com.kia.blagogramapp.DesignEngine
 import com.kia.blagogramapp.model.Chat
 import com.kia.blagogramapp.model.Message
+import com.kia.blagogramapp.model.ReplyMessage
 import com.kia.blagogramapp.model.UserProfile
 import com.kia.blagogramapp.model.PremiumInfo
 import com.kia.blagogramapp.model.Post
+import com.kia.blagogramapp.models.ChatInfoResponse
 import com.kia.blagogramapp.models.SearchUserItem
 import com.kia.blagogramapp.utils.DevModeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -20,6 +23,7 @@ import java.io.File
 class ApiRepository(private val api: BlagoApi) {
 
     private val TAG = "ApiRepository"
+    private val gson = Gson()
 
     private fun isDevMode(): Boolean {
         return DesignEngine.context?.let { DevModeManager.isEnabled(it) } ?: false
@@ -139,6 +143,17 @@ class ApiRepository(private val api: BlagoApi) {
 
         return list.map {
             val imagesList = it["images"] as? List<String> ?: emptyList()
+            val replyData = it["reply"] as? Map<String, Any>
+            val reply = replyData?.let { r ->
+                ReplyMessage(
+                    id = (r["id"] as Number).toInt(),
+                    sender_id = (r["sender_id"] as Number).toInt(),
+                    display_name = r["display_name"].toString(),
+                    content = r["content"].toString(),
+                    images = r["images"] as? List<String> ?: emptyList()
+                )
+            }
+            
             Message(
                 id = (it["id"] as Number).toInt(),
                 chat_id = (it["chat_id"] as Number).toInt(),
@@ -149,7 +164,8 @@ class ApiRepository(private val api: BlagoApi) {
                 is_read = (it["is_read"] as Number).toInt(),
                 avatar = it["avatar"].toString(),
                 display_name = it["display_name"].toString(),
-                images = imagesList
+                images = imagesList,
+                reply = reply
             )
         }
     }
@@ -176,7 +192,8 @@ class ApiRepository(private val api: BlagoApi) {
                 is_read = it.is_read,
                 avatar = it.avatar,
                 display_name = it.display_name,
-                images = it.images ?: emptyList()
+                images = it.images ?: emptyList(),
+                reply = null // Long polling usually returns simple objects, or you need to update it too
             )
         } ?: emptyList()
     }
@@ -191,7 +208,7 @@ class ApiRepository(private val api: BlagoApi) {
     // -------------------------------------------------
     // SEND MESSAGE
     // -------------------------------------------------
-    suspend fun sendMessage(token: String, chatId: Int, text: String, images: List<File>? = null): Boolean {
+    suspend fun sendMessage(token: String, chatId: Int, text: String, images: List<File>? = null, replyToId: Int? = null): Boolean {
         if (isDevMode()) {
             DevModeManager.addMockMessage(chatId, text, images)
             return true
@@ -203,6 +220,7 @@ class ApiRepository(private val api: BlagoApi) {
         val tokenBody = token.toRequestBody("text/plain".toMediaTypeOrNull())
         val chatIdBody = chatId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
         val textBody = text.toRequestBody("text/plain".toMediaTypeOrNull())
+        val replyToIdBody = replyToId?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
 
         val imageParts = images?.map { file ->
             val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
@@ -214,6 +232,7 @@ class ApiRepository(private val api: BlagoApi) {
             token = tokenBody,
             chatId = chatIdBody,
             text = textBody,
+            replyToId = replyToIdBody,
             image = imageParts
         )
 
@@ -365,6 +384,29 @@ class ApiRepository(private val api: BlagoApi) {
         return body
     }
 
+    suspend fun changeUsername(token: String, username: String): Map<String, Any> {
+        if (isDevMode()) return mapOf("ok" to true)
+
+        val resp = api.call(
+            ApiRequest(
+                action = "profile.edit.username",
+                token = token,
+                username = username
+            )
+        )
+
+        if (!resp.isSuccessful) {
+            val errorBody = resp.errorBody()?.string()
+            Log.e(TAG, "changeUsername error: ${resp.code()} $errorBody")
+            throw Exception("API Error: ${resp.code()} $errorBody")
+        }
+
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"].toString())
+
+        return body
+    }
+
     // -------------------------------------------------
     // PROFILE EDIT — MULTIPART
     // -------------------------------------------------
@@ -449,7 +491,8 @@ class ApiRepository(private val api: BlagoApi) {
                     expires_at = it["expires_at"]?.toString()
                 )
             },
-            cover = r["cover"]?.toString()
+            cover = r["cover"]?.toString(),
+            phone = r["phone"]?.toString() ?: ""
         )
     }
 
@@ -491,7 +534,6 @@ class ApiRepository(private val api: BlagoApi) {
         val body = resp.body() ?: throw Exception("Empty")
         if (body["ok"] != true) throw Exception(body["error"].toString())
         
-        val gson = com.google.gson.Gson()
         val resultJson = gson.toJson(body["result"])
         val type = object : com.google.gson.reflect.TypeToken<List<Post>>() {}.type
         return gson.fromJson(resultJson, type)
@@ -525,7 +567,6 @@ class ApiRepository(private val api: BlagoApi) {
         val result = body["result"] as? Map<String, Any>
         val postsData = result?.get("posts") ?: return emptyList()
 
-        val gson = com.google.gson.Gson()
         val postsJson = gson.toJson(postsData)
         val type = object : com.google.gson.reflect.TypeToken<List<Post>>() {}.type
         val posts: List<Post> = gson.fromJson(postsJson, type)
@@ -578,5 +619,25 @@ class ApiRepository(private val api: BlagoApi) {
         val body = resp.body() ?: return false
         if (body["ok"] != true) return false
         return (body["result"] as? Map<*, *>)?.get("liked") as? Boolean ?: false
+    }
+
+    // -------------------------------------------------
+    // CHAT INFO
+    // -------------------------------------------------
+    suspend fun getChatInfo(token: String, chatId: Int): ChatInfoResponse {
+        val resp = api.call(
+            ApiRequest(
+                action = "chat.getInfo",
+                token = token,
+                chat_id = chatId
+            )
+        )
+
+        if (!resp.isSuccessful) throw Exception("API Error: ${resp.code()}")
+        val body = resp.body() ?: throw Exception("Empty response")
+        if (body["ok"] != true) throw Exception(body["error"].toString())
+
+        val resultJson = gson.toJson(body["result"])
+        return gson.fromJson(resultJson, ChatInfoResponse::class.java)
     }
 }

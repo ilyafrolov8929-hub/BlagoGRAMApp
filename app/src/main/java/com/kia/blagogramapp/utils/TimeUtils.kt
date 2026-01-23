@@ -5,9 +5,13 @@ import java.util.*
 
 object TimeUtils {
 
-    private val input = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).apply {
+    // Формат API (серверный). Используем Московское время как эталон для приложения.
+    private val apiFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).apply {
         timeZone = TimeZone.getTimeZone("Europe/Moscow")
     }
+
+    // Формат для отображения в чате (местное время пользователя)
+    private val displayFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     fun normalizeRussianPhone(input: String): String? {
         var phone = input.trim()
@@ -15,129 +19,84 @@ object TimeUtils {
             .replace("-", "")
             .replace("(", "")
             .replace(")", "")
-            .replace("[^0-9+]", "") // убираем всё кроме цифр и +
+            .replace("[^0-9+]", "")
 
         if (phone.isEmpty()) return null
 
         when {
-            phone.startsWith("+7") || phone.startsWith("+79") -> {
-                // Уже хорошо
-            }
-            phone.startsWith("8") && phone.length >= 11 -> {
-                phone = "+7" + phone.substring(1)
-            }
-            phone.startsWith("7") && phone.length >= 10 -> {
-                phone = "+" + phone
-            }
-            phone.startsWith("9") && phone.length == 10 -> {
-                phone = "+79" + phone
-            }
-            else -> return null // некорректный формат
+            phone.startsWith("+7") || phone.startsWith("+79") -> {}
+            phone.startsWith("8") && phone.length >= 11 -> phone = "+7" + phone.substring(1)
+            phone.startsWith("7") && phone.length >= 10 -> phone = "+" + phone
+            phone.startsWith("9") && phone.length == 10 -> phone = "+79" + phone
+            else -> return null
         }
-
-        // Финальная проверка: +7 и ровно 11 цифр после
         return if (phone.matches(Regex("^\\+7\\d{10}$"))) phone else null
+    }
+
+    /**
+     * Возвращает текущее время в формате МСК для временных сообщений.
+     */
+    fun getCurrentServerTime(): String {
+        return apiFormat.format(Date())
     }
 
     fun formatTime(raw: String): String {
         if (raw.isBlank()) return ""
-        val date = input.parse(raw) ?: return ""
-        return SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
-    }
-    // -------------------------
-    // Вспомогательная безопасная парс-функция
-    // -------------------------
-    private fun safeParse(raw: String): Date? {
         return try {
-            inputFormat.parse(raw)
+            val date = apiFormat.parse(raw) ?: return ""
+            displayFormat.format(date)
         } catch (e: Exception) {
-            null
+            ""
         }
     }
-    // Парсер входной строки "yyyy-MM-dd HH:mm:ss"
-    private val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).apply {
-        // НЕ заставляем конкретную зону по умолчанию.
-        // Если сервер действительно отдаёт UTC or Europe/Moscow consistently,
-        // можно изменить на TimeZone.getTimeZone("UTC") или "Europe/Moscow"
-        timeZone = TimeZone.getDefault()
-    }
+
     fun headerFor(raw: String): String {
         if (raw.isBlank()) return ""
-        val date = safeParse(raw) ?: return ""
-
+        val date = try { apiFormat.parse(raw) } catch (e: Exception) { null } ?: return ""
         val msg = Calendar.getInstance().apply { time = date }
-
         val today = Calendar.getInstance()
         val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
-        val thisYear = Calendar.getInstance()  // год сравниваем только с ним!
 
-        // Сегодня
         if (today.get(Calendar.YEAR) == msg.get(Calendar.YEAR) &&
             today.get(Calendar.DAY_OF_YEAR) == msg.get(Calendar.DAY_OF_YEAR)
-        ) {
-            return "Сегодня"
-        }
+        ) return "Сегодня"
 
-        // Вчера
         if (yesterday.get(Calendar.YEAR) == msg.get(Calendar.YEAR) &&
             yesterday.get(Calendar.DAY_OF_YEAR) == msg.get(Calendar.DAY_OF_YEAR)
-        ) {
-            return "Вчера"
-        }
+        ) return "Вчера"
 
-        // Если год совпадает → просто "27 ноября"
-        return if (msg.get(Calendar.YEAR) == thisYear.get(Calendar.YEAR)) {
+        return if (msg.get(Calendar.YEAR) == today.get(Calendar.YEAR)) {
             SimpleDateFormat("d MMMM", Locale("ru")).format(date)
                 .replaceFirstChar { it.uppercase() }
         } else {
-            // Если год другой → "27 ноября 2024"
             SimpleDateFormat("d MMMM yyyy", Locale("ru")).format(date)
                 .replaceFirstChar { it.uppercase() }
         }
     }
 
-    /**
-     * Форматирует дату для PhotoViewerActivity.
-     * Формат: "сегодня в 14:30", "вчера в 09:15", "8 янв. в 12:00".
-     * Год добавляется, если он не совпадает с текущим.
-     * @param raw Исходная строка с датой (например, "2026-01-10 11:26:34").
-     * @return Отформатированная строка.
-     */
     fun formatPhotoViewerDate(raw: String): String {
         if (raw.isBlank()) return ""
-        val date = safeParse(raw) ?: return "" // Используем вашу утилиту safeParse
-
+        val date = try { apiFormat.parse(raw) } catch (e: Exception) { null } ?: return ""
         val msgCalendar = Calendar.getInstance().apply { time = date }
         val now = Calendar.getInstance()
+        val timeString = "в ${displayFormat.format(date)}"
 
-        // Форматы времени и даты
-        val timeFormat = SimpleDateFormat("HH:mm", Locale("ru"))
+        if (now.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR) &&
+            now.get(Calendar.DAY_OF_YEAR) == msgCalendar.get(Calendar.DAY_OF_YEAR)
+        ) return "сегодня $timeString"
+
+        val yesterday = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
+        if (yesterday.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR) &&
+            yesterday.get(Calendar.DAY_OF_YEAR) == msgCalendar.get(Calendar.DAY_OF_YEAR)
+        ) return "вчера $timeString"
+
         val dayMonthFormat = SimpleDateFormat("d MMM", Locale("ru"))
         val dayMonthYearFormat = SimpleDateFormat("d MMM yyyy", Locale("ru"))
 
-        val timeString = "в ${timeFormat.format(date)}"
-
-        // Сегодня
-        if (now.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR) &&
-            now.get(Calendar.DAY_OF_YEAR) == msgCalendar.get(Calendar.DAY_OF_YEAR)) {
-            return "сегодня $timeString"
-        }
-
-        // Вчера
-        val yesterday = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
-        if (yesterday.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR) &&
-            yesterday.get(Calendar.DAY_OF_YEAR) == msgCalendar.get(Calendar.DAY_OF_YEAR)) {
-            return "вчера $timeString"
-        }
-
-        // Другая дата
         return if (now.get(Calendar.YEAR) == msgCalendar.get(Calendar.YEAR)) {
-            // Этот год
             "${dayMonthFormat.format(date)} $timeString"
         } else {
-            // Другой год
             "${dayMonthYearFormat.format(date)} $timeString"
         }
     }
-
 }

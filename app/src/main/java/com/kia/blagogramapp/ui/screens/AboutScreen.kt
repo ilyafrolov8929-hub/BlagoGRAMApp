@@ -1,20 +1,39 @@
-package com.kia.blagogramapp
+package com.kia.blagogramapp.ui.screens
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.*
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.RelativeLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.common.wrappers.Wrappers.packageManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.kia.blagogramapp.utils.DevModeManager
+import com.kia.blagogramapp.*
+import com.kia.blagogramapp.ui.modules.ChatListLayout
+import com.kia.blagogramapp.views.BlurGradientBackgroundView
+import com.kia.blagogramapp.views.GradientTextView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,48 +42,46 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
-import java.util.*
 
-class AboutActivity : AppCompatActivity() {
+class AboutScreen(context: Context) : BaseScreen(context) {
+
     private var isCurrentThemeDark: Boolean = false
     private var isCurrentUseMonet: Boolean = false
+    val activity = context as? AppCompatActivity
 
     private val UPDATE_JSON_URL = "https://blagogram.ru/download/update.json"
     private val INSTALL_PERMISSION_CODE = 1001
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun createView(): View {
+        val rootLayout = ChatListLayout(context)
 
-        val rootLayout = DesignEngine.initializeScreenWithFrameLayout(this)
-        setContentView(rootLayout)
-
-        val packageInfo = packageManager.getPackageInfo(packageName, 0)
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val vName = packageInfo.versionName ?: "0.0.0"
         val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode else packageInfo.versionCode
 
-        val themePrefs = getSharedPreferences("app_theme", MODE_PRIVATE)
+        val themePrefs = context.getSharedPreferences("app_theme", MODE_PRIVATE)
         isCurrentThemeDark = themePrefs.getBoolean("is_dark_theme", false)
         isCurrentUseMonet = themePrefs.getBoolean("use_monet", false)
 
-        val scrollView = ScrollView(this).apply {
+        val scrollView = ScrollView(context).apply {
             isFillViewport = true
             overScrollMode = View.OVER_SCROLL_NEVER
         }
 
-        val contentLayout = LinearLayout(this).apply {
+        val contentLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, LayoutHelper.dp(40))
         }
         scrollView.addView(contentLayout)
-        contentLayout.addView(SpacerCell(this, LayoutHelper.dp(50)))
+        contentLayout.addView(SpacerCell(context, LayoutHelper.dp(50)))
 
-        val logoView = ImageView(this).apply { setImageResource(R.mipmap.ic_launcher) }
+        val logoView = ImageView(context).apply { setImageResource(R.mipmap.ic_launcher) }
         contentLayout.addView(logoView, LinearLayout.LayoutParams(LayoutHelper.dp(90), LayoutHelper.dp(90)).apply {
             gravity = Gravity.CENTER_HORIZONTAL
             bottomMargin = LayoutHelper.dp(12)
         })
 
-        val appNameView = TextView(this).apply {
+        val appNameView = TextView(context).apply {
             text = "Lume"
             textSize = 32f
             setTextColor(DesignEngine.Theme.colorTextPrimary)
@@ -73,7 +90,7 @@ class AboutActivity : AppCompatActivity() {
         }
         contentLayout.addView(appNameView, LinearLayout.LayoutParams(-1, -2))
 
-        val versionTextView = TextView(this).apply {
+        val versionTextView = TextView(context).apply {
             textSize = 16f
             setTextColor(DesignEngine.Theme.colorTextSecondary)
             gravity = Gravity.CENTER_HORIZONTAL
@@ -83,12 +100,11 @@ class AboutActivity : AppCompatActivity() {
         contentLayout.addView(versionTextView, LinearLayout.LayoutParams(-1, -2))
 
         addSectionHeader(contentLayout, "ИНФОРМАЦИЯ")
-        val mainCard = ContainerCell(this)
-        addInfoRow(mainCard, "Имя пакета", packageName)
-        addInfoRow(mainCard, "Сайт проекта", "blagogram.ru", true) {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://blagogram.ru")))
+        val mainCard = ContainerCell(context)
+        addInfoRow(mainCard, "Имя пакета", context.packageName)
+        addInfoRow(mainCard, "Версия LumeEngine", "2.0") {
+            Toast.makeText(context, "Это иновационый движок разработанный для рендеринга приложения.", Toast. LENGTH_LONG).show()
         }
-
         addInfoRow(mainCard, "Проверить обновления", vName, isLast = true) {
             checkForUpdates(vName)
         }
@@ -96,12 +112,14 @@ class AboutActivity : AppCompatActivity() {
 
         rootLayout.addView(scrollView)
         setupToolbar(rootLayout)
+
+        return rootLayout
     }
 
     private fun checkForUpdates(currentVersion: String) {
-        Toast.makeText(this, "Поиск обновлений...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Поиск обновлений...", Toast.LENGTH_SHORT).show()
 
-        lifecycleScope.launch(Dispatchers.IO) {
+        activity?.lifecycleScope?.launch(Dispatchers.IO) {
             try {
                 val client = OkHttpClient()
                 val request = Request.Builder()
@@ -114,20 +132,21 @@ class AboutActivity : AppCompatActivity() {
 
                 val jsonData = response.body?.string() ?: ""
                 val latestVersion = jsonData.substringAfter("\"version\":").substringAfter("\"").substringBefore("\"").trim()
+                val info = jsonData.substringAfter("\"info\":").substringAfter("\"").substringBefore("\"").trim()
                 val downloadUrl = jsonData.substringAfter("\"url\":").substringAfter("\"").substringBefore("\"").trim()
 
                 withContext(Dispatchers.Main) {
                     if (isNewer(latestVersion, currentVersion)) {
-                        val file = File(externalCacheDir, "Lume-$latestVersion.apk")
+                        val file = File(context.externalCacheDir, "Lume-$latestVersion.apk")
                         val isDownloaded = file.exists() && file.length() > 1024 // файл больше 1кб
-                        showUpdateBottomSheet(currentVersion, latestVersion, downloadUrl, isDownloaded)
+                        showUpdateBottomSheet(currentVersion, latestVersion, info, downloadUrl, isDownloaded)
                     } else {
-                        Toast.makeText(this@AboutActivity, "У вас последняя версия ($currentVersion)", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "У вас последняя версия ($currentVersion)", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@AboutActivity, "Ошибка сети", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Ошибка сети", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -149,10 +168,10 @@ class AboutActivity : AppCompatActivity() {
         } catch (e: Exception) { v1 > v2 }
     }
 
-    private fun showUpdateBottomSheet(oldVer: String, newVer: String, url: String, isDownloaded: Boolean) {
-        val dialog = BottomSheetDialog(this, R.style.CustomBottomSheetDialogTheme)
+    private fun showUpdateBottomSheet(oldVer: String, newVer: String, info: String, url: String, isDownloaded: Boolean) {
+        val dialog = BottomSheetDialog(context, R.style.CustomBottomSheetDialogTheme)
 
-        val root = LinearLayout(this).apply {
+        val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(LayoutHelper.dp(20), LayoutHelper.dp(24), LayoutHelper.dp(20), LayoutHelper.dp(30))
             background = GradientDrawable().apply {
@@ -161,7 +180,7 @@ class AboutActivity : AppCompatActivity() {
             }
         }
 
-        val title = TextView(this).apply {
+        val title = TextView(context).apply {
             text = "Доступно обновление!"
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
@@ -170,7 +189,7 @@ class AboutActivity : AppCompatActivity() {
         }
         root.addView(title)
 
-        val subTitle = TextView(this).apply {
+        val subTitle = TextView(context).apply {
             text = "$oldVer → $newVer"
             textSize = 14f
             typeface = Typeface.MONOSPACE
@@ -180,19 +199,19 @@ class AboutActivity : AppCompatActivity() {
         }
         root.addView(subTitle)
 
-        val row = RelativeLayout(this)
-        val icon = ImageView(this).apply {
+        val row = RelativeLayout(context)
+        val icon = ImageView(context).apply {
             setImageResource(R.mipmap.ic_launcher)
             id = View.generateViewId()
             background = GradientDrawable().apply {
-                setColor(DesignEngine.Theme.colorBackground)
+                setColor(if (isCurrentThemeDark) Color.parseColor("#303030") else Color.parseColor("#F0F0F0"))
                 cornerRadius = LayoutHelper.dp(12).toFloat()
             }
             setPadding(LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8), LayoutHelper.dp(8))
         }
         row.addView(icon, RelativeLayout.LayoutParams(LayoutHelper.dp(64), LayoutHelper.dp(64)))
 
-        val textContainer = LinearLayout(this).apply {
+        val textContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             val p = RelativeLayout.LayoutParams(-2, -2).apply {
                 addRule(RelativeLayout.RIGHT_OF, icon.id)
@@ -214,12 +233,12 @@ class AboutActivity : AppCompatActivity() {
         }
         row.addView(textContainer)
 
-        val btnUpdate = Button(this).apply {
+        val btnUpdate = Button(context).apply {
             text = if (isDownloaded) "Установить" else "Обновить"
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#007AFF"))
+                setColor(Color.parseColor("#E0E0E0")) // Светлая кнопка как на макете
                 cornerRadius = LayoutHelper.dp(20).toFloat()
             }
         }
@@ -230,19 +249,82 @@ class AboutActivity : AppCompatActivity() {
         row.addView(btnUpdate, btnParams)
         root.addView(row)
 
-        val progressLayout = LinearLayout(this).apply {
+        // --- ОБНОВЛЕННЫЙ БЛОК: Контейнер для списка изменений с кружочками ---
+        if (info.isNotEmpty()) {
+            val infoContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16), LayoutHelper.dp(16))
+                background = GradientDrawable().apply {
+                    setColor(if (isCurrentThemeDark) Color.parseColor("#252525") else Color.parseColor("#E8E8E8"))
+                    cornerRadius = LayoutHelper.dp(16).toFloat()
+                }
+            }
+            val infoParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = LayoutHelper.dp(24)
+            }
+
+            // Заголовок "Изменения:"
+            val infoHeader = TextView(context).apply {
+                text = "Изменения:"
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(DesignEngine.Theme.colorTextPrimary)
+                setPadding(0, 0, 0, LayoutHelper.dp(8))
+            }
+            infoContainer.addView(infoHeader)
+
+            // Разделяем текст на строки по \n или \\n
+            val lines = info.split(Regex("\\\\n|\\n")).filter { it.isNotBlank() }
+
+            lines.forEach { line ->
+                val rowLayout = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(0, LayoutHelper.dp(4), 0, LayoutHelper.dp(4))
+                    gravity = Gravity.TOP
+                }
+
+                // Рисуем кружочек (Bullet)
+                val dot = View(context).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(DesignEngine.Theme.colorTextPrimary) // Цвет точки как у текста
+                    }
+                }
+                val dotParams = LinearLayout.LayoutParams(LayoutHelper.dp(6), LayoutHelper.dp(6)).apply {
+                    topMargin = LayoutHelper.dp(8) // Центрируем точку относительно первой строки текста
+                    rightMargin = LayoutHelper.dp(10)
+                }
+                rowLayout.addView(dot, dotParams)
+
+                // Текст самого изменения
+                val lineText = TextView(context).apply {
+                    text = line.trim()
+                    textSize = 14f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(DesignEngine.Theme.colorTextPrimary)
+                }
+                rowLayout.addView(lineText, LinearLayout.LayoutParams(-1, -2))
+
+                infoContainer.addView(rowLayout)
+            }
+
+            root.addView(infoContainer, infoParams)
+        }
+        // --- КОНЕЦ НОВОГО БЛОКА ---
+
+        val progressLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
             setPadding(0, LayoutHelper.dp(30), 0, 0)
         }
 
-        val labels = RelativeLayout(this)
-        val tvSize = TextView(this).apply { textSize = 13f; setTextColor(DesignEngine.Theme.colorTextPrimary); typeface = Typeface.DEFAULT_BOLD }
-        val tvPercent = TextView(this).apply { textSize = 13f; setTextColor(DesignEngine.Theme.colorTextPrimary); typeface = Typeface.DEFAULT_BOLD }
+        val labels = RelativeLayout(context)
+        val tvSize = TextView(context).apply { textSize = 13f; setTextColor(DesignEngine.Theme.colorTextPrimary); typeface = Typeface.DEFAULT_BOLD }
+        val tvPercent = TextView(context).apply { textSize = 13f; setTextColor(DesignEngine.Theme.colorTextPrimary); typeface = Typeface.DEFAULT_BOLD }
         labels.addView(tvSize, RelativeLayout.LayoutParams(-2,-2).apply { addRule(RelativeLayout.ALIGN_PARENT_LEFT)})
         labels.addView(tvPercent, RelativeLayout.LayoutParams(-2,-2).apply { addRule(RelativeLayout.ALIGN_PARENT_RIGHT)})
 
-        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+        val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#4A90E2"))
         }
 
@@ -251,7 +333,7 @@ class AboutActivity : AppCompatActivity() {
         root.addView(progressLayout)
 
         btnUpdate.setOnClickListener {
-            val file = File(externalCacheDir, "Lume-$newVer.apk")
+            val file = File(context.externalCacheDir, "Lume-$newVer.apk")
             if (isDownloaded && file.exists()) {
                 installApk(file)
             } else {
@@ -265,9 +347,10 @@ class AboutActivity : AppCompatActivity() {
         dialog.show()
     }
 
+
     private fun downloadAndInstall(url: String, version: String, bar: ProgressBar, tvSize: TextView, tvPercent: TextView) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val file = File(externalCacheDir, "Lume-$version.apk")
+        activity?.lifecycleScope?.launch(Dispatchers.IO) {
+            val file = File(context.externalCacheDir, "Lume-$version.apk")
             try {
                 val client = OkHttpClient()
                 val request = Request.Builder().url(url).build()
@@ -296,7 +379,7 @@ class AboutActivity : AppCompatActivity() {
                 }
                 withContext(Dispatchers.Main) { installApk(file) }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@AboutActivity, "Ошибка загрузки", Toast.LENGTH_SHORT).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(context, "Ошибка загрузки", Toast.LENGTH_SHORT).show() }
             }
         }
     }
@@ -305,39 +388,39 @@ class AboutActivity : AppCompatActivity() {
         if (!file.exists()) return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (!packageManager.canRequestPackageInstalls()) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
                 val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:$packageName")
+                    data = Uri.parse("package:${context.packageName}")
                 }
-                startActivityForResult(intent, INSTALL_PERMISSION_CODE)
+                // Вызываем через activity, так как экран — это не Activity
+                activity?.startActivityForResult(intent, INSTALL_PERMISSION_CODE)
                 return
             }
         }
 
         try {
-            val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            startActivity(intent)
+            context.startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+            // Исправлена опечатка contextcontext -> context
+            Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    override fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == INSTALL_PERMISSION_CODE) {
-            // Файл ищется по версии, но тут упростим до поиска последнего скачанного в кэше
-            val files = externalCacheDir?.listFiles { _, name -> name.endsWith(".apk") }
+            val files = context.externalCacheDir?.listFiles { _, name -> name.endsWith(".apk") }
             files?.maxByOrNull { it.lastModified() }?.let { installApk(it) }
         }
     }
 
     private fun addSectionHeader(container: LinearLayout, title: String) {
-        container.addView(TextView(this).apply {
+        container.addView(TextView(context).apply {
             text = title
             textSize = 13f
             setTextColor(DesignEngine.Theme.colorHeader)
@@ -346,10 +429,10 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun addInfoRow(card: ContainerCell, label: String, value: String, isLink: Boolean = false, isLast: Boolean = false, onClick: (() -> Unit)? = null) {
-        val frame = FrameLayout(this).apply { if (onClick != null) setOnClickListener { onClick() } }
-        frame.addView(TextView(this).apply { text = label; textSize = 16f; setTextColor(DesignEngine.Theme.colorTextPrimary) },
+        val frame = FrameLayout(context).apply { if (onClick != null) setOnClickListener { onClick() } }
+        frame.addView(TextView(context).apply { text = label; textSize = 16f; setTextColor(DesignEngine.Theme.colorTextPrimary) },
             LayoutHelper.createFrame(-2, -2, Gravity.START or Gravity.CENTER_VERTICAL, 16, 0, 0, 0))
-        frame.addView(TextView(this).apply {
+        frame.addView(TextView(context).apply {
             text = value
             textSize = 15f
             setTextColor(if (isLink) Color.parseColor("#007AFF") else DesignEngine.Theme.colorTextSecondary)
@@ -359,10 +442,10 @@ class AboutActivity : AppCompatActivity() {
 
     private fun setupToolbar(root: FrameLayout) {
         val toolbar = DesignEngine.createToolBar(
-            context = this,
+            context = context,
             title = "О приложении",
             leftButtonIconRes = R.drawable.ic_back,
-            leftButtonClickListener = { finish() },
+            leftButtonClickListener = { finishFragment() },
             isDark = isCurrentThemeDark
         )
         root.addView(toolbar)

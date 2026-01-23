@@ -19,6 +19,7 @@ data class ApiRequest(
     val user_id: Int? = null,
 
     val display_name: String? = null,
+    val username: String? = null,
     val status: String? = null,
     val theme: String? = null,
     val avatar: String? = null,
